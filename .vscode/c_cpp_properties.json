@@ -1,0 +1,47 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/libraries/HAL_Drivers/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/libraries/HAL_Drivers/config/h7/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/libraries/HAL_Drivers/drv_flash/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/libraries/STM32H7xx_HAL/CMSIS/Device/ST/STM32H7xx/Include/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/libraries/STM32H7xx_HAL/CMSIS/Include/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/libraries/STM32H7xx_HAL/STM32H7xx_HAL_Driver/Inc/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/libraries/STM32H7xx_HAL/STM32H7xx_HAL_Driver/Inc/Legacy/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/rcf-nano-h7/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/rcf-nano-h7/applications/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/bsp/stm32/rcf-nano-h7/board/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/components/drivers/include/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/components/drivers/include/drivers/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/components/drivers/include/ipc/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/components/drivers/spi/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/components/finsh/",
+                "${workspaceFolder}/rtthread-nano/rt-thread/include/"
+                // "D:/NXP/S32DS.3.4/S32DS/build_tools/gcc_v10.2/gcc-10.2-arm32-eabi/arm-none-eabi/include"
+                // "D:\\NXP\\S32DS.3.4\\S32DS\\build_tools\\gcc_v10.2\\gcc-10.2-arm32-eabi\\arm-none-eabi\\include",
+                // "D:\\NXP\\S32DS.3.4\\S32DS\\build_tools\\gcc_v10.2\\gcc-10.2-arm32-eabi\\lib\\gcc\\arm-none-eabi\\10.2.0\\include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "__GNUC__",
+                "STM32H750xx",
+                "__VFP_FP__",
+                "USE_HAL_DRIVER",
+                "HSE_VALUE=8000000UL",
+                "USE_FULL_LL_DRIVER"
+            ],
+            // "compilerPath": "D:\\NXP\\S32DS.3.4\\S32DS\\build_tools\\gcc_v10.2\\gcc-10.2-arm32-eabi\\bin\\arm-none-eabi-gcc.exe",
+            "compilerPath": "D:\\Software\\Work\\gcc-arm-none-eabi-10.3-2021.07\\bin\\arm-none-eabi-gcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-arm"
+        }
+    ],
+    "version": 4
+}
