@@ -38,7 +38,8 @@ static uint32_t _systick_ms = 1;
 /* SysTick configuration */
 void rt_hw_systick_init(void)
 {
-    HAL_SYSTICK_Config(SystemCoreClock / RT_TICK_PER_SECOND);
+    // HAL_SYSTICK_Config(SystemCoreClock / RT_TICK_PER_SECOND);
+    HAL_SYSTICK_Config(HAL_RCCEx_GetD1SysClockFreq() / RT_TICK_PER_SECOND);
 
     NVIC_SetPriority(SysTick_IRQn, 0xFF);
 

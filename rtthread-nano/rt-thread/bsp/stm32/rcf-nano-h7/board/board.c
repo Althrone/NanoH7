@@ -37,7 +37,7 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.PLL.PLLM=1;
     RCC_OscInitStruct.PLL.PLLN=120;
     RCC_OscInitStruct.PLL.PLLP=2;//480MHz cpu
-    RCC_OscInitStruct.PLL.PLLQ=8;// 60MHZ USB
+    RCC_OscInitStruct.PLL.PLLQ=16;//60MHZ USB
     // RCC_OscInitStruct.PLL
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
     {
@@ -80,10 +80,11 @@ void SystemClock_Config(void)
     RCC_PeriphCLKInitStruct.PLL2.PLL2R=4;//200MHz SDMMC
     RCC_PeriphCLKInitStruct.PLL3.PLL3M=1;
     RCC_PeriphCLKInitStruct.PLL3.PLL3N=100;
+    RCC_PeriphCLKInitStruct.PLL3.PLL3P=4;//200MHz SPI
     RCC_PeriphCLKInitStruct.PLL3.PLL3Q=16;//50MHz USB
     RCC_PeriphCLKInitStruct.PLL3.PLL3R=8;//100MHz IIC
     RCC_PeriphCLKInitStruct.SdmmcClockSelection=RCC_SDMMCCLKSOURCE_PLL2;//250
-    // RCC_PeriphCLKInitStruct.Spi123ClockSelection=;//200
+    RCC_PeriphCLKInitStruct.Spi123ClockSelection=RCC_SPI123CLKSOURCE_PLL3;//200
     RCC_PeriphCLKInitStruct.FdcanClockSelection=RCC_FDCANCLKSOURCE_PLL2;//125
     RCC_PeriphCLKInitStruct.Usart234578ClockSelection=RCC_USART234578CLKSOURCE_PLL2;//125
     RCC_PeriphCLKInitStruct.Usart16ClockSelection=RCC_USART16CLKSOURCE_PLL2;//125

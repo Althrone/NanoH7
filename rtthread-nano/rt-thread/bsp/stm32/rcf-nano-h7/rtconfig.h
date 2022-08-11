@@ -378,6 +378,8 @@
 #define BSP_USING_UART8
 #define BSP_USING_I2C2
 #define BSP_USING_SPI1
+// #define BSP_SPI1_RX_USING_DMA
+// #define BSP_SPI1_TX_USING_DMA
 #define BSP_USING_FDCAN1
 // #define BSP_USING_USBD
 

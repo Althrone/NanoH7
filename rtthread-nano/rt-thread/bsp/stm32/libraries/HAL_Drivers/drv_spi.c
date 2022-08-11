@@ -154,6 +154,8 @@ static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configur
     SPI_APB_CLOCK = HAL_RCC_GetPCLK1Freq();
 
     /* normal series */
+#elif defined(SOC_SERIES_STM32H7)
+    SPI_APB_CLOCK = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_SPI123);
 #else
     /* SPI2 and SPI3 on APB1 */
     if(spi_drv->config->Instance == SPI2 || spi_drv->config->Instance == SPI3)
@@ -308,6 +310,18 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
     struct stm32_spi *spi_drv =  rt_container_of(device->bus, struct stm32_spi, spi_bus);
     SPI_HandleTypeDef *spi_handle = &spi_drv->handle;
     struct stm32_hw_spi_cs *cs = device->parent.user_data;
+
+    //测试代码
+    uint8_t sendata=0x80|0x2F;
+    uint8_t revdata=0xff;
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+    HAL_SPI_Transmit(spi_handle,&sendata,1,1000);
+    while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+    volatile HAL_StatusTypeDef sata=HAL_SPI_Receive(spi_handle,&revdata,1,1000);
+    while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
+
 
     if (message->cs_take && !(device->config.mode & RT_SPI_NO_CS))
     {
