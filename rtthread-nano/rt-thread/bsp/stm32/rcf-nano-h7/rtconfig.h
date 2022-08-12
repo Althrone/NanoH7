@@ -248,6 +248,7 @@
 #define RT_USING_ADC
 #define RT_USING_SPI
 #define RT_USING_USB_DEVICE
+#define RT_USING_SDIO
 
 #define RT_AUDIO_REPLAY_MP_BLOCK_SIZE 4096
 #define RT_AUDIO_REPLAY_MP_BLOCK_COUNT 2
@@ -259,6 +260,8 @@
 
 
 /* C/C++ and POSIX layer */
+#define RT_USING_LIBC
+#define RT_USING_POSIX
 
 #define RT_LIBC_DEFAULT_TIMEZONE 8
 
@@ -381,6 +384,7 @@
 // #define BSP_SPI1_RX_USING_DMA
 // #define BSP_SPI1_TX_USING_DMA
 #define BSP_USING_FDCAN1
+#define BSP_USING_SDIO
 // #define BSP_USING_USBD
 
 /* External Libraries */

@@ -45,6 +45,10 @@
         "spl06_001.h": "c",
         "rtdbg.h": "c",
         "mmc5983ma.h": "c",
-        "drv_spi.h": "c"
+        "drv_spi.h": "c",
+        "dfs_fs.h": "c",
+        "dfs.h": "c",
+        "libc_fcntl.h": "c",
+        "libc_errno.h": "c"
     }
 }
