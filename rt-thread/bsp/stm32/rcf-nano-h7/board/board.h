@@ -28,24 +28,24 @@ extern "C" {
 
 /*-------------------------- CHIP CONFIG END --------------------------*/
 
-// /*-------------------------- ROM/RAM CONFIG BEGIN --------------------------*/
-//  #define ROM_START              ((uint32_t)0x90000000)
-//  #define ROM_SIZE               (16384)
-//  #define ROM_END                ((uint32_t)(ROM_START + ROM_SIZE * 1024))
+/*-------------------------- ROM/RAM CONFIG BEGIN --------------------------*/
+ #define ROM_START              ((uint32_t)0x08000000)
+ #define ROM_SIZE               (2*1024*1024)
+ #define ROM_END                ((uint32_t)(ROM_START + ROM_SIZE))
 
-// #define RAM_START              (0x24000000)
-// #define RAM_SIZE               (512)
-// #define RAM_END                (RAM_START + RAM_SIZE * 1024)
+#define RAM_START              (0x24000000)
+#define RAM_SIZE               (512 * 1024)
+#define RAM_END                (RAM_START + RAM_SIZE)
 
-// /*-------------------------- ROM/RAM CONFIG END --------------------------*/
+/*-------------------------- ROM/RAM CONFIG END --------------------------*/
 
-// /*-------------------------- CLOCK CONFIG BEGIN --------------------------*/
+/*-------------------------- CLOCK CONFIG BEGIN --------------------------*/
 
-// #define BSP_CLOCK_SOURCE                  ("HSE")
-// #define BSP_CLOCK_SOURCE_FREQ_MHZ         ((int32_t)0)
-// #define BSP_CLOCK_SYSTEM_FREQ_MHZ         ((int32_t)480)
+#define BSP_CLOCK_SOURCE                  ("HSE")
+#define BSP_CLOCK_SOURCE_FREQ_MHZ         ((int32_t)8)
+#define BSP_CLOCK_SYSTEM_FREQ_MHZ         ((int32_t)480)
 
-// /*-------------------------- CLOCK CONFIG END --------------------------*/
+/*-------------------------- CLOCK CONFIG END --------------------------*/
 
 /*-------------------------- UART CONFIG BEGIN --------------------------*/
 
