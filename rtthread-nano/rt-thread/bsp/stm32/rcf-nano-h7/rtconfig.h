@@ -384,7 +384,7 @@
 // #define BSP_SPI1_RX_USING_DMA
 // #define BSP_SPI1_TX_USING_DMA
 #define BSP_USING_FDCAN1
-#define BSP_USING_SDIO
+#define BSP_USING_SDIO1
 // #define BSP_USING_USBD
 
 /* External Libraries */
