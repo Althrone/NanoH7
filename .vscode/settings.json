@@ -49,6 +49,8 @@
         "dfs_fs.h": "c",
         "dfs.h": "c",
         "libc_fcntl.h": "c",
-        "libc_errno.h": "c"
+        "libc_errno.h": "c",
+        "time.h": "c",
+        "dfs_file.h": "c"
     }
 }

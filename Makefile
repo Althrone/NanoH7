@@ -78,7 +78,9 @@ C_DEFS = \
 -DUSE_HAL_DRIVER \
 -DSTM32H750xx \
 -DHSE_VALUE=8000000UL \
--DUSE_FULL_LL_DRIVER
+-DUSE_FULL_LL_DRIVER \
+-D__need_time_t \
+-D__need_timespec
 # -D__FPU_PRESENT\#在stm32h750xx.h中定义了
 # -DARM_MATH_CM4 \#数学库以后再说
 # -DARM_MATH_MATRIX_CHECK
@@ -144,7 +146,10 @@ $(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
 # $(AS) -c $(ASFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
-	$(CC) $(OBJECTS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map -o $@
+	$(CC) $(OBJECTS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map \
+-Wl,--start-group -lc -lm -Wl,--end-group \
+-lnosys \
+-o $@
 	$(SZ) $@
 
 # $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)

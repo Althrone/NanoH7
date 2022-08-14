@@ -11,7 +11,7 @@
 #ifndef __DFS_FS_H__
 #define __DFS_FS_H__
 
-#include <dfs.h>
+#include "dfs.h"
 
 #ifdef __cplusplus
 extern "C" {
