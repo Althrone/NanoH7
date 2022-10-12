@@ -251,10 +251,21 @@ static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configur
     spi_handle->Init.FifoThreshold              = SPI_FIFO_THRESHOLD_08DATA;
 #endif
 
+    HAL_SPI_DeInit(spi_handle);
     if (HAL_SPI_Init(spi_handle) != HAL_OK)
     {
         return RT_EIO;
     }
+
+    //初始化完成，试下读写数据
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+
+    uint8_t txdata[2]={0xAF,0x00};
+    uint8_t rxdata[2]={0};
+    volatile HAL_StatusTypeDef staa=HAL_SPI_TransmitReceive(spi_handle,txdata,rxdata,2,100);
+    // while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
 
 #if defined(SOC_SERIES_STM32L4) || defined(SOC_SERIES_STM32F0) \
         || defined(SOC_SERIES_STM32F7) || defined(SOC_SERIES_STM32G0) || defined(SOC_SERIES_STM32WB)
@@ -311,18 +322,35 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
     SPI_HandleTypeDef *spi_handle = &spi_drv->handle;
     struct stm32_hw_spi_cs *cs = device->parent.user_data;
 
-    //测试代码
-    uint8_t sendata=0x80|0x2F;
-    uint8_t revdata=0xff;
+    // //测试代码
+    // uint8_t sendata=0x80|0x2F;
+    // uint8_t revdata=0xff;
+    // volatile HAL_SPI_StateTypeDef state1=HAL_SPI_GetState(spi_handle);
+    // volatile uint32_t erroroc=HAL_SPI_GetError(spi_handle);
+    // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+    // // HAL_SPI_Transmit(spi_handle,&sendata,1,1000);
+    // // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
+    // // state1=HAL_SPI_GetState(spi_handle);
+    // // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+    // volatile HAL_StatusTypeDef sata=HAL_SPI_TransmitReceive(spi_handle, &sendata, &revdata, 1, 10);
+    // while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+    // // volatile HAL_StatusTypeDef sata=HAL_SPI_Receive(spi_handle,&revdata,1,1);
+    // sata=HAL_SPI_TransmitReceive(spi_handle, &sendata, &revdata, 1, 10);
 
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
-    HAL_SPI_Transmit(spi_handle,&sendata,1,1000);
-    while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
-    volatile HAL_StatusTypeDef sata=HAL_SPI_Receive(spi_handle,&revdata,1,1000);
-    while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
+    // while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+    // // volatile HAL_StatusTypeDef sata=HAL_SPI_Receive(spi_handle,&revdata,1,1);
+    // sata=HAL_SPI_TransmitReceive(spi_handle, &sendata, &revdata, 1, 10);
+    // while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+    // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
 
-
+    // state1=HAL_SPI_GetState(spi_handle);
+    // erroroc=HAL_SPI_GetError(spi_handle);
+    // state1++;
+    // erroroc++;
+    // if(state1==erroroc)
+    // {
+    //     state1++;
+    // }
     if (message->cs_take && !(device->config.mode & RT_SPI_NO_CS))
     {
         if (device->config.mode & RT_SPI_CS_HIGH)

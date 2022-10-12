@@ -17,6 +17,13 @@ rt_err_t mmc5893ma_mag_get_id(struct rt_sensor_device *sensor, void *args)
     rt_uint8_t send_buf[]={0x80|ID_REG};
     rt_uint8_t recv_buf[]={0xFF};
 
+    // //在这里调用spi hal程序
+    // HAL_GPIO_WritePin(cs->GPIOx, cs->GPIO_Pin, GPIO_PIN_RESET);
+
+    // HAL_SPI_TransmitReceive()
+
+    // HAL_GPIO_WritePin(cs->GPIOx, cs->GPIO_Pin, GPIO_PIN_SET);
+
     // result=rt_spi_transfer(spi_dev,send_buf,recv_buf,1);
     result=rt_spi_send_then_recv(spi_dev,send_buf,sizeof(send_buf),recv_buf,sizeof(send_buf));
     // result=rt_spi_send(spi_dev,send_buf,sizeof(send_buf));
