@@ -1,7 +1,7 @@
 #用于编译FWLIB
 #路径都是相对于/d/STM32Project的
 
-TARGET=Rcf
+TARGET=RcF_NanoH7_RTT
 COMPILE_TIME=$(shell date +%Y_%m_%d)
 
 #路径处理
@@ -11,16 +11,31 @@ ALL_DIR=$(shell find -type d)#遍历整个工程文件夹的路径
 # c编译生成文件夹
 BUILD_DIR=./build
 
-SRCS_C+=$(foreach dir,$(ALL_DIR),$(wildcard $(dir)/*.c))
-OBJS_C+=$(addprefix $(BUILD_DIR)/,$(notdir $(SRCS_C:.c=.o)))
-SRCS_S=$(foreach dir,$(ALL_DIR),$(wildcard $(dir)/*.s))
-SRCS_S+=$(foreach dir,$(ALL_DIR),$(wildcard $(dir)/*.S))
-#由于SRCS_S中含有.s和.S所以只能用下面这种极其麻烦的方法
-OBJS_S=$(foreach src_s,$(SRCS_S),$(addsuffix .o,$(basename $(addprefix $(BUILD_DIR)/,$(notdir $(src_s))))))
-INC_DIRS+=$(foreach dir,$(ALL_DIR),$(dir $(wildcard $(dir)/*.h)))
-INCS_C=$(patsubst ./%,-I%,$(sort $(INC_DIRS)))
+# SRCS_C+=$(foreach dir,$(ALL_DIR),$(wildcard $(dir)/*.c))
+# OBJS_C+=$(addprefix $(BUILD_DIR)/,$(notdir $(SRCS_C:.c=.o)))
+# # SRCS_s=$(foreach dir,$(ALL_DIR),$(wildcard $(dir)/*.s))
+# SRCS_S=$(foreach dir,$(ALL_DIR),$(wildcard $(dir)/*.s))
+# #由于SRCS_S中含有.s和.S所以只能用下面这种极其麻烦的方法
+# # OBJS_s=$(foreach src_s,$(SRCS_s),$(addsuffix .o,$(basename $(addprefix $(BUILD_DIR)/,$(notdir $(src_s))))))
+# OBJS_S=$(foreach src_S,$(SRCS_S),$(addsuffix .o,$(basename $(addprefix $(BUILD_DIR)/,$(notdir $(src_S))))))
 
-SRCS_D=$(OBJS_C:.o=.d)
+# INC_DIRS+=$(foreach dir,$(ALL_DIR),$(dir $(wildcard $(dir)/*.h)))
+# INCS_C=$(patsubst ./%,-I%,$(sort $(INC_DIRS)))
+
+# SRCS_D=$(OBJS_C:.o=.d)
+
+SRCS_C=$(shell find ./rt-thread -type f -name *.c)
+OBJS_C=$(addprefix $(BUILD_DIR)/,$(notdir $(SRCS_C:.c=.o)))
+SRCS_s=$(shell find ./rt-thread -type f -name *.s)
+OBJS_s=$(addprefix $(BUILD_DIR)/,$(notdir $(SRCS_s:.s=.o)))
+SRCS_S=$(shell find ./rt-thread -type f -name *.S)
+OBJS_S=$(addprefix $(BUILD_DIR)/,$(notdir $(SRCS_S:.S=.o)))
+
+INC_DIRS=$(sort $(dir $(shell find ./rt-thread -type f -name *.h)))
+INCS_C=$(patsubst ./%,-I%,$(INC_DIRS))
+
+echo:
+	@echo  $(sort $(dir $(SRCS_S)))
 
 ######################################
 # building variables
@@ -101,7 +116,12 @@ CFLAGS = $(MCU) $(C_DEFS) $(INCS_C) $(OPT)
 
 # link script  链接配置文件
 #如果出现多个ld文件 应该给个警告，然后自动选第一个
-LDSCRIPT=$(patsubst ./%,%,$(sort $(foreach dir,$(ALL_DIR),$(wildcard $(dir)/*750*.ld))))
+# LDSCRIPT=$(patsubst ./%,%,$(sort $(foreach dir,$(ALL_DIR),$(wildcard $(dir)/*750*.ld))))
+LDSCRIPT=$(shell find ./rt-thread -type f -name *.ld)
+ifneq ($(words $(LDSCRIPT)),1)
+$(error more than one ld file was found)
+endif
+
 # LDSCRIPT = source/CORE/STM32F417IG_FLASH.ld
 
 LDGROUP = -Wl,--start-group -lc -lm -Wl,--end-group
@@ -118,32 +138,47 @@ LDFLAGS = $(MCU) -T$(LDSCRIPT) $(LIBDIR) $(LIBS)
 #######################################
 OCD_LINK_FILE = cmsis-dap.cfg#烧录器配置文件，用于普通买到的烧录器
 # OCD_LINK_FILE = stlink-v2-1.cfg	#烧录器配置文件，用于stm32f4discovery
-OCD_CHIP_FILE = stm32h7x_reset.cfg	#芯片配置文件
+# OCD_CHIP_FILE = stm32h7x_reset.cfg	#芯片配置文件
+OCD_CHIP_FILE = stm32h7x_2MB.cfg	#芯片配置文件
+
+
+# all:
+# 	@echo $(sort $(dir $(SRCS_S)))
 
 .PHONY: all burn size link clean macro reset#这里顺序随意
 
-all: $(BUILD_DIR)/$(TARGET).elf #$(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin##########请nm的绝对保证all放在PHONY第一个
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin##########请nm的绝对保证all放在PHONY第一个
 	@echo build at $(COMPILE_TIME)
 
 OBJECTS=$(OBJS_C)
 vpath %.c $(sort $(dir $(SRCS_C)))
 
-OBJECTS+=$(OBJS_S)
-vpath %.s $(sort $(dir $(SRCS_S)))
-
-vpath %.S $(sort $(dir $(SRCS_S)))
-
 $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
 	$(CC) -c $(CFLAGS) -g -Wall $< -o $@
 # $(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
-$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
-	$(CC) -c $(ASFLAGS) -g -Wa,--warn $< -o $@
+OBJECTS+=$(OBJS_s)
+# # OBJECTS+=./build/startup_stm32h750xx.o
+# vpath %.s $(sort $(dir $(SRCS_s)))
+
+# $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
+# 	$(CC) -c $(ASFLAGS) -g -Wa,--warn $< -o $@
+# # $(AS) -c $(ASFLAGS) $< -o $@
+
+OBJECTS+=$(OBJS_S)
+# vpath %.S $(sort $(dir $(SRCS_S)))
+
+# $(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
+# 	$(CC) -c $(ASFLAGS) -g -Wa,--warn $< -o $@
 # $(AS) -c $(ASFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
+$(OBJS_s):$(SRCS_s)
+	@echo build s file
 	$(CC) -c $(ASFLAGS) -g -Wa,--warn $< -o $@
-# $(AS) -c $(ASFLAGS) $< -o $@
+
+$(OBJS_S):$(SRCS_S)
+	@echo build S file
+	$(CC) -c $(ASFLAGS) -g -Wa,--warn $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
 	$(CC) $(OBJECTS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map \
@@ -152,11 +187,13 @@ $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
 -o $@
 	$(SZ) $@
 
-# $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
-# 	$(HEX) $< $@
+$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	@echo creat hex file
+	$(CP) -O ihex $< $@
 	
-# $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
-# 	$(BIN) $< $@	
+$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	@echo creat bin file
+	$(CP) -O binary $< $@	
 	
 $(BUILD_DIR):
 	mkdir $@	
@@ -200,7 +237,7 @@ comman=:
 empty=
 space=$(empty) $(empty)
 
-export C_INCLUDE_PATH=/d/NXP/S32DS.3.4/S32DS/build_tools/gcc_v10.2/gcc-10.2-arm32-eabi/include
+# export C_INCLUDE_PATH=/d/NXP/S32DS.3.4/S32DS/build_tools/gcc_v10.2/gcc-10.2-arm32-eabi/include
 
 # $(warning $(sort $(dir $(C_INCLUDE_PATH))))
 # $(warning $(sort $(dir $(INC_DIRS))))

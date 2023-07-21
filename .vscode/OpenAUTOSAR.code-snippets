@@ -1,0 +1,99 @@
+{
+	// Place your OpenAUTOSAR workspace snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and 
+	// description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope 
+	// is left empty or omitted, the snippet gets applied to all languages. The prefix is what is 
+	// used to trigger the snippet and the body will be expanded and inserted. Possible variables are: 
+	// $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. 
+	// Placeholders with the same ids are connected.
+	// Example:
+	// "Print to console": {
+	// 	"scope": "javascript,typescript",
+	// 	"prefix": "log",
+	// 	"body": [
+	// 		"console.log('$1');",
+	// 		"$2"
+	// 	],
+	// 	"description": "Log output to console"
+	// }
+	"C HEADER":{
+		"scope": "c,cpp",
+		"prefix": "header",
+		"description": "no",
+		"body": [
+			"/******************************************************************************",
+			" * NanoH7 - UAV firmware base on RT-Thread",
+			" * Copyright (C) 2023 - $CURRENT_YEAR Althrone <mail>",
+			" * ",
+			" * @file    $RELATIVE_FILEPATH",
+			" * ",
+			" * ref: Specification of <some UM RM or Datasheet>",
+			" *****************************************************************************/",
+			"",
+			// "#ifndef $WORKSPACE_NAME",
+			// "${WORKSPACE_NAME/(.*)/${1:/upcase}/}_${RELATIVE_FILEPATH/([\\\\.\\-])/${1:?_:/upcase}/g}",
+			// "#ifndef ${RELATIVE_FILEPATH/(.*)/${1:/upcase}/}",
+			// "#ifndef ${WORKSPACE_NAME/(.*)/${1:/upcase}/}_${RELATIVE_FILEPATH/([\\\\.-])|(.*)/${1:_}${2:/upcase}/g}_",
+			// "#ifndef ${WORKSPACE_NAME/(.*)/${1:/upcase}/}_${RELATIVE_FILEPATH/([\\\\.-])|(.*)/${1:_}${2:/upcase}/}_",
+			// "#ifndef ${WORKSPACE_NAME/(.*)/${1:/upcase}/}_${RELATIVE_FILEPATH/(.*)/${1:/upcase}/}_",
+			"//不知道正则表达式怎么支持嵌套，暂时没法按google style风格命名define保护,请手动大写",
+			"#ifndef NANOH7_${RELATIVE_FILEPATH/([\\\\.\\-])/_/g}_",
+			"#define NANOH7_${RELATIVE_FILEPATH/([\\\\.\\-])/_/g}_",
+			"",
+			"#ifdef __cplusplus",
+			"extern \"C\" {",
+			"#endif",
+			"",
+			"/******************************************************************************\n * includes\n *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * macros\n *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * pubilc types\n *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * pubilc functions\n *****************************************************************************/",
+			"",
+			"#ifdef __cplusplus",
+			"}",
+			"#endif",
+			"",
+			"#endif /* NANOH7_${RELATIVE_FILEPATH/([\\\\.\\-])/_/g}_ */",
+		],
+	},
+	"type brief":{
+		"scope": "c,cpp",
+		"prefix": "type brief",
+		"description": "no",
+		"body": [
+			"/**",
+			" * @brief   ",
+			" **/",
+		],
+	},
+	"C Source":{
+		"scope": "c,cpp",
+		"prefix": "csource",
+		"description": "no",
+		"body": [
+			"/******************************************************************************",
+			" * NanoH7 - UAV firmware base on RT-Thread",
+			" * Copyright (C) 2023 - $CURRENT_YEAR Althrone <mail>",
+			" * ",
+			" * @file    $RELATIVE_FILEPATH",
+			" * ",
+			" * ref: Specification of <some UM RM or Datasheet>",
+			" *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * includes\n *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * private macros\n *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * private types\n *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * private functions declaration\n *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * pubilc functions definition\n *****************************************************************************/",
+			"",
+			"/******************************************************************************\n * private functions definition\n *****************************************************************************/",
+			"",
+		],
+	},
+}

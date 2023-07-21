@@ -208,7 +208,7 @@
 #define RT_USING_DEVICE
 #define RT_USING_CONSOLE
 #define RT_CONSOLEBUF_SIZE 128
-#define RT_CONSOLE_DEVICE_NAME "uart1"
+#define RT_CONSOLE_DEVICE_NAME "uart1"//使用jlink rtt
 #define RT_VER_NUM 0x40100
 #define ARCH_ARM
 #define RT_USING_CPU_FFS
@@ -249,6 +249,7 @@
 #define RT_USING_SPI
 #define RT_USING_USB_DEVICE
 #define RT_USING_SDIO
+#define RT_USING_PWM
 
 #define RT_USING_DFS
 #define RT_USING_DFS_ELMFAT
@@ -389,6 +390,11 @@
 #define BSP_USING_FDCAN1
 #define BSP_USING_SDIO1
 // #define BSP_USING_USBD
+#define BSP_USING_PWM1
+#define BSP_USING_PWM1_CH1
+#define BSP_USING_PWM1_CH2
+#define BSP_USING_PWM1_CH3
+#define BSP_USING_PWM1_CH4
 
 /* External Libraries */
 

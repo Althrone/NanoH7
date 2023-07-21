@@ -20,7 +20,8 @@
                 "${workspaceFolder}/rt-thread/components/drivers/include/ipc/",
                 "${workspaceFolder}/rt-thread/components/drivers/spi/",
                 "${workspaceFolder}/rt-thread/components/finsh/",
-                "${workspaceFolder}/rt-thread/include/"
+                "${workspaceFolder}/rt-thread/include/",
+                "${workspaceFolder}/rt-thread/bsp/stm32/SEGGER_RTT_V630b/RTT"
                 // "D:/NXP/S32DS.3.4/S32DS/build_tools/gcc_v10.2/gcc-10.2-arm32-eabi/arm-none-eabi/include"
                 // "D:\\NXP\\S32DS.3.4\\S32DS\\build_tools\\gcc_v10.2\\gcc-10.2-arm32-eabi\\arm-none-eabi\\include",
                 // "D:\\NXP\\S32DS.3.4\\S32DS\\build_tools\\gcc_v10.2\\gcc-10.2-arm32-eabi\\lib\\gcc\\arm-none-eabi\\10.2.0\\include"
@@ -37,7 +38,7 @@
                 "USE_FULL_LL_DRIVER"
             ],
             // "compilerPath": "D:\\NXP\\S32DS.3.4\\S32DS\\build_tools\\gcc_v10.2\\gcc-10.2-arm32-eabi\\bin\\arm-none-eabi-gcc.exe",
-            "compilerPath": "D:\\Software\\Work\\gcc-arm-none-eabi-10.3-2021.07\\bin\\arm-none-eabi-gcc.exe",
+            "compilerPath": "D:\\Software\\Work\\GNU Arm Embedded Toolchain\\10 2021.10\\bin\\arm-none-eabi-gcc.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-gcc-arm"

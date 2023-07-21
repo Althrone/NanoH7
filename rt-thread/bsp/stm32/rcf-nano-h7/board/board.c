@@ -80,13 +80,13 @@ void SystemClock_Config(void)
     RCC_PeriphCLKInitStruct.PLL2.PLL2R=4;//200MHz SDMMC
     RCC_PeriphCLKInitStruct.PLL3.PLL3M=1;
     RCC_PeriphCLKInitStruct.PLL3.PLL3N=100;
-    RCC_PeriphCLKInitStruct.PLL3.PLL3P=4;//200MHz SPI
+    RCC_PeriphCLKInitStruct.PLL3.PLL3P=5;//160MHz SPI
     RCC_PeriphCLKInitStruct.PLL3.PLL3Q=16;//50MHz USB
     RCC_PeriphCLKInitStruct.PLL3.PLL3R=8;//100MHz IIC
     RCC_PeriphCLKInitStruct.SdmmcClockSelection=RCC_SDMMCCLKSOURCE_PLL2;//250
     RCC_PeriphCLKInitStruct.Spi123ClockSelection=RCC_SPI123CLKSOURCE_PLL3;//200
-    RCC_PeriphCLKInitStruct.FdcanClockSelection=RCC_FDCANCLKSOURCE_PLL2;//125
-    RCC_PeriphCLKInitStruct.Usart234578ClockSelection=RCC_USART234578CLKSOURCE_PLL2;//125
+    RCC_PeriphCLKInitStruct.FdcanClockSelection=RCC_FDCANCLKSOURCE_PLL2;//最高125
+    RCC_PeriphCLKInitStruct.Usart234578ClockSelection=RCC_USART234578CLKSOURCE_PLL2;//最高125
     RCC_PeriphCLKInitStruct.Usart16ClockSelection=RCC_USART16CLKSOURCE_PLL2;//125
     RCC_PeriphCLKInitStruct.I2c123ClockSelection=RCC_I2C123CLKSOURCE_PLL3;//125
     RCC_PeriphCLKInitStruct.UsbClockSelection=RCC_USBCLKSOURCE_PLL;//66otg 60ULPI  48MHz???
@@ -131,6 +131,22 @@ void rt_hw_console_output(const char *str)
         HAL_UART_Transmit(&UartHandle, (uint8_t *)(str + i), 1, 1);
     }
 }
+
+// #include "SEGGER_RTT.h"
+// void rt_hw_console_output(const char *str)
+// {
+//     rt_size_t i = 0, size = 0;
+
+//     size = rt_strlen(str);
+//     for (i = 0; i < size; i++)
+//     {
+//         if (*(str + i) == '\n')
+//         {
+//            break;
+//         }
+//     }
+//     SEGGER_RTT_printf(0,"%s",str);
+// }
 #endif
 
 #ifdef RT_USING_FINSH
@@ -153,6 +169,20 @@ char rt_hw_console_getchar(void)
     }
     return ch;
 }
+
+// char rt_hw_console_getchar(void)
+// {
+//     int ch = -1;
+//     char tempbuffer[2];
+//     uint8_t NumBytes=0;
+
+//     NumBytes = SEGGER_RTT_Read(0, &tempbuffer[0], 1);
+//     if(NumBytes==1)
+//     {
+//         ch=tempbuffer[0];
+//     }
+//     return ch;
+// }
 #endif
 
 // //其他片上外设初始化，假装使用MX生成的函数，然后给rtt隐式调用

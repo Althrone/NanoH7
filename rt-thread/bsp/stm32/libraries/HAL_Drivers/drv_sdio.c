@@ -499,7 +499,7 @@ int rt_hw_sdio_init(void)
 
     return 0;
 }
-INIT_DEVICE_EXPORT(rt_hw_sdio_init);
+// INIT_DEVICE_EXPORT(rt_hw_sdio_init);
 
 void sdcard_change(void)
 {

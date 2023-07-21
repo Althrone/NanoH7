@@ -3,8 +3,8 @@
 
 #include <rtthread.h>
 #include "sensor.h"
-#include "drv_gpio.h"
-#include "drv_spi.h"
+// #include "drv_gpio.h"
+// #include "drv_spi.h"
 
 typedef enum 
 {
@@ -22,8 +22,8 @@ typedef enum
     CTLR_2_REG      = 0x0B,
     CTLR_3_REG      = 0x0C,
     ID_REG          = 0x2F
-}mmc5893ma_reg_list_t;
+}MMC5893MARegEnum;
 
-rt_err_t mmc5893ma_mag_get_id(struct rt_sensor_device *sensor, void *args);
+rt_err_t mmc5893ma_get_id(struct rt_sensor_device *sensor, void *args);
 
 #endif /* __HMC5883L_H__ */

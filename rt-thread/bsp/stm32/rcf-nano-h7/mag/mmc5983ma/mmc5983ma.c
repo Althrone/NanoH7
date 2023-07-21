@@ -6,7 +6,7 @@
  * @param   sensor:
  * @param   args: id就放在这里
  **/
-rt_err_t mmc5893ma_mag_get_id(struct rt_sensor_device *sensor, void *args)
+rt_err_t mmc5893ma_get_id(struct rt_sensor_device *sensor, void *args)
 {
     rt_err_t result=RT_EOK;
     //查找总线设备

@@ -83,58 +83,56 @@ static struct stm32_spi spi_bus_obj[sizeof(spi_config) / sizeof(spi_config[0])] 
 static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configuration *cfg)
 {
 
-    // ///////////
-    // SPI_HandleTypeDef hspi1={0};
-    // hspi1.Instance = SPI1;
-    // hspi1.Init.Mode = SPI_MODE_MASTER;
-    // hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-    // hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-    // hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
-    // hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
-    // hspi1.Init.NSS = SPI_NSS_SOFT;
-    // hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
-    // hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-    // hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-    // hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    // hspi1.Init.CRCPolynomial = 0x0;
-    // hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-    // hspi1.Init.NSSPolarity = SPI_NSS_POLARITY_LOW;
-    // hspi1.Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
-    // hspi1.Init.TxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
-    // hspi1.Init.RxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
-    // hspi1.Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
-    // hspi1.Init.MasterInterDataIdleness = SPI_MASTER_INTERDATA_IDLENESS_01CYCLE;
-    // hspi1.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_DISABLE;
-    // hspi1.Init.IOSwap = SPI_IO_SWAP_DISABLE;
-    // // HAL_SPI_DeInit(&hspi1);
-    // if (HAL_SPI_Init(&hspi1) != HAL_OK)
-    // {
-    //     Error_Handler();
-    // }
-    // uint8_t BMI_Data[20]={0};
-    // BMI_Data[0]=0x80;
-    // BMI_Data[1]=0x00;
-    // // BMI_Data[2]=0x00;
-    // // BMI_Data[3]=0x00;
-    // // uint8_t BMI_A=0x00;
-    // // uint8_t BMI088_GYR_ID=0x00|0x80;
-    // volatile HAL_StatusTypeDef aaa=HAL_SPI_Transmit(&hspi1,&BMI_Data[2],2,1000);
+    ///////////
+    SPI_HandleTypeDef hspi1={0};
+    hspi1.Instance = SPI1;
+    hspi1.Init.Mode = SPI_MODE_MASTER;
+    hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+    hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+    hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+    hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
+    hspi1.Init.NSS = SPI_NSS_SOFT;
+    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
+    hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+    hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+    hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+    hspi1.Init.CRCPolynomial = 0x0;
+    hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
+    hspi1.Init.NSSPolarity = SPI_NSS_POLARITY_LOW;
+    hspi1.Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
+    hspi1.Init.TxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
+    hspi1.Init.RxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
+    hspi1.Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
+    hspi1.Init.MasterInterDataIdleness = SPI_MASTER_INTERDATA_IDLENESS_00CYCLE;
+    hspi1.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_DISABLE;
+    hspi1.Init.IOSwap = SPI_IO_SWAP_DISABLE;
+    // HAL_SPI_DeInit(&hspi1);
+    if (HAL_SPI_Init(&hspi1) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    uint8_t BMI_Data[20]={0};
+    BMI_Data[0]=0x80;
+    BMI_Data[1]=0x00;
+    // BMI_Data[2]=0x00;
+    // BMI_Data[3]=0x00;
+    // uint8_t BMI_A=0x00;
+    // uint8_t BMI088_GYR_ID=0x00|0x80;
+    volatile HAL_StatusTypeDef aaa=HAL_SPI_Transmit(&hspi1,&BMI_Data[2],2,1000);
     // while(1)
     // {
     //     BMI_Data[0]=0x80;
-    // BMI_Data[1]=0x00;
-    // BMI_Data[2]=0x00;
-    //     while(BMI_Data[5]!=0x1E)
+    //     while(BMI_Data[3]!=0x1E)
     //     {
     //         HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_RESET);//acc
-    //         HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[3],3,1000);
+    //         HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[2],2,1000);
     //         // rt_thread_mdelay(5);
     //         HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);
     //     }
         
 
     //     // HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_RESET);//acc
-    //     // HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[3],3,1000);
+    //     // HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[2],3,1000);
     //     // HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);
 
     //     // while(BMI_Data[4]!=0x1E);
@@ -177,7 +175,7 @@ static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configur
     //     // while(BMI_Data[3]!=0x30);
     // }
     
-    // /////////
+    /////////
 
     RT_ASSERT(spi_drv != RT_NULL);
     RT_ASSERT(cfg != RT_NULL);
@@ -335,33 +333,65 @@ static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configur
 #elif defined(SOC_SERIES_STM32H7) || defined(SOC_SERIES_STM32MP1)
     spi_handle->Init.Mode                       = SPI_MODE_MASTER;
     spi_handle->Init.NSS                        = SPI_NSS_SOFT;
-    spi_handle->Init.NSSPMode                   = SPI_NSS_PULSE_DISABLE;
+    spi_handle->Init.NSSPMode                   = SPI_NSS_PULSE_DISABLE;//和cubemx不一样
     spi_handle->Init.NSSPolarity                = SPI_NSS_POLARITY_LOW;
-    spi_handle->Init.CRCPolynomial              = 0;
+    spi_handle->Init.CRCPolynomial              = 7;//和cubemx不一样
     spi_handle->Init.TxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
     spi_handle->Init.RxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
     spi_handle->Init.MasterSSIdleness           = SPI_MASTER_SS_IDLENESS_00CYCLE;
     spi_handle->Init.MasterInterDataIdleness    = SPI_MASTER_INTERDATA_IDLENESS_00CYCLE;
     spi_handle->Init.MasterReceiverAutoSusp     = SPI_MASTER_RX_AUTOSUSP_DISABLE;
-    spi_handle->Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;
+    spi_handle->Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;//和cubemx不一样
     spi_handle->Init.IOSwap                     = SPI_IO_SWAP_DISABLE;
     spi_handle->Init.FifoThreshold              = SPI_FIFO_THRESHOLD_01DATA;//和cubemx不一样
 #endif
 
+    // SPI_HandleTypeDef hspi;
+    // hspi.Instance=SPI1;
+    // hspi.Init.Mode=SPI_MODE_MASTER;
+    // hspi.Init.Direction=SPI_DIRECTION_2LINES;
+    // hspi.Init.DataSize=SPI_DATASIZE_8BIT;
+    // hspi.Init.CLKPolarity=SPI_POLARITY_HIGH;
+    // hspi.Init.CLKPhase=SPI_PHASE_2EDGE;
+    // hspi.Init.NSS=SPI_NSS_SOFT;
+    // hspi.Init.BaudRatePrescaler=SPI_BAUDRATEPRESCALER_32;
+    // hspi.Init.FirstBit=SPI_FIRSTBIT_MSB;
+    // hspi.Init.TIMode=SPI_TIMODE_DISABLE;
+    // hspi.Init.CRCCalculation=SPI_CRCCALCULATION_DISABLE;
+    // hspi.Init.CRCPolynomial=0;
+    // hspi.Init.NSSPMode=SPI_NSS_PULSE_DISABLE;
+    // hspi.Init.NSSPolarity=SPI_NSS_POLARITY_LOW;
+    // hspi.Init.FifoThreshold=SPI_FIFO_THRESHOLD_01DATA;
+    // hspi.Init.TxCRCInitializationPattern=SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
+    // hspi.Init.RxCRCInitializationPattern=SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
+    // hspi.Init.MasterSSIdleness=SPI_MASTER_SS_IDLENESS_00CYCLE;
+    // hspi.Init.MasterInterDataIdleness=SPI_MASTER_INTERDATA_IDLENESS_00CYCLE;
+    // hspi.Init.MasterReceiverAutoSusp=SPI_MASTER_RX_AUTOSUSP_DISABLE;
+    // hspi.Init.MasterKeepIOState=SPI_MASTER_KEEP_IO_STATE_ENABLE;
+
+    // if(HAL_SPI_Init(&hspi) != HAL_OK)
+    // {
+    //     return RT_EIO;
+    // }
+
+    HAL_SPI_DeInit(spi_handle);
     if (HAL_SPI_Init(spi_handle) != HAL_OK)
     {
         return RT_EIO;
     }
 
-    // rt_uint8_t send_buf[3]={0x80,0x00,0x00};
-    // rt_uint8_t recv_buf[3]={0};
-    // while(recv_buf[2]!=0x1E)
-    // {
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_RESET);//acc
-    //     HAL_SPI_TransmitReceive(spi_handle,&send_buf[0],&recv_buf[0],3,1000);
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);
-    // }
-    
+    //初始化完成，试下读写数据
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+
+    uint8_t txdata[2]={0xAF,0x00};
+    uint8_t rxdata[2]={0};
+    volatile HAL_StatusTypeDef staa=HAL_SPI_TransmitReceive(spi_handle,txdata,rxdata,2,1000);
+    // volatile HAL_StatusTypeDef staa=HAL_SPI_Transmit(spi_handle,txdata,1,1000);
+    // staa=HAL_SPI_Receive(spi_handle,rxdata,1,1000);
+    // volatile HAL_StatusTypeDef staa=HAL_SPI_Transmit(&hspi,txdata,2,1000);
+    // while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
 
 #if defined(SOC_SERIES_STM32L4) || defined(SOC_SERIES_STM32F0) \
         || defined(SOC_SERIES_STM32F7) || defined(SOC_SERIES_STM32G0) || defined(SOC_SERIES_STM32WB)
@@ -418,6 +448,35 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
     SPI_HandleTypeDef *spi_handle = &spi_drv->handle;
     struct stm32_hw_spi_cs *cs = device->parent.user_data;
 
+    // //测试代码
+    // uint8_t sendata=0x80|0x2F;
+    // uint8_t revdata=0xff;
+    // volatile HAL_SPI_StateTypeDef state1=HAL_SPI_GetState(spi_handle);
+    // volatile uint32_t erroroc=HAL_SPI_GetError(spi_handle);
+    // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+    // // HAL_SPI_Transmit(spi_handle,&sendata,1,1000);
+    // // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
+    // // state1=HAL_SPI_GetState(spi_handle);
+    // // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);
+    // volatile HAL_StatusTypeDef sata=HAL_SPI_TransmitReceive(spi_handle, &sendata, &revdata, 1, 10);
+    // while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+    // // volatile HAL_StatusTypeDef sata=HAL_SPI_Receive(spi_handle,&revdata,1,1);
+    // sata=HAL_SPI_TransmitReceive(spi_handle, &sendata, &revdata, 1, 10);
+
+    // while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+    // // volatile HAL_StatusTypeDef sata=HAL_SPI_Receive(spi_handle,&revdata,1,1);
+    // sata=HAL_SPI_TransmitReceive(spi_handle, &sendata, &revdata, 1, 10);
+    // while (HAL_SPI_GetState(spi_handle) != HAL_SPI_STATE_READY);
+    // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
+
+    // state1=HAL_SPI_GetState(spi_handle);
+    // erroroc=HAL_SPI_GetError(spi_handle);
+    // state1++;
+    // erroroc++;
+    // if(state1==erroroc)
+    // {
+    //     state1++;
+    // }
     if (message->cs_take && !(device->config.mode & RT_SPI_NO_CS))
     {
         if (device->config.mode & RT_SPI_CS_HIGH)

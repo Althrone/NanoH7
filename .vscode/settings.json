@@ -51,6 +51,11 @@
         "libc_fcntl.h": "c",
         "libc_errno.h": "c",
         "time.h": "c",
-        "dfs_file.h": "c"
+        "dfs_file.h": "c",
+        "rtdevice.h": "c",
+        "spl06.h": "c",
+        "sensor_intf_bn880.h": "c",
+        "bn880.h": "c",
+        "bmi088.h": "c"
     }
 }

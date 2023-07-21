@@ -360,6 +360,10 @@ static void sensor(int argc, char **argv)
         case RT_SENSOR_VENDOR_MAXIM:
             rt_kprintf("vendor    :Maxim Integrated\n");
             break;
+
+        case RT_SENSOR_VENDOR_MEMSIC:
+            rt_kprintf("vendor    :Memsic\n");
+            break;
         }
         rt_kprintf("model     :%s\n", info.model);
         switch (info.unit)
