@@ -286,9 +286,9 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 
     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_RESET);//acc
 
-    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_SET);//acc
-    HAL_GPIO_WritePin(GPIOD,GPIO_PIN_7,GPIO_PIN_SET);//acc
-    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_7,GPIO_PIN_SET);//acc
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOD,GPIO_PIN_7,GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_7,GPIO_PIN_SET);
 
     GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -302,8 +302,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);//acc
-    
+    HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);//acc用于将bmi088的模式切换为spi
 
     GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -311,13 +310,6 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;//传感器SPI速度多为10M/s，慢速也够了
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-    // GPIO_InitStruct.Pin = GPIO_PIN_4;
-    // GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    // GPIO_InitStruct.Pull = GPIO_NOPULL;
-    // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;//传感器SPI速度多为10M/s，慢速也够了
-    // GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
-    // HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN SPI1_MspInit 1 */
 
@@ -518,7 +510,7 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
  * @param huart: SPI handle pointer
  * @retval None
  */
-void HAL_TIM_MspPostInit(SPI_HandleTypeDef* htim)
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(htim->Instance==TIM1)

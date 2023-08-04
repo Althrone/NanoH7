@@ -122,6 +122,8 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
         return -RT_ERROR;
     }
 
+    bmi088_acce_init();
+
     //读取设备ID，这里开始用到自己写的东西了
     rt_uint8_t id = 0x00;
     if(rt_device_control(sensor_acce, RT_SENSOR_CTRL_GET_ID, &id)==-RT_ENOSYS)

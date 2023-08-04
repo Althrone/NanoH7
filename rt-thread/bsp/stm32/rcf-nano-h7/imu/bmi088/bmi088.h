@@ -60,6 +60,14 @@ typedef enum
     ACC_SOFTRESET   = 0x7E
 }BMI088AccRegEnum;
 
+typedef enum
+{
+    kBmi088AccRange3G,
+    kBmi088AccRange6G,
+    kBmi088AccRange12G,
+    kBmi088AccRange24G,
+}Bmi088AccRangeEnum;
+
 typedef enum 
 {
     GYRO_CHIP_ID        = 0x00,
@@ -83,6 +91,9 @@ typedef enum
 /******************************************************************************
  * pubilc functions
  *****************************************************************************/
+
+rt_err_t bmi088_acce_init(void);
+rt_err_t bmi088_acce_reset(void);
 
 rt_err_t bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args);
 rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args);
