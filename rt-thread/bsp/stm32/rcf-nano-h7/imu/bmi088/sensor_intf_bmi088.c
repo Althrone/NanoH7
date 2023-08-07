@@ -251,6 +251,8 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
         return -RT_ERROR;
     }
 
+    bmi088_gyro_init();
+
     //读取设备ID，这里开始用到自己写的东西了
     rt_uint8_t id = 0x00;
     if(rt_device_control(sensor_gyro, RT_SENSOR_CTRL_GET_ID, &id)==-RT_ENOSYS)
@@ -332,8 +334,10 @@ static rt_err_t bmi088_acce_control(struct rt_sensor_device *sensor, int cmd, vo
     case RT_SENSOR_CTRL_GET_INFO:
         break;
     case RT_SENSOR_CTRL_SET_RANGE:
+        result=bmi088_acce_set_range(sensor,(rt_int32_t)args);
         break;
     case RT_SENSOR_CTRL_SET_ODR:
+        result=bmi088_acce_set_odr(sensor,(rt_uint16_t)args);
         break;
     case RT_SENSOR_CTRL_SET_MODE:
         break;

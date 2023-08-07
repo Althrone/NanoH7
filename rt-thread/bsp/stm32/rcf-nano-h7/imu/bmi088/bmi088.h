@@ -20,6 +20,7 @@ extern "C" {
  *****************************************************************************/
 
 #include <rtthread.h>
+#include <rtdevice.h>
 #include "sensor.h"
 // #include "drv_gpio.h"
 // #include "drv_spi.h"
@@ -51,6 +52,7 @@ typedef enum
     TEMP_LSB        = 0x23,
     ACC_CONF        = 0x40,
     ACC_RANGE       = 0x41,
+    FIFO_CONFIG_1   = 0x49,
     INT1_IO_CTRL    = 0x53,
     INT2_IO_CTRL    = 0x54,
     INT_MAP_DATA    = 0x58,
@@ -96,6 +98,12 @@ rt_err_t bmi088_acce_init(void);
 rt_err_t bmi088_acce_reset(void);
 
 rt_err_t bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args);
+rt_err_t bmi088_acce_set_range(struct rt_sensor_device *sensor, void *args);
+rt_err_t bmi088_acce_set_odr(struct rt_sensor_device *sensor, void *args);
+
+rt_err_t bmi088_gyro_init(void);
+rt_err_t bmi088_gyro_reset(void);
+
 rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args);
 
 #ifdef __cplusplus
