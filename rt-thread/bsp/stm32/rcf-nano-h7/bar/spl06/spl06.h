@@ -74,6 +74,9 @@ typedef enum
  * pubilc functions
  *****************************************************************************/
 
+void spl06_init(void);
+void spl06_reset(void);
+
 rt_err_t spl06_get_id(struct rt_sensor_device *sensor, void *args);
 
 #ifdef __cplusplus

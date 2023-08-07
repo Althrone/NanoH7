@@ -129,6 +129,8 @@ int rt_hw_mmc5983ma_init(const char *name, struct rt_sensor_config *mag_cfg)
     // LOG_I("intf_type :%d", info.intf_type);
     // LOG_I("period_min:%d", info.period_min);
 
+    mmc5893ma_init();
+
     //读取设备ID，这里开始用到自己写的东西了
     rt_uint8_t id = 0x00;
     if(rt_device_control(sensor_mag, RT_SENSOR_CTRL_GET_ID, &id)==-RT_ENOSYS)

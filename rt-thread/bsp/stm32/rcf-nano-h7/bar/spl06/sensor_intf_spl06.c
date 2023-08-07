@@ -132,6 +132,8 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *baro_cfg)
     // LOG_I("intf_type :%d", info.intf_type);
     // LOG_I("period_min:%d", info.period_min);
 
+    spl06_init();
+
     //读取设备ID，这里开始用到自己写的东西了
     rt_uint8_t id = 0x00;
     if(rt_device_control(sensor_baro, RT_SENSOR_CTRL_GET_ID, &id)==-RT_ENOSYS)

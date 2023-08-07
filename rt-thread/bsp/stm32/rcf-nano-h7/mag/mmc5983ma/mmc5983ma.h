@@ -2,6 +2,7 @@
 #define __MMC5983MA_H__
 
 #include <rtthread.h>
+#include <rtdevice.h>
 #include "sensor.h"
 // #include "drv_gpio.h"
 // #include "drv_spi.h"
@@ -23,6 +24,9 @@ typedef enum
     CTLR_3_REG      = 0x0C,
     ID_REG          = 0x2F
 }MMC5893MARegEnum;
+
+void mmc5893ma_init(void);
+void mmc5893ma_reset(void);
 
 rt_err_t mmc5893ma_get_id(struct rt_sensor_device *sensor, void *args);
 

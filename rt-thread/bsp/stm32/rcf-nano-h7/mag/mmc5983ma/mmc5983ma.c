@@ -1,5 +1,34 @@
 #include "mmc5983ma.h"
 
+void mmc5893ma_init(void)
+{
+    rt_err_t result=RT_EOK;
+    //查找总线设备
+    struct rt_spi_device *spi_dev=RT_NULL;
+    spi_dev=(struct rt_spi_device *)rt_device_find("spi12");
+
+    mmc5893ma_reset();
+
+    rt_uint8_t send_buf[]={CTLR_0_REG,0x24};//开启测量完成中断，开启自动sr
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+
+    send_buf[0]=CTLR_2_REG;
+    send_buf[1]=0x88;
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+}
+
+void mmc5893ma_reset(void)
+{
+    rt_err_t result=RT_EOK;
+    //查找总线设备
+    struct rt_spi_device *spi_dev=RT_NULL;
+    spi_dev=(struct rt_spi_device *)rt_device_find("spi12");
+
+    rt_uint8_t send_buf[]={CTLR_1_REG,0x80};
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+
+    rt_thread_mdelay(10);
+}
 
 /**
  * @brief   获取传感器ID
