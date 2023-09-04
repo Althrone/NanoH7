@@ -106,6 +106,9 @@ rt_err_t bmi088_gyro_reset(void);
 
 rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args);
 
+void bmi088_temp_init(void);
+rt_size_t bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len);
+
 #ifdef __cplusplus
 }
 #endif

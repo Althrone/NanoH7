@@ -3,6 +3,8 @@
 #include <rtdevice.h>
 #include <board.h>
 
+#include "sensor.h"
+
 #include "drv_sdio.h"
 
 static rt_thread_t USART_thread =RT_NULL;
@@ -13,6 +15,12 @@ void USART_enter(void *parameter);
 
 int main(void)
 {
+    rt_uint16_t sensor_data;
+    rt_device_t dev = rt_device_find("temp_0");
+    // rt_device_init(dev);
+    rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
+
+    rt_device_read(dev, 0, &sensor_data, 1);
     // HAL_FDCAN_AddMessageToTxBuffer
     // HAL_FDCAN_EnableTxBufferRequest
     // SD_HandleTypeDef hsdio={0};
@@ -85,27 +93,30 @@ void USART_enter(void *parameter)
     msg.data[6] = 0x66;
     msg.data[7] = 0x77;
     /* 发送一帧 CAN 数据 */
-    rt_size_t size=rt_device_write(can_dev, 0, &msg, sizeof(msg));
-    if (size == 0)
+    while(1)
     {
-        rt_kprintf("can dev write data failed!\n");
-    }
-    else
-    {
-        rt_kprintf("can dev write data success!\n");
-    }
-	
-    // while (1)
-    // {
-				rt_thread_mdelay(500);	        
-				// rt_kprintf("thread usart count: %d\r\n",  count_U ++); /* 打印线程计数值输出 */
-				// rt_thread_resume(&led0_thread);		
-				// rt_kprintf("LED_thread 线程被解挂!\r\n");
-				// if(count_U==10)
-				// {
-				// 		rt_thread_detach(&led0_thread);
-				// 		rt_kprintf("LED_thread 线程被删除！\r\n");
-				// }
+        rt_size_t size=rt_device_write(can_dev, 0, &msg, sizeof(msg));
+        if (size == 0)
+        {
+            rt_kprintf("can dev write data failed!\n");
+        }
+        else
+        {
+            rt_kprintf("can dev write data success!\n");
+        }
         
-    // }
+        // while (1)
+        // {
+                rt_thread_mdelay(500);	        
+                // rt_kprintf("thread usart count: %d\r\n",  count_U ++); /* 打印线程计数值输出 */
+                // rt_thread_resume(&led0_thread);		
+                // rt_kprintf("LED_thread 线程被解挂!\r\n");
+                // if(count_U==10)
+                // {
+                // 		rt_thread_detach(&led0_thread);
+                // 		rt_kprintf("LED_thread 线程被删除！\r\n");
+                // }
+            
+        // }
+    }
 }

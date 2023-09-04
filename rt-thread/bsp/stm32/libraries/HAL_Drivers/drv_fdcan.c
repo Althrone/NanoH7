@@ -39,16 +39,16 @@ static _stm32_fdcan_t st_DrvCan2=
 };
 #endif
 
-
+//can时钟100MHz 取采样点在80%
 static const _stm32_fdcan_NTconfig_t st_CanNTconfig[]=
 /*baud brp sjw tseg1 tseg2*/
 {
-	{CAN1MBaud,     10,8,15,4},
-	{CAN800kBaud,   10,8,20,4},
-	{CAN500kBaud,   20,8,15,4},
-	{CAN250kBaud,   20,8,35,4},
-	{CAN125kBaud,   40,8,35,4},
-	{CAN100kBaud,   40,8,44,5},
+	{CAN1MBaud,      5,8,15,4},
+	{CAN800kBaud,    5,8,20,4},
+	{CAN500kBaud,   10,8,15,4},
+	{CAN250kBaud,   10,8,35,4},
+	{CAN125kBaud,   20,8,35,4},
+	{CAN100kBaud,   20,8,44,5},
 	{CAN50kBaud,    80,8,44,5},
 	{CAN20kBaud,    200,8,44,5},
 	{CAN10kBaud,    400,8,44,5}
