@@ -249,6 +249,7 @@
 #define RT_USING_SPI
 #define RT_USING_USB_DEVICE
 #define RT_USING_SDIO
+#define RT_USING_HWTIMER
 #define RT_USING_PWM
 
 #define RT_USING_DFS
@@ -388,13 +389,31 @@
 // #define BSP_SPI1_RX_USING_DMA
 // #define BSP_SPI1_TX_USING_DMA
 #define BSP_USING_FDCAN1
+#define BSP_USING_SDIO
 #define BSP_USING_SDIO1
-// #define BSP_USING_USBD
+#define BSP_USING_USBD
 #define BSP_USING_PWM1
 #define BSP_USING_PWM1_CH1
 #define BSP_USING_PWM1_CH2
 #define BSP_USING_PWM1_CH3
 #define BSP_USING_PWM1_CH4
+#define BSP_USING_TIM
+#define BSP_USING_TIM1
+#define BSP_USING_TIM4
+#define BSP_USING_TIM12
+#define BSP_USING_TIM15
+#define BSP_USING_PWM4
+#define BSP_USING_PWM4_CH1
+#define BSP_USING_PWM4_CH2
+#define BSP_USING_PWM4_CH3
+#define BSP_USING_PWM4_CH4
+#define BSP_USING_PWM12
+#define BSP_USING_PWM12_CH1
+#define BSP_USING_PWM12_CH2
+#define BSP_USING_PWM15
+#define BSP_USING_PWM15_CH1
+#define BSP_USING_PWM15_CH2
+#define BSP_USING_ADC1
 
 /* External Libraries */
 

@@ -21,28 +21,14 @@ int main(void)
     rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
 
     rt_device_read(dev, 0, &sensor_data, 1);
-    // HAL_FDCAN_AddMessageToTxBuffer
-    // HAL_FDCAN_EnableTxBufferRequest
-    // SD_HandleTypeDef hsdio={0};
-    // hsdio.Instance=SDMMC1;
-    // hsdio.Init.ClockEdge=SDMMC_CLOCK_EDGE_RISING;
-    // hsdio.Init.BusWide=SDMMC_BUS_WIDE_4B;
-    // hsdio.Init.ClockPowerSave=SDMMC_CLOCK_POWER_SAVE_DISABLE;
-    // hsdio.Init.HardwareFlowControl=SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
-    // hsdio.Init.ClockDiv=SDMMC_NSpeed_CLK_DIV;
 
-    // HAL_SD_Init(&hsdio);
-    // HAL_SD_CardInfoTypeDef g_sd_card_info_handle;
-    // HAL_SD_GetCardInfo(&hsdio, &g_sd_card_info_handle);
-    // sdcard_change();
-    // double a=2.1f,b;
-    // a=2.3*3.1;
-    // b=a*12;
-    // while(1)
-    // {
-    //     // rt_kprintf("LED_thread 线程被挂起!\r\n");
-    // }
-    // imu_thread_entry(0);
+    struct rt_device_pwm *pwm_dev=(struct rt_device_pwm *)rt_device_find("pwm12");
+    rt_pwm_set(pwm_dev, 1, 500000, 150000);
+    // rt_pwm_set(pwm_dev, 3, 500000, 490000);
+    rt_pwm_set(pwm_dev, 2, 500000, 250000);
+    rt_pwm_enable(pwm_dev, 1);
+    // rt_pwm_enable(pwm_dev, 3);
+    rt_pwm_enable(pwm_dev, 2);
 
     //使能can终端电阻
     rt_pin_mode(GET_PIN(D,5),PIN_MODE_OUTPUT);

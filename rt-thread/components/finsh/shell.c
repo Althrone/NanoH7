@@ -85,7 +85,7 @@ int finsh_set_prompt(const char *prompt)
 }
 #endif /* RT_USING_HEAP */
 
-#define _MSH_PROMPT "msh "
+#define _MSH_PROMPT "NanoH7 "
 
 const char *finsh_get_prompt(void)
 {

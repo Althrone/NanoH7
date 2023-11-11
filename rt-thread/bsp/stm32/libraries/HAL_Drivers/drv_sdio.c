@@ -436,7 +436,7 @@ struct rt_mmcsd_host *sdio_host_create(struct stm32_sdio_des *sdio_des, rt_uint8
     host->private_data = sdio;
 
     /* ready to change */
-    // mmcsd_change(host);
+    mmcsd_change(host);
 
     return host;
 
@@ -466,7 +466,7 @@ void SDMMC2_IRQHandler(void)
     rt_interrupt_leave();
 }
 
-int rt_hw_sdio_init(void)
+int rt_hw_sdio_init(void)//这个初始化只是对引脚进行初始化，还有绑定了cache
 {
 #ifdef BSP_USING_SDIO1
     struct stm32_sdio_des sdio_des1;
@@ -499,7 +499,7 @@ int rt_hw_sdio_init(void)
 
     return 0;
 }
-// INIT_DEVICE_EXPORT(rt_hw_sdio_init);
+INIT_DEVICE_EXPORT(rt_hw_sdio_init);
 
 void sdcard_change(void)
 {

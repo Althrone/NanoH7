@@ -417,8 +417,8 @@ void HAL_SD_MspInit(SD_HandleTypeDef* hsd)
     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
     // /* SDMMC1 interrupt Init */
-    // HAL_NVIC_SetPriority(SDMMC1_IRQn, 0, 0);
-    // HAL_NVIC_EnableIRQ(SDMMC1_IRQn);
+    HAL_NVIC_SetPriority(SDMMC1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(SDMMC1_IRQn);
   /* USER CODE BEGIN SDMMC1_MspInit 1 */
 
   /* USER CODE END SDMMC1_MspInit 1 */
@@ -494,8 +494,8 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     // /* USB_OTG_FS interrupt Init */
-    // HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
-    // HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+    HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
   /* USER CODE BEGIN USB_OTG_FS_MspInit 1 */
 
   /* USER CODE END USB_OTG_FS_MspInit 1 */
@@ -503,11 +503,11 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
 }
 
 /**
- * @brief SPI MSP Initialization
+ * @brief TIM MSP Initialization
  *        This function configures the hardware resources used in this example
  *        - Peripheral's clock enable
  *        - Peripheral's GPIO Configuration
- * @param huart: SPI handle pointer
+ * @param huart: TIM handle pointer
  * @retval None
  */
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
@@ -522,7 +522,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     __HAL_RCC_TIM1_CLK_ENABLE();
 
     __HAL_RCC_GPIOE_CLK_ENABLE();
-    /**SPI1 GPIO Configuration
+    /**TIM1 GPIO Configuration
     PE9      ------> TIM1_CH1
     PE11     ------> TIM1_CH2
     PE13     ------> TIM1_CH3
@@ -531,8 +531,56 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_11|GPIO_PIN_13|GPIO_PIN_14;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;//传感器SPI速度多为10M/s，慢速也够了
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
+    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+    /* rgb led */
+    __HAL_RCC_TIM4_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    /**TIM4 GPIO Configuration
+    PD13     ------> TIM4_CH2
+    PD14     ------> TIM4_CH3
+    PD15     ------> TIM4_CH4
+    */
+
+    /* 加热 */
+    /**TIM4 GPIO Configuration
+    PD12     ------> TIM4_CH1
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    /* pwm12 */
+    __HAL_RCC_TIM12_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    /**TIM12 GPIO Configuration
+    PB14     ------> TIM12_CH1
+    PB15     ------> TIM12_CH2
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_14|GPIO_PIN_15;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF2_TIM12;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    /* pwm15 */
+    __HAL_RCC_TIM15_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    /**TIM15 GPIO Configuration
+    PE5     ------> TIM15_CH1
+    PE6     ------> TIM15_CH2
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_14|GPIO_PIN_15;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF4_TIM15;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /* USER CODE BEGIN TIM1_MspInit 1 */
