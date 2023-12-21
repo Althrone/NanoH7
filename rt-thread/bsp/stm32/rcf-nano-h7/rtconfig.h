@@ -236,6 +236,8 @@
 #define FINSH_ARG_MAX 10
 
 /* Device Drivers */
+#define DFS_USING_POSIX/////////
+#define RT_USING_NEWLIB////
 
 #define RT_USING_DEVICE_IPC
 #define RT_USING_SERIAL
@@ -262,7 +264,7 @@
 /* Using USB */
 
 #define RT_USB_DEVICE_COMPOSITE
-
+#define RT_USB_DEVICE_CDC
 
 /* C/C++ and POSIX layer */
 #define RT_USING_LIBC

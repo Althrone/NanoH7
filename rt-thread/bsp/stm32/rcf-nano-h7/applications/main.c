@@ -15,12 +15,17 @@ void USART_enter(void *parameter);
 
 int main(void)
 {
-    rt_uint16_t sensor_data;
-    rt_device_t dev = rt_device_find("temp_0");
-    // rt_device_init(dev);
-    rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
+    //usb测试
+    rt_device_t dev = RT_NULL;
+    dev = rt_device_find("vcom");
+    if(dev)
+        rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+    // rt_uint16_t sensor_data;
+    // rt_device_t dev = rt_device_find("temp_0");
+    // // rt_device_init(dev);
+    // rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
 
-    rt_device_read(dev, 0, &sensor_data, 1);
+    // rt_device_read(dev, 0, &sensor_data, 1);
 
     struct rt_device_pwm *pwm_dev=(struct rt_device_pwm *)rt_device_find("pwm12");
     rt_pwm_set(pwm_dev, 1, 500000, 150000);

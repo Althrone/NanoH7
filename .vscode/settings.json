@@ -57,6 +57,9 @@
         "sensor_intf_bn880.h": "c",
         "bn880.h": "c",
         "bmi088.h": "c",
-        "hwtimer.h": "c"
+        "hwtimer.h": "c",
+        "fcntl.h": "c",
+        "_default_fcntl.h": "c",
+        "unistd.h": "c"
     }
 }

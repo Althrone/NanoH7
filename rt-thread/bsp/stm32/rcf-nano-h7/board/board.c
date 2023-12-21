@@ -32,6 +32,7 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.OscillatorType=RCC_OSCILLATORTYPE_HSE;
     RCC_OscInitStruct.HSEState=RCC_HSE_ON;
     // RCC_OscInitStruct.HSIState=RCC_HSI_ON;
+    RCC_OscInitStruct.HSI48State=RCC_HSI48_ON;
     RCC_OscInitStruct.PLL.PLLState=RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource=RCC_PLLSOURCE_HSE;
     RCC_OscInitStruct.PLL.PLLM=1;
@@ -72,7 +73,8 @@ void SystemClock_Config(void)
                                                  RCC_PERIPHCLK_SDMMC|
                                                  RCC_PERIPHCLK_USB|
                                                  RCC_PERIPHCLK_ADC|
-                                                 RCC_PERIPHCLK_TIM;
+                                                 RCC_PERIPHCLK_TIM|
+                                                 RCC_PERIPHCLK_USB;
     RCC_PeriphCLKInitStruct.PLL2.PLL2M=1;
     RCC_PeriphCLKInitStruct.PLL2.PLL2N=100;
     RCC_PeriphCLKInitStruct.PLL2.PLL2P=5;//80MHz ADC
@@ -89,7 +91,7 @@ void SystemClock_Config(void)
     RCC_PeriphCLKInitStruct.Usart234578ClockSelection=RCC_USART234578CLKSOURCE_PLL2;//最高125
     RCC_PeriphCLKInitStruct.Usart16ClockSelection=RCC_USART16CLKSOURCE_PLL2;//125
     RCC_PeriphCLKInitStruct.I2c123ClockSelection=RCC_I2C123CLKSOURCE_PLL3;//125
-    RCC_PeriphCLKInitStruct.UsbClockSelection=RCC_USBCLKSOURCE_PLL;//66otg 60ULPI  48MHz???
+    RCC_PeriphCLKInitStruct.UsbClockSelection=RCC_USBCLKSOURCE_HSI48;//66otg 60ULPI  48MHz???
     RCC_PeriphCLKInitStruct.AdcClockSelection=RCC_ADCCLKSOURCE_PLL2;//80
     RCC_PeriphCLKInitStruct.TIMPresSelection=RCC_TIMPRES_ACTIVATED;//
     if (HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphCLKInitStruct) != HAL_OK)
@@ -98,6 +100,7 @@ void SystemClock_Config(void)
     }
 
     //USB电压检测不知道有什么用
+    HAL_PWREx_EnableUSBVoltageDetector();
 }
 
 #ifdef RT_USING_CONSOLE
