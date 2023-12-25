@@ -18,6 +18,9 @@
 #include <dfs_file.h>
 #include <unistd.h>
 #include <fcntl.h>
+//自行增加
+#include <dfs_posix.h>
+#include <libc/libc_dirent.h>
 
 static int msh_readline(int fd, char *line_buf, int size)
 {

@@ -24,6 +24,8 @@
 #include <dfs_file.h>
 #include <unistd.h>
 #include <fcntl.h>
+//自行增加
+#include <dfs_posix.h>
 #endif /* DFS_USING_POSIX */
 #ifdef RT_USING_MODULE
 #include <dlmodule.h>
