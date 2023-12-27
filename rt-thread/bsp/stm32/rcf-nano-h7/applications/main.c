@@ -7,6 +7,8 @@
 
 #include "drv_sdio.h"
 
+#include "dfs_fs.h"
+
 static rt_thread_t USART_thread =RT_NULL;
 void USART_enter(void *parameter);
 
@@ -41,6 +43,9 @@ int main(void)
 
     rt_pin_mode(GET_PIN(D,4),PIN_MODE_OUTPUT);
     rt_pin_write(GET_PIN(D,4),PIN_LOW);//使能终端电阻
+
+    //挂载文件系统
+    dfs_mount("sd0","/","elm",0,0);
 
     USART_thread=rt_thread_create("USART_thread",
                                 USART_enter,
