@@ -639,6 +639,10 @@ void mmcsd_detect(void *param)
                     mmcsd_host_unlock(host);
                     continue;
                 }
+                // else
+                // {
+                //     LOG_I("this cmd error mean not sdio dev");
+                // }
 
                 /*
                  * detect SD card

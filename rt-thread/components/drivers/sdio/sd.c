@@ -583,7 +583,7 @@ static rt_int32_t mmcsd_sd_init_card(struct rt_mmcsd_host *host,
             goto err1;
     }
 
-    err = mmcsd_get_scr(card, card->resp_scr);
+    err = mmcsd_get_scr(card, card->resp_scr);//sd如果两次报错，就是这里出问题
     if (err)
         goto err1;
 
