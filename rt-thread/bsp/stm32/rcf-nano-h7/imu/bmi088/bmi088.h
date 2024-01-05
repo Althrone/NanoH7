@@ -33,6 +33,546 @@ extern "C" {
  * pubilc types
  *****************************************************************************/
 
+typedef enum{
+    BMI08x_ACC_CHIP_ID_ADDR     = 0x00,
+    BMI08x_ACC_ERR_REG_ADDR     = 0x02,
+    BMI08x_ACC_STATUS_ADDR      = 0x03,
+    BMI08x_DATA_0_ADDR          = 0x0A,
+    BMI08x_DATA_1_ADDR          = 0x0B,
+    BMI08x_DATA_2_ADDR          = 0x0C,
+    BMI08x_DATA_3_ADDR          = 0x0D,
+    BMI08x_DATA_4_ADDR          = 0x0E,
+    BMI08x_DATA_5_ADDR          = 0x0F,
+    BMI08x_DATA_6_ADDR          = 0x10,
+    BMI08x_DATA_7_ADDR          = 0x11,
+    BMI08x_ACC_X_LSB_ADDR       = 0x12,
+    BMI08x_ACC_X_MSB_ADDR       = 0x13,
+    BMI08x_ACC_Y_LSB_ADDR       = 0x14,
+    BMI08x_ACC_Y_MSB_ADDR       = 0x15,
+    BMI08x_ACC_Z_LSB_ADDR       = 0x16,
+    BMI08x_ACC_Z_MSB_ADDR       = 0x17,
+    BMI08x_SENSORTIME_0_ADDR    = 0x18,
+    BMI08x_SENSORTIME_1_ADDR    = 0x19,
+    BMI08x_SENSORTIME_2_ADDR    = 0x1A,
+    BMI08x_EVENT_ADDR           = 0x1B,
+    BMI08x_ACC_INT_STAT_0_ADDR  = 0x1C,
+    BMI08x_ACC_INT_STAT_1_ADDR  = 0x1D,
+    BMI08x_GP_0_ADDR            = 0x1E,
+    BMI08x_TEMP_MSB_ADDR        = 0x22,
+    BMI08x_TEMP_LSB_ADDR        = 0x23,
+    BMI08x_FIFO_LENGTH_0_ADDR   = 0x24,
+    BMI08x_FIFO_LENGTH_1_ADDR   = 0x25,
+    BMI08x_FIFO_DATA_ADDR       = 0x26,
+    BMI08x_GP_4_ADDR            = 0x27,
+    BMI08x_ORIENT_HIGH_OUT_ADDR = 0x29,
+    BMI08x_INTERNAL_STATUS_ADDR = 0x2A,
+    BMI08x_ACC_CONF_ADDR        = 0x40,
+    BMI08x_ACC_RANGE_ADDR       = 0x41,
+    BMI08x_AUX_CONF_ADDR        = 0x44,
+    BMI08x_FIFO_DOWNS_ADDR      = 0x45,
+    BMI08x_FIFO_WTM_0_ADDR      = 0x46,
+    BMI08x_FIFO_WTM_1_ADDR      = 0x47,
+    BMI08x_FIFO_CONFIG_0_ADDR   = 0x48,
+    BMI08x_FIFO_CONFIG_1_ADDR   = 0x49,
+    BMI08x_AUX_DEV_ID_ADDR      = 0x4B,
+    BMI08x_AUX_IF_CONF_ADDR     = 0x4C,
+    BMI08x_AUX_RD_ADDR_ADDR     = 0x4D,
+    BMI08x_AUX_WR_ADDR_ADDR     = 0x4E,
+    BMI08x_AUX_WR_DATA_ADDR     = 0x4F,
+    BMI08x_INT1_IO_CTRL_ADDR    = 0x53,
+    BMI08x_INT2_IO_CTRL_ADDR    = 0x54,
+    BMI08x_INT_LATCH_ADDR       = 0x55,
+    BMI08x_INT1_MAP_ADDR        = 0x56,
+    BMI08x_INT2_MAP_ADDR        = 0x57,
+    BMI08x_INT_MAP_DATA_ADDR    = 0x58,
+    BMI08x_INIT_CTRL_ADDR       = 0x59,
+    BMI08x_FEATURES_LSB_ADDR    = 0x5B,
+    BMI08x_FEATURES_MSB_ADDR    = 0x5C,
+    BMI08x_FEATURES_IN_ADDR     = 0x5E,
+    BMI08x_INTERNAL_ERROR_ADDR  = 0x5F,
+    BMI08x_NVM_CONF_ADDR        = 0x6A,
+    BMI08x_IF_CONF_ADDR         = 0x6B,
+    BMI08x_ACC_SELF_TEST_ADDR   = 0x6D,
+    BMI08x_NV_CONF_ADDR         = 0x70,
+    BMI08x_OFFSET_0_ADDR        = 0x71,
+    BMI08x_OFFSET_1_ADDR        = 0x72,
+    BMI08x_OFFSET_2_ADDR        = 0x73,
+    BMI08x_ACC_PWR_CONF_ADDR    = 0x7C,
+    BMI08x_ACC_PWR_CTRL_ADDR    = 0x7D,
+    BMI08x_ACC_SOFTRESET_ADDR   = 0x7E
+}Bmi08xAccRegAddrEnum;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t         :2;
+        volatile rt_uint8_t acc_en  :1;
+        volatile rt_uint8_t         :5;
+    }B;
+}Bmi08xAccPwrCtrlRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t pwr_save_mode   :1;
+        volatile rt_uint8_t                 :7;
+    }B;
+}Bmi08xAccPwrConfRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t spi_en      :1;
+        volatile rt_uint8_t i2c_wdt_sel :1;
+        volatile rt_uint8_t i2c_wdt_en  :1;
+        volatile rt_uint8_t acc_off_en  :1;
+        volatile rt_uint8_t             :4;
+    }B;
+}Bmi08xNvConfRegUnion;//操作这个寄存器貌似不需要nvm_prog_en
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t acc_self_test_en    :1;
+        volatile rt_uint8_t                     :1;
+        volatile rt_uint8_t acc_self_test_sign  :1;
+        volatile rt_uint8_t acc_self_test_amp   :1;
+        volatile rt_uint8_t                     :4;
+    }B;
+}Bmi08xAccSelfTestRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t spi3    :1;
+        volatile rt_uint8_t         :3;
+        volatile rt_uint8_t if_mode :1;//居然tm可以开磁力计
+        volatile rt_uint8_t         :3;
+    }B;
+}Bmi08xIfConfRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t nvm_prog_en :1;
+        volatile rt_uint8_t             :6;
+    }B;
+}Bmi08xNvmConfRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t int_err_1   :1;
+        volatile rt_uint8_t int_err_2   :1;
+        volatile rt_uint8_t             :5;
+    }B;
+}Bmi08xInternalErrorRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t int1_ffull  :1;
+        volatile rt_uint8_t int1_fwm    :1;
+        volatile rt_uint8_t int1_drdy   :1;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t int2_ffull  :1;
+        volatile rt_uint8_t int2_fwm    :1;
+        volatile rt_uint8_t int2_drdy   :1;
+        volatile rt_uint8_t             :1;
+    }B;
+}Bmi08xIntMapDataRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t Data_sync_out   :1;
+        volatile rt_uint8_t any_motion_out  :1;
+        volatile rt_uint8_t high_g_out      :1;
+        volatile rt_uint8_t low_g_out       :1;
+        volatile rt_uint8_t orientation_out :1;
+        volatile rt_uint8_t no_motion_out   :1;
+        volatile rt_uint8_t                 :1;
+        volatile rt_uint8_t error_int_out   :1;
+    }B;
+}Bmi08xInt2MapRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t Data_sync_out   :1;
+        volatile rt_uint8_t any_motion_out  :1;
+        volatile rt_uint8_t high_g_out      :1;
+        volatile rt_uint8_t low_g_out       :1;
+        volatile rt_uint8_t orientation_out :1;
+        volatile rt_uint8_t no_motion_out   :1;
+        volatile rt_uint8_t                 :1;
+        volatile rt_uint8_t error_int_out   :1;
+    }B;
+}Bmi08xInt1MapRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t int_latch   :1;
+        volatile rt_uint8_t             :1;
+    }B;
+}Bmi08xIntLatchRegUnion;//锁存，不知道有啥用
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t edge_ctrl   :1;
+        volatile rt_uint8_t lvl         :1;
+        volatile rt_uint8_t od          :1;
+        volatile rt_uint8_t output_en   :1;
+        volatile rt_uint8_t input_en    :1;
+        volatile rt_uint8_t             :3;
+    }B;
+}Bmi08xInt2IoCtrlRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t edge_ctrl   :1;
+        volatile rt_uint8_t lvl         :1;
+        volatile rt_uint8_t od          :1;
+        volatile rt_uint8_t output_en   :1;
+        volatile rt_uint8_t input_en    :1;
+        volatile rt_uint8_t             :3;
+    }B;
+}Bmi08xInt1IoCtrlRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t aux_rd_burst    :2;
+        volatile rt_uint8_t                 :5;
+        volatile rt_uint8_t aux_manual_en   :1;
+    }B;
+}Bmi08xAuxIfConfRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t                 :1;
+        volatile rt_uint8_t i2c_device_addr :7;
+    }B;
+}Bmi08xAuxDevIdRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t                 :2;
+        volatile rt_uint8_t fifo_tag_int2_en:1;
+        volatile rt_uint8_t fifo_tag_int1_en:1;
+        volatile rt_uint8_t fifo_header_en  :1;
+        volatile rt_uint8_t fifo_aux_en     :1;
+        volatile rt_uint8_t fifo_acc_en     :1;
+        volatile rt_uint8_t                 :1;
+    }B;
+}Bmi08xFifoConfig1RegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t fifo_stop_on_full   :1;
+        volatile rt_uint8_t fifo_time_en        :1;
+        volatile rt_uint8_t                     :6;
+    }B;
+}Bmi08xFifoConfig0RegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t                     :4;
+        volatile rt_uint8_t acc_fifo_downs      :3;
+        volatile rt_uint8_t acc_fifo_filt_data  :1;
+    }B;
+}Bmi08xFifoDownsRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t aux_odr     :4;
+        volatile rt_uint8_t aux_offset  :4;
+    }B;
+}Bmi08xAuxConfRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t aux_range   :2;
+        volatile rt_uint8_t             :6;
+    }B;
+}Bmi08xAccRangeRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t acc_odr         :4;
+        volatile rt_uint8_t acc_bwp         :3;
+        volatile rt_uint8_t acc_pref_mode   :1;
+    }B;
+}Bmi08xAccConfRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t message         :5;
+        volatile rt_uint8_t axes_remap_error:1;
+        volatile rt_uint8_t                 :2;
+    }B;
+}Bmi08xInternalStatusRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t orientation_portrait_landspace  :2;
+        volatile rt_uint8_t orientation_faceup_down         :1;
+        volatile rt_uint8_t high_g_detect_x                 :1;
+        volatile rt_uint8_t high_g_detect_y                 :1;
+        volatile rt_uint8_t high_g_detect_z                 :1;
+        volatile rt_uint8_t high_g_detect_sign              :1;
+    }B;
+}Bmi08xOrientHighgOutRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t ffull_int   :1;
+        volatile rt_uint8_t fwm_int     :1;
+        volatile rt_uint8_t             :5;
+        volatile rt_uint8_t acc_drdy_int:1;
+    }B;
+}Bmi08xAccIntStat1RegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t Data_sync_out   :1;
+        volatile rt_uint8_t any_motion_out  :1;
+        volatile rt_uint8_t high_g_out      :1;
+        volatile rt_uint8_t low_g_out       :1;
+        volatile rt_uint8_t orientation_out :1;
+        volatile rt_uint8_t no_motion_out   :1;
+        volatile rt_uint8_t                 :1;
+        volatile rt_uint8_t error_int_out   :1;
+    }B;
+}Bmi08xAccIntStat0RegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t por_detected:1;
+        volatile rt_uint8_t             :1;
+    }B;
+}Bmi08xEventRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t             :2;
+        volatile rt_uint8_t aux_map_op  :1;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t cmd_rdy     :1;
+        volatile rt_uint8_t drdy_aux    :1;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t drdy_acc    :1;
+    }B;
+}Bmi08xAccStatusRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t fatal_err   :2;
+        volatile rt_uint8_t cmd_err     :1;
+        volatile rt_uint8_t error_code  :1;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t fifo_err    :1;
+        volatile rt_uint8_t aux_err     :1;
+    }B;
+}Bmi08xAccErrRegRegUnion;
+
+typedef enum{
+    BMI08x_GYRO_CHIP_ID_ADDR        = 0x00,
+    BMI08x_RATE_X_LSB_ADDR          = 0x02,
+    BMI08x_RATE_X_MSB_ADDR          = 0x03,
+    BMI08x_RATE_Y_LSB_ADDR          = 0x04,
+    BMI08x_RATE_Y_MSB_ADDR          = 0x05,
+    BMI08x_RATE_Z_LSB_ADDR          = 0x06,
+    BMI08x_RATE_Z_MSB_ADDR          = 0x07,
+    BMI08x_GYRO_INT_STAT_1_ADDR     = 0x0A,
+    BMI08x_FIFO_STATUS_ADDR         = 0x0E,
+    BMI08x_GYRO_RANGE_ADDR          = 0x0F,
+    BMI08x_GYRO_BANDWIDTH_ADDR      = 0x10,
+    BMI08x_GYRO_LPM1_ADDR           = 0x11,
+    BMI08x_GYRO_SOFTRESET_ADDR      = 0x14,
+    BMI08x_GYRO_INT_CTRL_ADDR       = 0x15,
+    BMI08x_INT3_INT4_IO_CONF_ADDR   = 0x16,
+    BMI08x_INT3_INT4_IO_MAP_ADDR    = 0x18,
+    BMI08x_FIFO_WM_EN_ADDR          = 0x1E,
+    BMI08x_FIFO_EXT_INT_S           = 0x34,
+    BMI08x_GYRO_SELF_TEST_ADDR      = 0x3C,
+    BMI08x_GYRO_FIFO_CONFIG_0_ADDR  = 0x3D,
+    BMI08x_GYRO_FIFO_CONFIG_1_ADDR  = 0x3E,
+    BMI08x_GYRO_FIFO_DATA_ADDR      = 0x3F
+}Bmi08xGyroRegAddrEnum;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t fifo_water_mark_level_trigger_retain:7;
+        volatile rt_uint8_t                                     :1;
+    }B;
+}Bmi08xGyrFifoConfig0RegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t trig_bist   :1;
+        volatile rt_uint8_t bist_rdy    :1;
+        volatile rt_uint8_t bist_fail   :1;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t rate_ok     :1;
+        volatile rt_uint8_t             :3;
+    }B;
+}Bmi08xGyroSelfTestRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t                 :4;
+        volatile rt_uint8_t ext_fifo_s_sel  :1;
+        volatile rt_uint8_t ext_fifo_s_en   :1;
+        volatile rt_uint8_t                 :2;
+    }B;
+}Bmi08xFifoExtIntSRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t Int3_data   :1;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t Int3_fifo   :1;
+        volatile rt_uint8_t             :2;
+        volatile rt_uint8_t Int4_fifo   :1;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t Int4_data   :1;
+    }B;
+}Bmi08xInt3Int4IoMapRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t Int3_lvl:1;
+        volatile rt_uint8_t Int3_od :1;
+        volatile rt_uint8_t Int4_lvl:1;
+        volatile rt_uint8_t Int4_od :1;
+        volatile rt_uint8_t         :4;
+    }B;
+}Bmi08xInt3Int4IoConfRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t         :1;
+        volatile rt_uint8_t fifo_en :1;
+        volatile rt_uint8_t data_en :4;
+    }B;
+}Bmi08xGyroIntCtrlRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t fifo_frame_counter  :7;
+        volatile rt_uint8_t fifo_overrun        :1;
+    }B;
+}Bmi08xFifoStatusRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t             :4;
+        volatile rt_uint8_t fifo_int    :1;
+        volatile rt_uint8_t data_en     :2;
+        volatile rt_uint8_t gyro_drdy   :1;
+    }B;
+}Bmi08xGyroIntStat1RegUnion;
+
 typedef enum 
 {
     ACC_CHIP_ID     = 0x00,
@@ -108,6 +648,8 @@ rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args);
 
 void bmi088_temp_init(void);
 rt_size_t bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len);
+
+rt_err_t bmi08x_load_config_file(struct rt_spi_device *device,const rt_uint8_t* file_ptr,rt_size_t file_size);
 
 #ifdef __cplusplus
 }
