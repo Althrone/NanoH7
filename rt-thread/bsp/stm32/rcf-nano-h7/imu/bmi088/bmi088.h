@@ -29,6 +29,14 @@ extern "C" {
  * macros
  *****************************************************************************/
 
+#define BMI08x_SOFTRESET_CMD    0xB6
+
+#define BMI08x_ACC_PWR_CTRL_ACC_EN_ACC_OFF  0x00
+#define BMI08x_ACC_PWR_CTRL_ACC_EN_ACC_ON   0x01
+
+#define BMI08x_ACC_PWR_CONF_PWR_SAVE_MODE_APS_OFF   0x00
+#define BMI08x_ACC_PWR_CONF_PWR_SAVE_MODE_APS_ON    0x01
+
 /******************************************************************************
  * pubilc types
  *****************************************************************************/
@@ -650,6 +658,7 @@ void bmi088_temp_init(void);
 rt_size_t bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len);
 
 rt_err_t bmi08x_load_config_file(struct rt_spi_device *device,const rt_uint8_t* file_ptr,rt_size_t file_size);
+rt_err_t bmi08x_read_imu_sync_data(void);
 
 #ifdef __cplusplus
 }
