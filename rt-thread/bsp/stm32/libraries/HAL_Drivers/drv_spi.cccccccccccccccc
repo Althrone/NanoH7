@@ -379,6 +379,7 @@ static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configur
     {
         return RT_EIO;
     }
+    hspi1=spi_handle;
 
     //初始化完成，试下读写数据
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);

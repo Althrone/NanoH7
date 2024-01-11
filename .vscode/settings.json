@@ -60,6 +60,7 @@
         "hwtimer.h": "c",
         "fcntl.h": "c",
         "_default_fcntl.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "bmi088_stm32.h": "c"
     }
 }

@@ -77,6 +77,7 @@ static struct stm32_spi_config spi_config[] =
     SPI6_BUS_CONFIG,
 #endif
 };
+extern SPI_HandleTypeDef* hspi1;
 
 static struct stm32_spi spi_bus_obj[sizeof(spi_config) / sizeof(spi_config[0])] = {0};
 
@@ -352,6 +353,7 @@ static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configur
     {
         return RT_EIO;
     }
+    hspi1=spi_handle;
 
     // rt_uint8_t send_buf[3]={0x80,0x00,0x00};
     // rt_uint8_t recv_buf[3]={0};
