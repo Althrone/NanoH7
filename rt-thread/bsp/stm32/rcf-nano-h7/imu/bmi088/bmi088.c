@@ -270,16 +270,16 @@ int8_t bmi088_set_data_sync_int_config(const struct bmi08x_int_cfg *int_config,
 	if (rslt != BMI08X_OK)
 		return rslt;
 
-	rslt = bmi08a_set_int_config(&int_config->accel_int_config_2, dev);
-	if (rslt != BMI08X_OK)
-		return rslt;
+	// rslt = bmi08a_set_int_config(&int_config->accel_int_config_2, dev);
+	// if (rslt != BMI08X_OK)
+	// 	return rslt;
 
 	/*configure gyro data ready interrupt configuration*/
 	rslt = bmi08g_set_int_config(&int_config->gyro_int_config_1, dev);
 	if (rslt != BMI08X_OK)
 		return rslt;
 
-	rslt = bmi08g_set_int_config(&int_config->gyro_int_config_2, dev);
+	// rslt = bmi08g_set_int_config(&int_config->gyro_int_config_2, dev);
 
 	return rslt;
 }
@@ -1582,6 +1582,12 @@ volatile rt_int16_t g_bmi08x_sync_acc_z=0;
 volatile rt_int16_t g_bmi08x_sync_gyro_x=0;
 volatile rt_int16_t g_bmi08x_sync_gyro_y=0;
 volatile rt_int16_t g_bmi08x_sync_gyro_z=0;
+
+volatile rt_int16_t g_bmi08x_aux_mag_r=0;
+volatile rt_int16_t g_bmi08x_aux_mag_x=0;
+volatile rt_int16_t g_bmi08x_aux_mag_y=0;
+volatile rt_int16_t g_bmi08x_aux_mag_z=0;
+
 /******************************************************************************
  * private functions declaration
  *****************************************************************************/
@@ -1628,11 +1634,11 @@ rt_err_t bmi088_acce_init(void)
     rt_thread_mdelay(5);//pwr相关寄存器切换等待5ms
 
     //加载配置文件，好像要放在ACC_PWR_CONF之后
-    bmi08x_load_config_file(bmi08x_config_file,sizeof(bmi088_mm_config_file));
+    bmi08x_load_config_file(bmi088_mm_config_file,sizeof(bmi088_mm_config_file));
 
     //配置采样率之类的
     raw_data=0xAB;//800
-    if(bmi08x_write_reg(spi_dev,BMI08x_ACC_PWR_CTRL_ADDR,&raw_data,1)!=RT_EOK)
+    if(bmi08x_write_reg(spi_dev,BMI08x_ACC_CONF_ADDR,&raw_data,1)!=RT_EOK)
         goto _exit;
     raw_data=0;
 
@@ -1654,14 +1660,47 @@ rt_err_t bmi088_acce_init(void)
     ((Bmi08xInt1IoCtrlRegUnion*)&raw_data)->B.input_en=1;//推挽
     if(bmi08x_write_reg(spi_dev,BMI08x_INT1_IO_CTRL_ADDR,&raw_data,1)!=RT_EOK)
         goto _exit;
+    raw_data=0;
+
+    //int2
+    ((Bmi08xInt2IoCtrlRegUnion*)&raw_data)->B.lvl=1;
+    ((Bmi08xInt2IoCtrlRegUnion*)&raw_data)->B.output_en=1;
+    if(bmi08x_write_reg(spi_dev,BMI08x_INT2_IO_CTRL_ADDR,&raw_data,1)!=RT_EOK)
+        goto _exit;
+    raw_data=0;
+
+    ((Bmi08xInt2MapRegUnion*)&raw_data)->B.Data_sync_out=1;
+    if(bmi08x_write_reg(spi_dev,BMI08x_INT2_MAP_ADDR,&raw_data,1)!=RT_EOK)
+        goto _exit;
+    raw_data=0;
 
     //使能gyro中断
     spi_dev=(struct rt_spi_device *)rt_device_find("spi11");
+    
+    //gyro io配置
+    (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int3_lvl=1;//高电平有效
+    (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int3_od=0;//int3推挽
+    (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int4_lvl=1;
+    (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int4_od=0;
+    result=bmi08x_write_reg(spi_dev,BMI08x_INT3_INT4_IO_CONF_ADDR,&raw_data,1);
+    if(result!=RT_EOK)
+        goto _exit;
+    raw_data=0;
+
+    //路由到int3
+    (*(Bmi08xInt3Int4IoMapRegUnion*)(&raw_data)).B.Int3_data=1;
+    result=bmi08x_write_reg(spi_dev,BMI08x_INT3_INT4_IO_MAP_ADDR,&raw_data,1);
+    if(result!=RT_EOK)
+        goto _exit;
+
     raw_data=0x80;
     if(bmi08x_write_reg(spi_dev,BMI08x_GYRO_INT_CTRL_ADDR,&raw_data,1)!=RT_EOK)
         goto _exit;
 
-    bmi08x_get_sync_data();
+    while(1)
+    {
+        bmi08x_get_sync_data();
+    }
 
 _exit:
     return result;
@@ -1697,11 +1736,6 @@ _exit:
     return result;
 }
 
-/**
- * @brief   获取传感器ID
- * @param   sensor:
- * @param   args: id就放在这里
- **/
 rt_err_t bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args)
 {
     rt_err_t result=RT_EOK;
@@ -1823,13 +1857,18 @@ rt_err_t bmi088_acce_set_odr(struct rt_sensor_device *sensor, void *args)
 
 rt_err_t bmi088_gyro_init(void)
 {
-#if 1
-    bmi088_init(&dev);
-
     rt_err_t result=RT_EOK;
     //查找总线设备
     struct rt_spi_device *spi_dev=RT_NULL;
     spi_dev=(struct rt_spi_device *)rt_device_find("spi11");
+
+#if 0
+    bmi088_init(&dev);
+
+    // rt_err_t result=RT_EOK;
+    // //查找总线设备
+    // struct rt_spi_device *spi_dev=RT_NULL;
+    // spi_dev=(struct rt_spi_device *)rt_device_find("spi11");
 
     bmi08x_gyro_reset();
 
@@ -1850,13 +1889,12 @@ rt_err_t bmi088_gyro_init(void)
   rslt = bmi088_apply_config_file(&dev);
 
   /*assign accel range setting*/
-  dev.accel_cfg.range = BMI088_ACCEL_RANGE_3G;
+  dev.accel_cfg.range = BMI088_ACCEL_RANGE_6G;
   /*assign gyro range setting*/
   dev.gyro_cfg.range = BMI08X_GYRO_RANGE_2000_DPS;
   /*! Mode (0 = off, 1 = 400Hz, 2 = 1kHz, 3 = 2kHz) */
   sync_cfg.mode = BMI08X_ACCEL_DATA_SYNC_MODE_2000HZ;
   rslt = bmi088_configure_data_synchronization(sync_cfg, &dev);
-
 
   /*set accel interrupt pin configuration*/
   /*configure host data ready interrupt */
@@ -1897,40 +1935,42 @@ rt_err_t bmi088_gyro_init(void)
     bmi08x_read_reg(spi_dev,BMI08x_AUX_DEV_ID_ADDR,&rawd,1);
 
   init_flag=1;
+    bmi08x_get_sync_data();
 
-   bmi088_get_synchronized_data(&user_accel_bmi088,&user_gyro_bmi088, &dev);
+    while(1);
+//    bmi088_get_synchronized_data(&user_accel_bmi088,&user_gyro_bmi088, &dev);
 #endif
-
-    // rt_err_t result=RT_EOK;
-    //查找总线设备
-    // struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi11");
 
     rt_uint8_t raw_data=0;
 
     //复位
-    bmi08x_gyro_reset();
+    result=bmi08x_gyro_reset();
+    if(result!=RT_EOK)
+        goto _exit;
 
     //配置odr
-    raw_data=0x02;//1000Hz
-    if(bmi08x_write_reg(spi_dev,BMI08x_GYRO_BANDWIDTH_ADDR,&raw_data,1)!=RT_EOK)
+    raw_data=0x82;//1000Hz 最高位永远是1
+    result=bmi08x_write_reg(spi_dev,BMI08x_GYRO_BANDWIDTH_ADDR,&raw_data,1);
+    if(result!=RT_EOK)
         goto _exit;
     raw_data=0;
 
-    //gyro io配置
-    (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int3_lvl=1;//高电平有效
-    (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int3_od=0;//int3推挽
-    (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int4_lvl=1;
-    (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int4_od=1;
-    if(bmi08x_write_reg(spi_dev,BMI08x_INT3_INT4_IO_CONF_ADDR,&raw_data,1)!=RT_EOK)
-        goto _exit;
-    raw_data=0;
+    // //gyro io配置
+    // (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int3_lvl=1;//高电平有效
+    // (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int3_od=0;//int3推挽
+    // (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int4_lvl=1;
+    // (*(Bmi08xInt3Int4IoConfRegUnion*)(&raw_data)).B.Int4_od=1;
+    // result=bmi08x_write_reg(spi_dev,BMI08x_INT3_INT4_IO_CONF_ADDR,&raw_data,1);
+    // if(result!=RT_EOK)
+    //     goto _exit;
+    // raw_data=0;
 
-    //路由到int3
-    raw_data=1;
-    if(bmi08x_write_reg(spi_dev,BMI08x_INT3_INT4_IO_MAP_ADDR,&raw_data,1)!=RT_EOK)
-        goto _exit;
-
+    // //路由到int3
+    // (*(Bmi08xInt3Int4IoMapRegUnion*)(&raw_data)).B.Int3_data=1;
+    // result=bmi08x_write_reg(spi_dev,BMI08x_INT3_INT4_IO_MAP_ADDR,&raw_data,1);
+    // if(result!=RT_EOK)
+    //     goto _exit;
+    
 _exit:
     return result;
 }
@@ -1943,18 +1983,16 @@ rt_err_t bmi08x_gyro_reset(void)
     spi_dev=(struct rt_spi_device *)rt_device_find("spi11");
 
     rt_uint8_t reset_cmd=BMI08x_SOFTRESET_CMD;
-    bmi08x_write_reg(spi_dev,BMI08x_GYRO_SOFTRESET_ADDR,reset_cmd,1);
+    result=bmi08x_write_reg(spi_dev,BMI08x_GYRO_SOFTRESET_ADDR,&reset_cmd,1);
+    if(result!=RT_EOK)
+        goto _exit;
 
     rt_thread_mdelay(30);
 
+_exit:
     return result;
 }
 
-/**
- * @brief   获取传感器ID
- * @param   sensor:
- * @param   args: id就放在这里
- **/
 rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args)
 {
     rt_err_t result=RT_EOK;
@@ -2136,23 +2174,31 @@ rt_err_t bmi08x_get_sync_data(void)
     //读取xy轴同步数据
     if(bmi08x_read_reg(spi_dev,BMI08x_GP_0_ADDR,recv_buf,4)!=RT_EOK)
         goto _exit;
-    g_bmi08x_sync_acc_x=((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8);
-    g_bmi08x_sync_acc_y=((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8);
+    g_bmi08x_sync_acc_x=(rt_int16_t)(((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8));
+    g_bmi08x_sync_acc_y=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8));
 
     //读取z轴同步数据
     if(bmi08x_read_reg(spi_dev,BMI08x_GP_4_ADDR,recv_buf,2)!=RT_EOK)
         goto _exit;
-    g_bmi08x_sync_acc_z=((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8);
+    g_bmi08x_sync_acc_z=(rt_int16_t)(((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8));
 
     //读取陀螺仪数据
-
     spi_dev=(struct rt_spi_device *)rt_device_find("spi11");
 
-    if(bmi08x_read_reg(spi_dev,BMI08x_RATE_X_LSB_ADDR,recv_buf,6)!=RT_EOK)
-        goto _exit;
-    g_bmi08x_sync_gyro_x=((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8);
-    g_bmi08x_sync_gyro_y=((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8);
-    g_bmi08x_sync_gyro_z=((rt_uint16_t)recv_buf[4])|((rt_uint16_t)recv_buf[5]<<8);
+    rt_uint8_t reg_addr=0x80|BMI08x_RATE_X_LSB_ADDR;
+    rt_spi_send_then_recv(spi_dev,&reg_addr,1,recv_buf,6);
+
+    // if(bmi08x_read_reg(spi_dev,BMI08x_RATE_X_LSB_ADDR,recv_buf,6)!=RT_EOK)
+    //     goto _exit;
+    g_bmi08x_sync_gyro_x=(rt_int16_t)(((rt_uint16_t)recv_buf[0])|(((rt_uint16_t)recv_buf[1])<<8));
+    g_bmi08x_sync_gyro_y=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|(((rt_uint16_t)recv_buf[3])<<8));
+    g_bmi08x_sync_gyro_z=(rt_int16_t)(((rt_uint16_t)recv_buf[4])|(((rt_uint16_t)recv_buf[5])<<8));
+
+    // if(bmi08x_read_reg(spi_dev,BMI08x_RATE_X_LSB_ADDR,recv_buf,6)!=RT_EOK)
+    //     goto _exit;
+    // g_bmi08x_sync_gyro_x=(rt_int16_t)(((rt_uint16_t)recv_buf[0])|(((rt_uint16_t)recv_buf[1])<<8));
+    // g_bmi08x_sync_gyro_y=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|(((rt_uint16_t)recv_buf[3])<<8));
+    // g_bmi08x_sync_gyro_z=(rt_int16_t)(((rt_uint16_t)recv_buf[4])|(((rt_uint16_t)recv_buf[5])<<8));
 
 _exit:
     return result;
