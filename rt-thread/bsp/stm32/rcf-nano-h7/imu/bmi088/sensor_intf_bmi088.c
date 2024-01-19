@@ -80,19 +80,23 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
     }
     LOG_I("sensor register success");//注册成功
 
+    char spi_bus_name[5]={0};
+    rt_strncpy(spi_bus_name,sensor_acce->config.intf.dev_name,4);
+
     //查找通讯总线
-    if(rt_device_find("spi1")==RT_NULL)
+    if(rt_device_find(spi_bus_name)==RT_NULL)
     {
-        LOG_E("Can't find %s bus device",acce_cfg->intf.dev_name);
+        LOG_E("Can't find %s bus device",spi_bus_name);
         rt_free(sensor_acce);
         return -RT_ERROR;
     }//建议放在_init中
 
     //挂载到SPI总线
-    if(rt_device_find("spi10")==RT_NULL)
+    if(rt_device_find(sensor_acce->config.intf.dev_name)==RT_NULL)
     {
-        result = rt_hw_spi_device_attach("spi1","spi10",
-                                     GPIOD, GPIO_PIN_6);
+        result = rt_hw_spi_device_attach(spi_bus_name,
+                                         sensor_acce->config.intf.dev_name,
+                                         GPIOD, GPIO_PIN_6);
         if (result != RT_EOK)
         {
             LOG_E("attach fail");
@@ -103,7 +107,7 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
     
     //配置SPI设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi10");
+    spi_dev=(struct rt_spi_device *)rt_device_find(sensor_acce->config.intf.dev_name);
     if (spi_dev == RT_NULL)
     {
         LOG_E("spi device not find");
@@ -116,8 +120,6 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
     spi_cfg.max_hz=5*1000*1000;
-    // spi_cfg.max_hz=10*1000*1000;
-    // spi_cfg.max_hz=5*500*1000;
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
 
@@ -129,7 +131,7 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
         return -RT_ERROR;
     }
 
-    bmi088_acce_init();
+    bmi088_acce_init(sensor_acce);
 
     //读取设备ID，这里开始用到自己写的东西了
     rt_uint8_t id = 0x00;
@@ -212,16 +214,20 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
     }
     LOG_I("sensor register success");//注册成功
 
+    char spi_bus_name[5]={0};
+    rt_strncpy(spi_bus_name,sensor_gyro->config.intf.dev_name,4);
+
     //查找通讯总线
-    if(rt_device_find("spi1")==RT_NULL)
+    if(rt_device_find(spi_bus_name)==RT_NULL)
     {
-        LOG_E("Can't find %s bus device",gyro_cfg->intf.dev_name);
+        LOG_E("Can't find %s bus device",spi_bus_name);
         rt_free(sensor_gyro);
         return -RT_ERROR;
     }//建议放在_init中
 
     //挂载到SPI总线
-    result = rt_hw_spi_device_attach("spi1","spi11",
+    result = rt_hw_spi_device_attach(spi_bus_name,
+                                     sensor_gyro->config.intf.dev_name,
                                      GPIOB, GPIO_PIN_6);
     if (result != RT_EOK)
     {
@@ -232,7 +238,7 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
     
     //配置SPI设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi11");
+    spi_dev=(struct rt_spi_device *)rt_device_find(sensor_gyro->config.intf.dev_name);
     if (spi_dev == RT_NULL)
     {
         LOG_E("spi device not find");
@@ -244,9 +250,7 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
 
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    // spi_cfg.max_hz=10*1000*1000;
     spi_cfg.max_hz=5*1000*1000;
-    // spi_cfg.max_hz=5*500*1000;
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
 
@@ -258,7 +262,7 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
         return -RT_ERROR;
     }
 
-    bmi088_gyro_init();
+    bmi088_gyro_init(sensor_gyro);
 
     //读取设备ID，这里开始用到自己写的东西了
     rt_uint8_t id = 0x00;
@@ -405,32 +409,32 @@ int rt_hw_bmi088_temp_init(const char *name, struct rt_sensor_config *temp_cfg)
     return RT_EOK;
 }
 
-int rt_hw_bmi088_temp_port(void)
-{
-    struct rt_sensor_config cfg;
+// int rt_hw_bmi088_temp_port(void)
+// {
+//     struct rt_sensor_config cfg;
 
-    cfg.intf.dev_name="spi10";//和acce共用的
-    cfg.intf.type=RT_SENSOR_INTF_SPI;//这个好像没用到
-    cfg.intf.user_data=(void*)GET_PIN(D,6);//和acce共用的
+//     cfg.intf.dev_name="spi10";//和acce共用的
+//     cfg.intf.type=RT_SENSOR_INTF_SPI;//这个好像没用到
+//     cfg.intf.user_data=(void*)GET_PIN(D,6);//和acce共用的
 
-    //查找是否存在 temp_0,temp_1...
-    char new_dev_name[]="0";
-    char exist_dev_name[]="temp_0";
-    while(rt_device_find(exist_dev_name))//如果是NULL的话就会跳出while
-    {
-        ++new_dev_name[0];
-        ++exist_dev_name[4];
-        if(new_dev_name[0]>'9')
-        {
-            return -RT_ERROR;//超过10个acce了
-        }
-    }
+//     //查找是否存在 temp_0,temp_1...
+//     char new_dev_name[]="0";
+//     char exist_dev_name[]="temp_0";
+//     while(rt_device_find(exist_dev_name))//如果是NULL的话就会跳出while
+//     {
+//         ++new_dev_name[0];
+//         ++exist_dev_name[4];
+//         if(new_dev_name[0]>'9')
+//         {
+//             return -RT_ERROR;//超过10个acce了
+//         }
+//     }
 
-    rt_hw_bmi088_temp_init(new_dev_name,&cfg);
+//     rt_hw_bmi088_temp_init(new_dev_name,&cfg);
 
-    return RT_EOK;
-}
-INIT_DEVICE_EXPORT(rt_hw_bmi088_temp_port);
+//     return RT_EOK;
+// }
+// INIT_DEVICE_EXPORT(rt_hw_bmi088_temp_port);
 
 /******************************************************************************
  * private functions definition

@@ -794,23 +794,23 @@ typedef enum
  * pubilc functions
  *****************************************************************************/
 
-rt_err_t bmi088_acce_init(void);
-rt_err_t bmi08x_acce_reset(void);
+rt_err_t bmi088_acce_init(rt_sensor_t sensor);
+rt_err_t bmi08x_acce_reset(rt_sensor_t sensor);
 
 rt_err_t bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args);
 rt_err_t bmi088_acce_set_range(struct rt_sensor_device *sensor, void *args);
 rt_err_t bmi088_acce_set_odr(struct rt_sensor_device *sensor, void *args);
 
-rt_err_t bmi088_gyro_init(void);
-rt_err_t bmi08x_gyro_reset(void);
+rt_err_t bmi088_gyro_init(rt_sensor_t sensor);
+rt_err_t bmi08x_gyro_reset(rt_sensor_t sensor);
 
 rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args);
 
 void bmi088_temp_init(void);
 rt_size_t bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len);
 
-rt_err_t bmi08x_load_config_file(const rt_uint8_t* file_ptr,rt_size_t file_size);
-rt_err_t bmi08x_config_feature(rt_uint8_t feature_addr, rt_uint16_t* feature_cfg, rt_size_t feature_len);
+rt_err_t bmi08x_load_config_file(rt_sensor_t sensor, const rt_uint8_t* file_ptr,rt_size_t file_size);
+rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_uint16_t* feature_cfg, rt_size_t feature_len);
 rt_err_t bmi08x_get_sync_data(void);
 
 
