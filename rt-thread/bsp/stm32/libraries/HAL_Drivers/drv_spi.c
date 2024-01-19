@@ -77,108 +77,12 @@ static struct stm32_spi_config spi_config[] =
     SPI6_BUS_CONFIG,
 #endif
 };
-extern SPI_HandleTypeDef* hspi1;
+// extern SPI_HandleTypeDef* hspi1;
 
 static struct stm32_spi spi_bus_obj[sizeof(spi_config) / sizeof(spi_config[0])] = {0};
 
 static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configuration *cfg)
 {
-
-    // ///////////
-    // SPI_HandleTypeDef hspi1={0};
-    // hspi1.Instance = SPI1;
-    // hspi1.Init.Mode = SPI_MODE_MASTER;
-    // hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-    // hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-    // hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
-    // hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
-    // hspi1.Init.NSS = SPI_NSS_SOFT;
-    // hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
-    // hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-    // hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-    // hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    // hspi1.Init.CRCPolynomial = 0x0;
-    // hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
-    // hspi1.Init.NSSPolarity = SPI_NSS_POLARITY_LOW;
-    // hspi1.Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
-    // hspi1.Init.TxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
-    // hspi1.Init.RxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
-    // hspi1.Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
-    // hspi1.Init.MasterInterDataIdleness = SPI_MASTER_INTERDATA_IDLENESS_01CYCLE;
-    // hspi1.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_DISABLE;
-    // hspi1.Init.IOSwap = SPI_IO_SWAP_DISABLE;
-    // // HAL_SPI_DeInit(&hspi1);
-    // if (HAL_SPI_Init(&hspi1) != HAL_OK)
-    // {
-    //     Error_Handler();
-    // }
-    // uint8_t BMI_Data[20]={0};
-    // BMI_Data[0]=0x80;
-    // BMI_Data[1]=0x00;
-    // // BMI_Data[2]=0x00;
-    // // BMI_Data[3]=0x00;
-    // // uint8_t BMI_A=0x00;
-    // // uint8_t BMI088_GYR_ID=0x00|0x80;
-    // volatile HAL_StatusTypeDef aaa=HAL_SPI_Transmit(&hspi1,&BMI_Data[2],2,1000);
-    // while(1)
-    // {
-    //     BMI_Data[0]=0x80;
-    // BMI_Data[1]=0x00;
-    // BMI_Data[2]=0x00;
-    //     while(BMI_Data[5]!=0x1E)
-    //     {
-    //         HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_RESET);//acc
-    //         HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[3],3,1000);
-    //         // rt_thread_mdelay(5);
-    //         HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);
-    //     }
-        
-
-    //     // HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_RESET);//acc
-    //     // HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[3],3,1000);
-    //     // HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);
-
-    //     // while(BMI_Data[4]!=0x1E);
-
-    //     // HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_RESET);//acc
-    //     // HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[2],2,1000);
-    //     // HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);
-
-    //     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_RESET);//gory
-    //     HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[2],2,1000);
-    //     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_SET);
-
-    //     // while(BMI_Data[3]!=0x0F);
-
-        
-    //     // 先配置成三线模式
-    //     BMI_Data[0]=0x09;
-    //     BMI_Data[1]=0x01;
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_7,GPIO_PIN_RESET);//bar
-    //     HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[2],2,1000);
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_7,GPIO_PIN_SET);
-
-    //     //读出来看一下，此时是三线模式了
-    //     BMI_Data[0]=0x89;
-    //     BMI_Data[1]=0x00;
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_7,GPIO_PIN_RESET);//bar
-    //     HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[2],2,1000);
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_7,GPIO_PIN_SET);
-
-    //     BMI_Data[0]=0x8D;
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_7,GPIO_PIN_RESET);//bar
-    //     HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[2],2,1000);
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_7,GPIO_PIN_SET);
-    //     // while(BMI_Data[3]!=0x10);
-
-    //     BMI_Data[0]=0xAF;
-    //     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_7,GPIO_PIN_RESET);//mag
-    //     HAL_SPI_TransmitReceive(&hspi1,&BMI_Data[0],&BMI_Data[2],2,1000);
-    //     HAL_GPIO_WritePin(GPIOB,GPIO_PIN_7,GPIO_PIN_SET);
-    //     // while(BMI_Data[3]!=0x30);
-    // }
-    
-    // /////////
 
     RT_ASSERT(spi_drv != RT_NULL);
     RT_ASSERT(cfg != RT_NULL);
@@ -353,16 +257,7 @@ static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configur
     {
         return RT_EIO;
     }
-    hspi1=spi_handle;
-
-    // rt_uint8_t send_buf[3]={0x80,0x00,0x00};
-    // rt_uint8_t recv_buf[3]={0};
-    // while(recv_buf[2]!=0x1E)
-    // {
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_RESET);//acc
-    //     HAL_SPI_TransmitReceive(spi_handle,&send_buf[0],&recv_buf[0],3,1000);
-    //     HAL_GPIO_WritePin(GPIOD,GPIO_PIN_6,GPIO_PIN_SET);
-    // }
+    // hspi1=spi_handle;
     
 
 #if defined(SOC_SERIES_STM32L4) || defined(SOC_SERIES_STM32F0) \
