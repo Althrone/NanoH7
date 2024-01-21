@@ -9,14 +9,44 @@
 
 #include "dfs_fs.h"
 
+#include "bmi088.h"
+
 static rt_thread_t USART_thread =RT_NULL;
 void USART_enter(void *parameter);
+void imu_data_thrd(void *parameter);
 
 // #define CAN_
 // #define CAN_Pin GET_PIN(B, 14)
 
+static rt_err_t cb_1ms(rt_device_t dev, rt_size_t size)
+{
+    //信号量
+    rt_sem_t sem=rt_device_find("dsem");
+
+    rt_sem_release(sem);
+
+    return 0;
+}
+
 int main(void)
 {
+    //定时器
+    rt_uint32_t freq = 1000;
+    rt_device_t tim_dev=rt_device_find("timer2");
+    rt_device_open(tim_dev, RT_DEVICE_OFLAG_RDWR);
+    rt_device_set_rx_indicate(tim_dev, cb_1ms);
+    rt_device_control(tim_dev, HWTIMER_CTRL_FREQ_SET, &freq);
+    rt_hwtimer_mode_t mode = HWTIMER_MODE_PERIOD;
+    rt_device_control(tim_dev, HWTIMER_CTRL_MODE_SET, &mode);
+    rt_hwtimerval_t timeout_s={
+        .sec=0,
+        .usec=1000,
+    };
+    rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
+
+    //创建信号量
+    rt_sem_create("dsem", 0, RT_IPC_FLAG_PRIO);
+
     //usb测试
     rt_device_t dev = RT_NULL;
     dev = rt_device_find("vcom");
@@ -47,14 +77,37 @@ int main(void)
     //挂载文件系统
     dfs_mount("sd0","/","elm",0,0);
 
-    USART_thread=rt_thread_create("USART_thread",
-                                USART_enter,
-                                RT_NULL,
-                                1024,
-                                5,
-                                5);
-    if(USART_thread != RT_NULL) rt_thread_startup(USART_thread);
+    // USART_thread=rt_thread_create("USART_thread",
+    //                             USART_enter,
+    //                             RT_NULL,
+    //                             1024,
+    //                             5,
+    //                             5);
+    // if(USART_thread != RT_NULL) rt_thread_startup(USART_thread);
+    // rt_uint32_t t1=SysTick->VAL;
+    // bmi08x_get_sync_data();//42303
+    // rt_uint32_t t2=SysTick->VAL;
+    // rt_uint32_t l=SysTick->LOAD;
+    // rt_kprintf("%d ",t1-t2);
+
+    rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
+                                    RT_NULL,1024,0,1);
+    rt_thread_startup(t1);
     return 0;
+}
+
+void imu_data_thrd(void *parameter)
+{
+    while (1)
+    {
+        rt_sem_t sem=rt_device_find("dsem");
+        rt_sem_take(sem, RT_WAITING_FOREVER);
+        bmi08x_get_sync_data();//42303
+        // rt_thread_mdelay(1);
+        // bmi08x_get_sync_data();//42303
+        // rt_uint32_t t2=SysTick->VAL;
+        // rt_kprintf("%d\n",t1-t2);
+    }
 }
 
 void USART_enter(void *parameter)

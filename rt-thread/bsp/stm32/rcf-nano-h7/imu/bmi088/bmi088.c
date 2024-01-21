@@ -352,6 +352,7 @@ const rt_uint8_t bmi088_mm_config_file[] = {
 };
 
 volatile rt_uint32_t g_bmi08x_sensor_time_stamp=0;
+volatile rt_int16_t g_bmi08x_tmp=0;
 volatile rt_int16_t g_bmi08x_sync_acc_x=0;
 volatile rt_int16_t g_bmi08x_sync_acc_y=0;
 volatile rt_int16_t g_bmi08x_sync_acc_z=0;
@@ -381,7 +382,6 @@ rt_err_t bmi088_acce_init(rt_sensor_t sensor)
 {
     rt_err_t result=RT_EOK;
     rt_uint8_t raw_data=0;
-    rt_uint8_t chip_id;
 
     bmi08x_acce_reset(sensor);
 
@@ -481,16 +481,14 @@ rt_err_t bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args)
     rt_err_t result=RT_EOK;
 
     rt_uint8_t chip_id;
-    if(bmi08x_read_reg(sensor,BMI08x_ACC_CHIP_ID_ADDR,&chip_id,1)!=RT_EOK)
+    result=bmi08x_read_reg(sensor,BMI08x_ACC_CHIP_ID_ADDR,&chip_id,1);
+    if(result!=RT_EOK)
         goto _exit;
 
     if(chip_id!=0x1E)
-    {
-        result=-RT_ERROR;
         goto _exit;
-    }
     
-    *(rt_uint8_t *)args = (rt_uint32_t)chip_id;
+    *(rt_uint8_t *)args = chip_id;
 
 _exit:
     return result;
@@ -498,28 +496,25 @@ _exit:
 
 rt_err_t bmi088_acce_set_range(struct rt_sensor_device *sensor, void *args)
 {
-    //芯片默认6g
+    //芯片默认6g 0x01
 
     rt_err_t result=RT_EOK;
-    //查找总线设备
-    struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi10");
 
-    rt_uint8_t send_buf[2]={ACC_RANGE,0x00};
+    rt_uint8_t send_buf;
     //判断args是多少
     switch (*(rt_int32_t*)args)
     {
     case 3000:
-        send_buf[1]=0x00;
+        send_buf=0x00;
         break;
     case 6000:
-        send_buf[1]=0x01;
+        send_buf=0x01;
         break;
     case 12000:
-        send_buf[1]=0x02;
+        send_buf=0x02;
         break;
     case 24000:
-        send_buf[1]=0x03;
+        send_buf=0x03;
         break;
     default:
         result=-RT_ERROR;
@@ -529,7 +524,7 @@ rt_err_t bmi088_acce_set_range(struct rt_sensor_device *sensor, void *args)
 
     if(result==RT_EOK)
     {
-        result=rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+        result=bmi08x_write_reg(sensor,BMI08x_ACC_RANGE_ADDR,&send_buf,1);
     }
 
     return result;
@@ -540,42 +535,47 @@ rt_err_t bmi088_acce_set_odr(struct rt_sensor_device *sensor, void *args)
     //芯片默认100Hz
     rt_err_t result=RT_EOK;
 
-    // struct rt_spi_device *spi_dev=RT_NULL;
-    // spi_dev=(struct rt_spi_device *)&(sensor->parent);
+    // rt_uint8_t send_buf[]={0x80|ACC_CONF,0x00,0x00};
+    // rt_uint8_t recv_buf[3]={0};
 
-    //查找总线设备
-    struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi10");
+    rt_uint8_t acc_odr;
+    rt_uint8_t feature[6];
 
-    rt_uint8_t send_buf[]={0x80|ACC_CONF,0x00,0x00};
-    rt_uint8_t recv_buf[3]={0};
+    //读取 features_in 寄存器，看看有没有开启同步模式
+    result=bmi08x_read_reg(sensor,BMI08x_FEATURES_IN_ADDR,feature,1);
+    if(feature[4]!=0x00)
+    {
+        LOG_E("开启了同步模式，禁用此命令");
+        result=-RT_ERROR;
+        goto _exit;
+    }
 
     //读取ACC_CONF的原始值
-    result=rt_spi_transfer(spi_dev,send_buf,recv_buf,3);
+    result=bmi08x_read_reg(sensor,BMI08x_ACC_CONF_ADDR,&acc_odr,1);
 
-    switch ((rt_uint16_t)args)
+    switch (*(rt_uint16_t*)args)
     {
     // case 12.5//这里的输入参数不支持
     case 25:
-        send_buf[1]=(recv_buf[2]&0xF0)|0x06;
+        acc_odr=(acc_odr&0xF0)|0x06;
         break;
     case 50:
-        send_buf[1]=(recv_buf[2]&0xF0)|0x07;
+        acc_odr=(acc_odr&0xF0)|0x07;
         break;
     case 100:
-        send_buf[1]=(recv_buf[2]&0xF0)|0x08;
+        acc_odr=(acc_odr&0xF0)|0x08;
         break;
     case 200:
-        send_buf[1]=(recv_buf[2]&0xF0)|0x09;
+        acc_odr=(acc_odr&0xF0)|0x09;
         break;
     case 400:
-        send_buf[1]=(recv_buf[2]&0xF0)|0x0A;
+        acc_odr=(acc_odr&0xF0)|0x0A;
         break;
     case 800:
-        send_buf[1]=(recv_buf[2]&0xF0)|0x0B;
+        acc_odr=(acc_odr&0xF0)|0x0B;
         break;
     case 1600:
-        send_buf[1]=(recv_buf[2]&0xF0)|0x0C;
+        acc_odr=(acc_odr&0xF0)|0x0C;
         break;
     default:
         result=-RT_ERROR;
@@ -583,11 +583,12 @@ rt_err_t bmi088_acce_set_odr(struct rt_sensor_device *sensor, void *args)
         break;
     }
 
-    if(result!=-RT_ERROR)
+    if(result==RT_EOK)
     {
-        send_buf[0]=ACC_CONF;
-        result=rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+        result=bmi08x_write_reg(sensor,BMI08x_ACC_CONF_ADDR,&acc_odr,1);
     }
+
+_exit:
     return result;
 }
 
@@ -651,17 +652,18 @@ _exit:
 rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args)
 {
     rt_err_t result=RT_EOK;
-    //查找总线设备
-    struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi11");
 
-    rt_uint8_t send_buf[2]={0x80|GYRO_CHIP_ID,0x00};
-    rt_uint8_t recv_buf[2]={0};
+    rt_uint8_t chip_id;
+    result=bmi08x_read_reg(sensor,BMI08x_GYRO_CHIP_ID_ADDR,&chip_id,1);
+    if(result!=RT_EOK)
+        goto _exit;
+    
+    if(chip_id!=0x0F)
+        goto _exit;
+    
+    *(rt_uint8_t *)args = chip_id;
 
-    result=rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-
-    *(rt_uint8_t *)args = (rt_uint32_t)recv_buf[1];
-
+_exit:
     return result;
 }
 
@@ -805,6 +807,10 @@ rt_err_t bmi08x_aux_mag_set_odr(struct rt_sensor_device *sensor, void *args)
     return result;
 }
 
+/**
+ * @note    只读取acc和gyro 88us
+ * @note    加上温度100us
+ **/
 rt_err_t bmi08x_get_sync_data(void)
 {
     //由于没有引出acc同步数据中断引脚，建议死循环读取 BMI08x_ACC_INT_STAT_0_ADDR 的 Data_sync_out
@@ -841,6 +847,15 @@ rt_err_t bmi08x_get_sync_data(void)
     // g_bmi08x_aux_mag_y=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8));
     // g_bmi08x_aux_mag_z=(rt_int16_t)(((rt_uint16_t)recv_buf[4])|((rt_uint16_t)recv_buf[5]<<8));
     // g_bmi08x_aux_mag_r=(rt_int16_t)(((rt_uint16_t)recv_buf[6])|((rt_uint16_t)recv_buf[7]<<8));
+
+    // bmi08x_read_reg(sensor,BMI08x_TEMP_MSB_ADDR,recv_buf,2);
+    // rt_uint16_t temp_u11=(((rt_uint16_t)recv_buf[0])<<3)|(((rt_uint16_t)recv_buf[1])>>5);
+    // if(temp_u11>1023)
+    //     g_bmi08x_tmp=temp_u11-2048;
+    // else
+    //     g_bmi08x_tmp=temp_u11;
+    //     //g_bmi08x_tmp*0.125+23
+
 
     //读取陀螺仪数据
     sensor=(rt_sensor_t )rt_device_find("gyro_0");
@@ -899,7 +914,7 @@ rt_err_t bmi08x_load_config_file(rt_sensor_t sensor, const rt_uint8_t* file_ptr,
         if(bmi08x_write_reg(sensor,BMI08x_FEATURES_MSB_ADDR,&feature_msb,1)!=RT_EOK)
             goto _exit;
 
-        if(bmi08x_write_reg(sensor,BMI08x_FEATURES_IN_ADDR,&file_ptr[i],32)!=RT_EOK)
+        if(bmi08x_write_reg(sensor,BMI08x_FEATURES_IN_ADDR,&(file_ptr[i]),32)!=RT_EOK)
             goto _exit;
     }
 
@@ -936,7 +951,7 @@ rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_u
 	rt_uint8_t feature_data[read_length];
 
     //读取 FEATURE_CFG 寄存器内容
-    if(bmi08x_read_reg(sensor,BMI08X_ACCEL_FEATURE_CFG_REG,feature_data,read_length)!=RT_EOK)
+    if(bmi08x_read_reg(sensor,BMI08x_FEATURES_IN_ADDR,feature_data,read_length)!=RT_EOK)
         goto _exit;
     
     //将配置内容写入读取的数组
@@ -948,7 +963,7 @@ rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_u
     }
 
     //写回去
-    if(bmi08x_write_reg(sensor,BMI08X_ACCEL_FEATURE_CFG_REG,feature_data,read_length)!=RT_EOK)
+    if(bmi08x_write_reg(sensor,BMI08x_FEATURES_IN_ADDR,feature_data,read_length)!=RT_EOK)
         goto _exit;
 
 _exit:

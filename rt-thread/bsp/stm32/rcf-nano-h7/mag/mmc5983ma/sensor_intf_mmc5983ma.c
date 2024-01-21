@@ -72,16 +72,20 @@ int rt_hw_mmc5983ma_init(const char *name, struct rt_sensor_config *mag_cfg)
     }
     LOG_I("sensor register success");//注册成功
 
+    char spi_bus_name[5]={0};
+    rt_strncpy(spi_bus_name,sensor_mag->config.intf.dev_name,4);
+
     //查找通讯总线
-    if(rt_device_find("spi1")==RT_NULL)
+    if(rt_device_find(spi_bus_name)==RT_NULL)
     {
-        LOG_E("Can't find %s bus device",mag_cfg->intf.dev_name);
+        LOG_E("Can't find %s bus device",spi_bus_name);
         rt_free(sensor_mag);
         return -RT_ERROR;
     }//建议放在_init中
 
     //挂载到SPI总线
-    result = rt_hw_spi_device_attach("spi1","spi12",
+    result = rt_hw_spi_device_attach(spi_bus_name,
+                                     sensor_mag->config.intf.dev_name,
                                      GPIOB, GPIO_PIN_7);
     if (result != RT_EOK)
     {
@@ -92,7 +96,7 @@ int rt_hw_mmc5983ma_init(const char *name, struct rt_sensor_config *mag_cfg)
 
     //配置SPI设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi12");
+    spi_dev=(struct rt_spi_device *)rt_device_find(sensor_mag->config.intf.dev_name);
     if (spi_dev == RT_NULL)
     {
         LOG_E("spi device not find");
@@ -102,10 +106,10 @@ int rt_hw_mmc5983ma_init(const char *name, struct rt_sensor_config *mag_cfg)
     struct rt_spi_configuration spi_cfg;
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    // spi_cfg.max_hz=10*1000*1000;
     spi_cfg.max_hz=5*1000*1000;
-    // spi_cfg.max_hz=5*500*1000;
-    // spi_dev->user_data=
+
+    spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
+
     result = rt_spi_configure(spi_dev, &spi_cfg);
     if (result != RT_EOK)
     {
@@ -114,22 +118,7 @@ int rt_hw_mmc5983ma_init(const char *name, struct rt_sensor_config *mag_cfg)
         return -RT_ERROR;
     }
     
-
-    //将初始化命令放到这里
-    //获取设备信息
-    // struct rt_sensor_info info;
-    // if(rt_device_control(sensor_mag,RT_SENSOR_CTRL_GET_INFO,&info))//sensor_mag的父类是rt_device_t 不知道行不行
-    // {
-    //     LOG_E("get device info faile");
-    //     return -RT_ERROR;
-    // }
-    // LOG_I("vendor :%d", info.vendor);
-    // LOG_I("model  :%s", info.model);
-    // LOG_I("unit   :%d", info.unit);
-    // LOG_I("intf_type :%d", info.intf_type);
-    // LOG_I("period_min:%d", info.period_min);
-
-    mmc5893ma_init();
+    mmc5893ma_init(sensor_mag);
 
     //读取设备ID，这里开始用到自己写的东西了
     rt_uint8_t id = 0x00;

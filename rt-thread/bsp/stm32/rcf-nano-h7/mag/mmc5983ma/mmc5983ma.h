@@ -25,7 +25,7 @@ typedef enum
     ID_REG          = 0x2F
 }MMC5893MARegEnum;
 
-void mmc5893ma_init(void);
+void mmc5893ma_init(rt_sensor_t sensor);
 void mmc5893ma_reset(void);
 
 rt_err_t mmc5893ma_get_id(struct rt_sensor_device *sensor, void *args);

@@ -77,13 +77,11 @@ static struct stm32_spi_config spi_config[] =
     SPI6_BUS_CONFIG,
 #endif
 };
-// extern SPI_HandleTypeDef* hspi1;
 
 static struct stm32_spi spi_bus_obj[sizeof(spi_config) / sizeof(spi_config[0])] = {0};
 
 static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configuration *cfg)
 {
-
     RT_ASSERT(spi_drv != RT_NULL);
     RT_ASSERT(cfg != RT_NULL);
 
@@ -257,8 +255,6 @@ static rt_err_t stm32_spi_init(struct stm32_spi *spi_drv, struct rt_spi_configur
     {
         return RT_EIO;
     }
-    // hspi1=spi_handle;
-    
 
 #if defined(SOC_SERIES_STM32L4) || defined(SOC_SERIES_STM32F0) \
         || defined(SOC_SERIES_STM32F7) || defined(SOC_SERIES_STM32G0) || defined(SOC_SERIES_STM32WB)

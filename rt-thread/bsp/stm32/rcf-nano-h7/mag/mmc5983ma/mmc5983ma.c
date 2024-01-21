@@ -1,11 +1,11 @@
 #include "mmc5983ma.h"
 
-void mmc5893ma_init(void)
+void mmc5893ma_init(rt_sensor_t sensor)
 {
     rt_err_t result=RT_EOK;
     //查找总线设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi12");
+    spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
 
     mmc5893ma_reset();
 
@@ -57,6 +57,6 @@ rt_err_t mmc5893ma_get_id(struct rt_sensor_device *sensor, void *args)
     result=rt_spi_send_then_recv(spi_dev,send_buf,sizeof(send_buf),recv_buf,sizeof(send_buf));
     // result=rt_spi_send(spi_dev,send_buf,sizeof(send_buf));
     // result=rt_spi_recv(spi_dev,recv_buf,sizeof(recv_buf));
-    *(rt_uint32_t *)args = (rt_uint32_t)recv_buf[0];
+    *(rt_uint8_t *)args = recv_buf[0];
     return result;
 }
