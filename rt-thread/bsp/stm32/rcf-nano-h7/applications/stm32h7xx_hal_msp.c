@@ -585,6 +585,9 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
 
   /* USER CODE BEGIN TIM1_MspInit 1 */
 
+    __HAL_RCC_TIM2_CLK_ENABLE();
+
+
   /* USER CODE END TIM1_MspInit 1 */
   }
 }

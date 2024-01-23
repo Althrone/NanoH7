@@ -17,11 +17,12 @@ void imu_data_thrd(void *parameter);
 
 // #define CAN_
 // #define CAN_Pin GET_PIN(B, 14)
+rt_sem_t sem;
 
 static rt_err_t cb_1ms(rt_device_t dev, rt_size_t size)
 {
     //信号量
-    rt_sem_t sem=rt_device_find("dsem");
+    // rt_sem_t sem=rt_object_find("dsem", RT_Object_Class_Semaphore);
 
     rt_sem_release(sem);
 
@@ -45,7 +46,7 @@ int main(void)
     rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
 
     //创建信号量
-    rt_sem_create("dsem", 0, RT_IPC_FLAG_PRIO);
+    sem=rt_sem_create("dsem", 0, RT_IPC_FLAG_PRIO);
 
     //usb测试
     rt_device_t dev = RT_NULL;
@@ -100,13 +101,13 @@ void imu_data_thrd(void *parameter)
 {
     while (1)
     {
-        rt_sem_t sem=rt_device_find("dsem");
+        // rt_sem_t sem=rt_object_find("dsem", RT_Object_Class_Semaphore);
         rt_sem_take(sem, RT_WAITING_FOREVER);
         bmi08x_get_sync_data();//42303
         // rt_thread_mdelay(1);
         // bmi08x_get_sync_data();//42303
-        // rt_uint32_t t2=SysTick->VAL;
-        // rt_kprintf("%d\n",t1-t2);
+        rt_uint32_t t2=SysTick->VAL;
+        rt_kprintf("%d\n",t2);
     }
 }
 
