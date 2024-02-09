@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "IDCC",
+            "name": "debug",
             "type": "cppdbg",
             "request": "launch",
             "program": "D:/Project/UAV/NanoH7/Firmware/build/RcF_NanoH7_RTT.elf",
@@ -22,6 +22,12 @@
                 {"text": "monitor reset"},
                 {"text": "monitor halt"},
                 {"text": "load"},
+                {
+                    "text": "break main_thread_entry"  //跳转main
+                },
+                {
+                    "text": "enable delete 1"  //跳转main
+                }
             ],
             "preLaunchTask": "build"
         }

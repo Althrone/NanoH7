@@ -200,7 +200,16 @@ RT_WEAK void rt_hw_board_init()
 
     #include "SEGGER_RTT.h"
     SEGGER_RTT_Init();
-    SEGGER_RTT_printf(0,"hellow!");
+
+    // while(1)
+    // {
+    //     char tempbuffer[2];
+    //     uint8_t NumBytes=SEGGER_RTT_Read(0, &tempbuffer[0], 1);
+    //     if(NumBytes==1)
+    //     {
+    //         tempbuffer[0]=0;
+    //     }
+    // }
 
     /* Set the shell console output device */
 #if defined(RT_USING_CONSOLE) && defined(RT_USING_DEVICE)

@@ -208,7 +208,8 @@
 #define RT_USING_DEVICE
 #define RT_USING_CONSOLE
 #define RT_CONSOLEBUF_SIZE 128
-#define RT_CONSOLE_DEVICE_NAME "uart1"//使用jlink rtt
+#define RT_CONSOLE_DEVICE_NAME ""//使用segger rtt
+// #define RT_CONSOLE_DEVICE_NAME "uart1"//使用串口
 #define RT_VER_NUM 0x40100
 #define ARCH_ARM
 #define RT_USING_CPU_FFS
@@ -234,6 +235,8 @@
 #define MSH_USING_BUILT_IN_COMMANDS
 #define FINSH_USING_DESCRIPTION
 #define FINSH_ARG_MAX 10
+
+#define FINSH_ECHO_DISABLE_DEFAULT//不做回显
 
 /* Device Drivers */
 #define DFS_USING_POSIX/////////

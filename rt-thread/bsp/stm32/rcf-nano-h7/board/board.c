@@ -116,76 +116,76 @@ static UART_HandleTypeDef UartHandle={
     .Init.OverSampling = UART_OVERSAMPLING_16,
 };//用于下面两个函数的参数，估计可以用serial_v2的某些函数代替
 
-void rt_hw_console_output(const char *str)
-{
-    rt_size_t i = 0, size = 0;
-    char a = '\r';
-
-    __HAL_UNLOCK(&UartHandle);
-
-    size = rt_strlen(str);
-
-    for (i = 0; i < size; i++)
-    {
-        if (*(str + i) == '\n')
-        {
-            HAL_UART_Transmit(&UartHandle, (uint8_t *)&a, 1, 1);
-        }
-        HAL_UART_Transmit(&UartHandle, (uint8_t *)(str + i), 1, 1);
-    }
-}
-
-// #include "SEGGER_RTT.h"
 // void rt_hw_console_output(const char *str)
 // {
 //     rt_size_t i = 0, size = 0;
+//     char a = '\r';
+
+//     __HAL_UNLOCK(&UartHandle);
 
 //     size = rt_strlen(str);
+
 //     for (i = 0; i < size; i++)
 //     {
 //         if (*(str + i) == '\n')
 //         {
-//            break;
+//             HAL_UART_Transmit(&UartHandle, (uint8_t *)&a, 1, 1);
 //         }
+//         HAL_UART_Transmit(&UartHandle, (uint8_t *)(str + i), 1, 1);
 //     }
-//     SEGGER_RTT_printf(0,"%s",str);
 // }
+
+#include "SEGGER_RTT.h"
+void rt_hw_console_output(const char *str)
+{
+    rt_size_t i = 0, size = 0;
+
+    size = rt_strlen(str);
+    for (i = 0; i < size; i++)
+    {
+        if (*(str + i) == '\n')
+        {
+           break;
+        }
+    }
+    SEGGER_RTT_printf(0,"%s",str);
+}
 #endif
 
 #ifdef RT_USING_FINSH
-char rt_hw_console_getchar(void)
-{
-    /* Note: the initial value of ch must < 0 */
-    int ch = -1;
-
-    if (__HAL_UART_GET_FLAG(&UartHandle, UART_FLAG_RXNE) != RESET)
-    {
-        #if defined(STM32H750xx)
-        ch = UartHandle.Instance->RDR & 0xff;//H750接收和发送寄存器是分开的
-        #else
-        ch = UartHandle.Instance->DR & 0xff;
-        #endif
-    }
-    else
-    {
-        rt_thread_mdelay(10);
-    }
-    return ch;
-}
-
 // char rt_hw_console_getchar(void)
 // {
+//     /* Note: the initial value of ch must < 0 */
 //     int ch = -1;
-//     char tempbuffer[2];
-//     uint8_t NumBytes=0;
 
-//     NumBytes = SEGGER_RTT_Read(0, &tempbuffer[0], 1);
-//     if(NumBytes==1)
+//     if (__HAL_UART_GET_FLAG(&UartHandle, UART_FLAG_RXNE) != RESET)
 //     {
-//         ch=tempbuffer[0];
+//         #if defined(STM32H750xx)
+//         ch = UartHandle.Instance->RDR & 0xff;//H750接收和发送寄存器是分开的
+//         #else
+//         ch = UartHandle.Instance->DR & 0xff;
+//         #endif
+//     }
+//     else
+//     {
+//         rt_thread_mdelay(10);
 //     }
 //     return ch;
 // }
+
+char rt_hw_console_getchar(void)
+{
+    int ch = -1;
+    char tempbuffer[2];
+    uint8_t NumBytes=0;
+
+    NumBytes = SEGGER_RTT_Read(0, &tempbuffer[0], 1);
+    if(NumBytes==1)
+    {
+        ch=tempbuffer[0];
+    }
+    return ch;
+}
 #endif
 
 // //其他片上外设初始化，假装使用MX生成的函数，然后给rtt隐式调用

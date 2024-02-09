@@ -164,28 +164,11 @@ int finsh_getchar(void)
     device = shell->device;
     if (device == RT_NULL)
     {
-        return -1; /* EOF */
+        // return -1; /* EOF */
 
-        // extern char rt_hw_console_getchar(void);
-        // return rt_hw_console_getchar();
+        extern char rt_hw_console_getchar(void);
+        return rt_hw_console_getchar();
     }
-    //jlink rtt支持
-    // else
-    // {
-    //     while (rt_device_read(device, -1, &ch, 1) != 1)
-    //     {
-    //         rt_sem_take(&shell->rx_sem, RT_WAITING_FOREVER);
-    //         if (shell->device != device)
-    //         {
-    //             device = shell->device;
-    //             if (device == RT_NULL)
-    //             {
-    //                 return -1;
-    //             }
-    //         }
-    //     }
-    //     return ch;
-    // }
     while (rt_device_read(device, -1, &ch, 1) != 1)
     {
         rt_sem_take(&shell->rx_sem, RT_WAITING_FOREVER);

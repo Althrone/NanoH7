@@ -41,7 +41,7 @@ echo:
 # building variables
 ######################################
 # optimization
-OPT = -Og
+OPT = -O0
 
 #######################################
 # binaries
@@ -213,7 +213,11 @@ burn:
 link:
 	openocd \
 	-f interface/$(OCD_LINK_FILE) \
-	-f target/$(OCD_CHIP_FILE)
+	-f target/$(OCD_CHIP_FILE) \
+	-c init \
+	-c "rtt server start 8765 0" \
+	-c "rtt setup 0x20000000 0x20000 \"SEGGER RTT\"" \
+	-c "rtt start"
 
 size: $(BUILD_DIR)/$(TARGET).elf
 	$(SZ) $@

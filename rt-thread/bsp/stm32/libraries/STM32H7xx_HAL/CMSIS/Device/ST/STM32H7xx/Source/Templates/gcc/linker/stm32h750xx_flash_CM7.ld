@@ -45,6 +45,7 @@ MEMORY
 FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 2048K
 RAM (xrw)      : ORIGIN = 0x24000000, LENGTH = 512K
 /*RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K*/
+DTCMRAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
 ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
 }
 
@@ -175,7 +176,12 @@ SECTIONS
     __rtt_ram_begin = __user_heap_stack_end__; /* define a global symbol at use ram end */ /* 简单来说就是编译过程占用的ram+heap+stack之后的内存，对齐之后的地址到_estack作为rtt的动态内存位置 */
   } >RAM
 
-  
+  /* SEGGER_RTT段 */
+  .segger_rtt :
+  {
+    . = ALIGN(4);
+    . = ALIGN(4);
+  } >DTCMRAM
 
   /* Remove information from the standard libraries */
   /DISCARD/ :

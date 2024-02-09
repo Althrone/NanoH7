@@ -1266,7 +1266,7 @@ void rt_kputs(const char *str)
  *
  * @return The number of characters actually written to buffer.
  */
-RT_WEAK int rt_kprintf(const char *fmt, ...)
+RT_WEAK int rt_kprintf(const char *fmt, ...)//修改为segger rtt输出
 {
     va_list args;
     rt_size_t length;

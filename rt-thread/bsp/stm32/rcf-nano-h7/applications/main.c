@@ -41,7 +41,7 @@ int main(void)
     rt_device_control(tim_dev, HWTIMER_CTRL_MODE_SET, &mode);
     rt_hwtimerval_t timeout_s={
         .sec=0,
-        .usec=1000,
+        .usec=2000,
     };
     rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
 
@@ -106,8 +106,8 @@ void imu_data_thrd(void *parameter)
         bmi08x_get_sync_data();//42303
         // rt_thread_mdelay(1);
         // bmi08x_get_sync_data();//42303
-        rt_uint32_t t2=SysTick->VAL;
-        rt_kprintf("%d\n",t2);
+        // rt_uint32_t t2=SysTick->VAL;
+        // rt_kprintf("%d\n",t2);
     }
 }
 

@@ -4,9 +4,57 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "load",
+            "type": "shell",
+            "command": "openocd",
+            "args": [
+                "-f",
+                "interface/cmsis-dap.cfg",
+                "-f",
+                "target/stm32h7x_2MB.cfg",
+                "-c init",
+                "-c reset halt",
+                "-c flash write_image erase ./build/RcF_NanoH7_RTT.elf",
+                "-c reset run",
+                "-c exit"
+                // "-c debug_level 3"
+            ],
+            // "dependsOn" : "build"
+        },
+        {
             "label": "build",
             "type": "shell",
-            "command": "make"
+            "command": "openocd",
+            "args": [
+                "-f",
+                "interface/cmsis-dap.cfg",
+                "-f",
+                "target/stm32h7x_2MB.cfg",
+                "-c init",
+                "-c rtt server start 8765 0",
+                "-c rtt setup 0x20000000 0x20000 \"SEGGER RTT\"",
+                "-c rtt start",
+                // "-c debug_level 3",
+                // "-c log_output log2024.txt"
+            ],
+            "isBackground": true,
+            "problemMatcher":{
+                "pattern":[
+                    {
+                        "regexp": ".",
+                        "file": 1,
+                        "location": 2,
+                        "message": 3
+                    }
+                ],
+                "background": {
+                    // "activeOnStart": true,
+                    "beginsPattern":"Info : Listening on port 3333 for gdb connections",
+                    "endsPattern":"Info : Listening on port 4444 for telnet connections"
+                    // "endsPattern":"."
+                }
+            },
+            "dependsOn" : "load"
         }
     ]
 }
