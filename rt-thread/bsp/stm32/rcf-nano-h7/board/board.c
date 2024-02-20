@@ -73,8 +73,7 @@ void SystemClock_Config(void)
                                                  RCC_PERIPHCLK_SDMMC|
                                                  RCC_PERIPHCLK_USB|
                                                  RCC_PERIPHCLK_ADC|
-                                                 RCC_PERIPHCLK_TIM|
-                                                 RCC_PERIPHCLK_USB;
+                                                 RCC_PERIPHCLK_TIM;
     RCC_PeriphCLKInitStruct.PLL2.PLL2M=1;
     RCC_PeriphCLKInitStruct.PLL2.PLL2N=100;
     RCC_PeriphCLKInitStruct.PLL2.PLL2P=5;//80MHz ADC

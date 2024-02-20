@@ -56,7 +56,7 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
 
     sensor_acce = rt_calloc(1, sizeof(struct rt_sensor_device));
     if (sensor_acce == RT_NULL)//空间开辟失败
-        return -RT_ERROR;
+        return -RT_ENOMEM;
 
     sensor_acce->info.type       = RT_SENSOR_CLASS_ACCE;
     sensor_acce->info.vendor     = RT_SENSOR_VENDOR_BOSCH;
