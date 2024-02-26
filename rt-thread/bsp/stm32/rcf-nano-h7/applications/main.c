@@ -31,6 +31,8 @@ static rt_err_t cb_1ms(rt_device_t dev, rt_size_t size)
 
 int main(void)
 {
+    volatile rt_uint32_t sysclk=HAL_RCC_GetSysClockFreq();
+    volatile rt_uint32_t coreid=DBGMCU->IDCODE;
     //定时器
     rt_uint32_t freq = 1000;
     rt_device_t tim_dev=rt_device_find("timer2");
@@ -48,11 +50,24 @@ int main(void)
     //创建信号量
     sem=rt_sem_create("dsem", 0, RT_IPC_FLAG_PRIO);
 
+    char test_str[]="vcom success!\n\t";
+
     //usb测试
     rt_device_t dev = RT_NULL;
     dev = rt_device_find("vcom");
-    if(dev)
-        rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+    rt_device_init(dev);
+    rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+    // if(dev)
+    // {
+    //     while(1)
+    //     {
+    //         rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+    //         rt_device_write(dev,0,test_str,sizeof(test_str));
+    //         rt_thread_mdelay(1000);
+    //         // rt_device_close(dev);
+    //     }
+    // }
+        
     // rt_uint16_t sensor_data;
     // rt_device_t dev = rt_device_find("temp_0");
     // // rt_device_init(dev);
@@ -92,22 +107,31 @@ int main(void)
     // rt_kprintf("%d ",t1-t2);
 
     rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
-                                    RT_NULL,1024,0,1);
+                                    RT_NULL,1024,0,10);
     rt_thread_startup(t1);
     return 0;
 }
 
 void imu_data_thrd(void *parameter)
 {
+    rt_device_t dev = RT_NULL;
+    dev = rt_device_find("vcom");
+    char test_str[]="vcom success!\n\t";
     while (1)
     {
+        // rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+        // rt_device_write(dev,0,test_str,sizeof(test_str));
+        // rt_device_close(dev);
+        rt_thread_mdelay(1000);
+
         // rt_sem_t sem=rt_object_find("dsem", RT_Object_Class_Semaphore);
-        rt_sem_take(sem, RT_WAITING_FOREVER);
-        bmi08x_get_sync_data();//42303
+        // rt_sem_take(sem, RT_WAITING_FOREVER);
+        // bmi08x_get_sync_data();//42303
+
         // rt_thread_mdelay(1);
         // bmi08x_get_sync_data();//42303
         // rt_uint32_t t2=SysTick->VAL;
-        // rt_kprintf("%d\n",t2);
+        // rt_kprintf("aaa\n\t");
     }
 }
 

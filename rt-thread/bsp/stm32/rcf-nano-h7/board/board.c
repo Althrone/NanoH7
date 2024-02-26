@@ -24,21 +24,31 @@ void SystemClock_Config(void)
     /* Supply configuration update enable*/
     HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);//PWR_CR3 bit3
 
-    /** Configure the main internal regulator output voltage*/
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);//VOS0更高
+    /** Configure the main internal regulator output voltage
+    */
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
     while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
-    RCC_OscInitStruct.OscillatorType=RCC_OSCILLATORTYPE_HSE;
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+
+    while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
+
+    RCC_OscInitStruct.OscillatorType=RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_HSI48;//大时钟要加在这里，不然就会出现usb的问题（HSI48）
     RCC_OscInitStruct.HSEState=RCC_HSE_ON;
     // RCC_OscInitStruct.HSIState=RCC_HSI_ON;
     RCC_OscInitStruct.HSI48State=RCC_HSI48_ON;
     RCC_OscInitStruct.PLL.PLLState=RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource=RCC_PLLSOURCE_HSE;
     RCC_OscInitStruct.PLL.PLLM=1;
-    RCC_OscInitStruct.PLL.PLLN=120;
+    RCC_OscInitStruct.PLL.PLLN=150;
     RCC_OscInitStruct.PLL.PLLP=2;//480MHz cpu
     RCC_OscInitStruct.PLL.PLLQ=16;//60MHZ USB
+    RCC_OscInitStruct.PLL.PLLR = 2;
+    RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
+    RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
+    RCC_OscInitStruct.PLL.PLLFRACN = 0;
     // RCC_OscInitStruct.PLL
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
     {
@@ -186,99 +196,3 @@ char rt_hw_console_getchar(void)
     return ch;
 }
 #endif
-
-// //其他片上外设初始化，假装使用MX生成的函数，然后给rtt隐式调用
-// //各外设的结构体先在这里作为全局变量，因为结构体中有可能需要灵活调整的变量，不能销毁
-// UART_HandleTypeDef USART1_HandleStructInst;
-// UART_HandleTypeDef USART2_HandleStructInst;
-// UART_HandleTypeDef USART3_HandleStructInst;
-// UART_HandleTypeDef UART4_HandleStructInst;
-// UART_HandleTypeDef USART6_HandleStructInst;
-// UART_HandleTypeDef UART8_HandleStructInst;
-
-/*******************************************************************************
- * 串口初始化
- * USART1   rtt命令行
- * USART2   GNSS
- * USART3   激光光流
- * UART4    RC
- * USART6   无线数传
- * UART8    有线数传
-*******************************************************************************/
-
-/**
- * ！！！！！！串口初始化用4.0的方法，只要写MSP就行了
- */
-
-/*******************************************************************************
- * IIC初始化
- * IIC1 一个其中一个受到IMU控制
- * IIC2 GPS的磁力计的
-*******************************************************************************/
-
-// static int i2c_init(void)
-// {
-//     // MX_I2C1_Init();
-//     // MX_I2C2_Init();
-// }
-// INIT_BOARD_EXPORT(i2c_init);
-
-// /*******************************************************************************
-//  * SPI初始化 受到IMU控制
-// *******************************************************************************/
-
-// static int spi_init(void)
-// {
-//     // MX_SPI1_Init();
-// }
-// INIT_BOARD_EXPORT(spi_init);
-
-// /*******************************************************************************
-//  * ADC初始化 用于检测电压电流
-// *******************************************************************************/
-
-// static int adc_init(void)
-// {
-//     // MX_ADC3_Init();
-// }
-// INIT_BOARD_EXPORT(adc_init);
-
-// /*******************************************************************************
-//  * TIM初始化，一个主pwm做四旋翼，从pwm控制舵机（火箭用），一个pwm控制led和恒温（受IMU控制）
-// *******************************************************************************/
-
-// static int tim_init(void)
-// {
-//     // MX_ADC3_Init();
-// }
-// INIT_BOARD_EXPORT(tim_init);
-
-// /*******************************************************************************
-//  * CAN初始化    控制高级电调用
-// *******************************************************************************/
-
-// static int can_init(void)
-// {
-//     // MX_ADC3_Init();
-// }
-// INIT_BOARD_EXPORT(can_init);
-
-// /*******************************************************************************
-//  * SD初始化，FDR，参数写入和调整
-// *******************************************************************************/
-
-// static int sd_init(void)
-// {
-//     // MX_ADC3_Init();
-// }
-// INIT_BOARD_EXPORT(sd_init);
-
-// /*******************************************************************************
-//  * USB初始化 FS-OTG模式，用于从机OTA，从机u盘，主机接键盘，主机接u盘
-// *******************************************************************************/
-
-// static int usb_init(void)
-// {
-//     // MX_ADC3_Init();
-// }
-// INIT_BOARD_EXPORT(usb_init);
