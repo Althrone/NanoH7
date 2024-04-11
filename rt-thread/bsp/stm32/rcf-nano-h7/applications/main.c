@@ -14,6 +14,7 @@
 static rt_thread_t USART_thread =RT_NULL;
 void USART_enter(void *parameter);
 void imu_data_thrd(void *parameter);
+void rc_rx_thread_entry(void *parameter);
 
 // #define CAN_
 // #define CAN_Pin GET_PIN(B, 14)
@@ -57,6 +58,7 @@ int main(void)
     dev = rt_device_find("vcom");
     rt_device_init(dev);
     rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+
     // if(dev)
     // {
     //     while(1)
@@ -106,9 +108,14 @@ int main(void)
     // rt_uint32_t l=SysTick->LOAD;
     // rt_kprintf("%d ",t1-t2);
 
-    rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
-                                    RT_NULL,1024,0,10);
-    rt_thread_startup(t1);
+    // rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
+    //                                 RT_NULL,1024,0,10);
+    // rt_thread_startup(t1);
+
+    //串口dma测试
+    rt_thread_t t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
+                                    RT_NULL,1024,0,5);
+    rt_thread_startup(t);
     return 0;
 }
 
@@ -119,9 +126,9 @@ void imu_data_thrd(void *parameter)
     char test_str[]="vcom success!\n\t";
     while (1)
     {
-        // rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
-        // rt_device_write(dev,0,test_str,sizeof(test_str));
-        // rt_device_close(dev);
+        rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+        rt_device_write(dev,0,test_str,sizeof(test_str));
+        rt_device_close(dev);
         rt_thread_mdelay(1000);
 
         // rt_sem_t sem=rt_object_find("dsem", RT_Object_Class_Semaphore);
@@ -134,6 +141,16 @@ void imu_data_thrd(void *parameter)
         // rt_kprintf("aaa\n\t");
     }
 }
+
+void vcom_test(void)
+{
+    rt_device_t dev = RT_NULL;
+    dev = rt_device_find("vcom");
+    char test_str[]="vcom success!\n\t";
+    rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+    rt_device_write(dev,0,test_str,sizeof(test_str));
+    rt_device_close(dev);
+}MSH_CMD_EXPORT(vcom_test, vcom test);
 
 void USART_enter(void *parameter)
 {
@@ -193,4 +210,66 @@ void USART_enter(void *parameter)
             
         // }
     }
+}
+
+/* 消息队列控制块 */
+static struct rt_messagequeue rc_rx_mq;
+static char rc_rx_buffer[BSP_UART4_RX_BUFSIZE + 1];
+
+/**
+ * @brief   遥控器接收回调函数
+ */
+static rt_err_t rc_rx_cbk(rt_device_t dev, rt_size_t size)
+{
+    rt_err_t result = rt_mq_send(&rc_rx_mq, &size, sizeof(size));
+    
+    return result;
+}
+
+/**
+ * @brief   遥控器接收线程
+ */
+void rc_rx_thread_entry(void *parameter)
+{
+    rt_device_t rc_serial = rt_device_find("uart4");
+    if (!rc_serial)
+    {
+        return ;
+    }
+
+    struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;  /* 初始化配置参数 */
+    config.baud_rate = 420000;        // 修改波特率为 9600
+    config.data_bits = DATA_BITS_8;           // 数据位 8
+    config.stop_bits = STOP_BITS_1;           // 停止位 1
+    config.rx_bufsz     = 128;                // 修改缓冲区 rx buff size 为 128
+    config.parity    = PARITY_NONE;           // 无奇偶校验位
+
+    rt_device_control(rc_serial, RT_DEVICE_CTRL_CONFIG, &config);
+
+    static char msg_pool[256];
+    /* 初始化消息队列 */
+    rt_mq_init(&rc_rx_mq, "rx_mq",
+               msg_pool,                 /* 存放消息的缓冲区 */
+               sizeof(rt_size_t),    /* 一条消息的最大长度 */
+               sizeof(msg_pool),         /* 存放消息的缓冲区大小 */
+               RT_IPC_FLAG_FIFO);        /* 如果有多个线程等待，按照先来先得到的方法分配消息 */
+
+    /* 以 DMA 接收及轮询发送方式打开串口设备 */
+    rt_device_open(rc_serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
+    /* 设置接收回调函数 */
+    rt_device_set_rx_indicate(rc_serial, rc_rx_cbk);
+
+    while (1)
+    {
+        rt_size_t size;
+        /* 从消息队列中读取消息 */
+        rt_err_t result = rt_mq_recv(&rc_rx_mq, &size, sizeof(size), RT_WAITING_FOREVER);
+        if (result == RT_EOK)
+        {
+            /* 从串口读取数据 */
+            rt_size_t rx_length = rt_device_read(rc_serial, 0, rc_rx_buffer, size);
+            rc_rx_buffer[rx_length] = '\0';
+        }
+    }
+    
 }
