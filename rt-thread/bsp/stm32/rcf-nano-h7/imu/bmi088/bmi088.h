@@ -660,6 +660,7 @@ rt_size_t bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, void *bu
 rt_err_t bmi08x_load_config_file(rt_sensor_t sensor, const rt_uint8_t* file_ptr,rt_size_t file_size);
 rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_uint16_t* feature_cfg, rt_size_t feature_len);
 rt_err_t bmi08x_get_sync_data(void);
+rt_err_t bmi08x_wait_sync_data(void);
 
 
 #ifdef __cplusplus

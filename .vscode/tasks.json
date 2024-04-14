@@ -54,7 +54,7 @@
                     // "endsPattern":"."
                 }
             },
-            // "dependsOn" : "load"
+            "dependsOn" : "load"
         }
     ]
 }

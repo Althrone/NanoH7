@@ -20,12 +20,12 @@ extern "C" {
 #endif
 
 /* DMA1 stream0 */
-#if defined(BSP_UART2_RX_USING_DMA) && !defined(UART2_RX_DMA_INSTANCE)
-#define UART2_DMA_RX_IRQHandler          DMA1_Stream0_IRQHandler
-#define UART2_RX_DMA_RCC                 RCC_AHB1ENR_DMA1EN
-#define UART2_RX_DMA_INSTANCE            DMA1_Stream0
-#define UART2_RX_DMA_REQUEST             DMA_REQUEST_USART2_RX
-#define UART2_RX_DMA_IRQ                 DMA1_Stream0_IRQn
+#if defined(BSP_UART2_TX_USING_DMA) && !defined(UART2_TX_DMA_INSTANCE)
+#define UART2_DMA_TX_IRQHandler          DMA1_Stream0_IRQHandler
+#define UART2_TX_DMA_RCC                 RCC_AHB1ENR_DMA1EN
+#define UART2_TX_DMA_INSTANCE            DMA1_Stream0
+#define UART2_TX_DMA_REQUEST             DMA_REQUEST_USART2_TX
+#define UART2_TX_DMA_IRQ                 DMA1_Stream0_IRQn
 #endif
 
 /* DMA1 stream1 */

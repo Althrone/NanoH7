@@ -11,45 +11,22 @@
 
 #include "bmi088.h"
 
-static rt_thread_t USART_thread =RT_NULL;
-void USART_enter(void *parameter);
 void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
+void gps_rx_thread_entry(void *parameter);
+void ins_rx_thread_entry(void *parameter);
 
 // #define CAN_
 // #define CAN_Pin GET_PIN(B, 14)
-rt_sem_t sem;
 
-static rt_err_t cb_1ms(rt_device_t dev, rt_size_t size)
-{
-    //信号量
-    // rt_sem_t sem=rt_object_find("dsem", RT_Object_Class_Semaphore);
-
-    rt_sem_release(sem);
-
-    return 0;
-}
 
 int main(void)
 {
-    volatile rt_uint32_t sysclk=HAL_RCC_GetSysClockFreq();
-    volatile rt_uint32_t coreid=DBGMCU->IDCODE;
-    //定时器
-    rt_uint32_t freq = 1000;
-    rt_device_t tim_dev=rt_device_find("timer2");
-    rt_device_open(tim_dev, RT_DEVICE_OFLAG_RDWR);
-    rt_device_set_rx_indicate(tim_dev, cb_1ms);
-    rt_device_control(tim_dev, HWTIMER_CTRL_FREQ_SET, &freq);
-    rt_hwtimer_mode_t mode = HWTIMER_MODE_PERIOD;
-    rt_device_control(tim_dev, HWTIMER_CTRL_MODE_SET, &mode);
-    rt_hwtimerval_t timeout_s={
-        .sec=0,
-        .usec=2000,
-    };
-    rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
-
-    //创建信号量
-    sem=rt_sem_create("dsem", 0, RT_IPC_FLAG_PRIO);
+    // volatile rt_uint32_t sysclk=HAL_RCC_GetSysClockFreq();
+    // volatile rt_uint32_t coreid=DBGMCU->IDCODE;
+    
+    rt_pin_mode(GET_PIN(D,9),PIN_MODE_OUTPUT);
+    rt_pin_write(GET_PIN(D,9),PIN_LOW);
 
     char test_str[]="vcom success!\n\t";
 
@@ -85,38 +62,133 @@ int main(void)
     // rt_pwm_enable(pwm_dev, 3);
     rt_pwm_enable(pwm_dev, 2);
 
-    //使能can终端电阻
-    rt_pin_mode(GET_PIN(D,5),PIN_MODE_OUTPUT);
-    rt_pin_write(GET_PIN(D,5),PIN_LOW);//使能终端电阻
-
-    rt_pin_mode(GET_PIN(D,4),PIN_MODE_OUTPUT);
-    rt_pin_write(GET_PIN(D,4),PIN_LOW);//使能终端电阻
-
     //挂载文件系统
     dfs_mount("sd0","/","elm",0,0);
 
-    // USART_thread=rt_thread_create("USART_thread",
-    //                             USART_enter,
-    //                             RT_NULL,
-    //                             1024,
-    //                             5,
-    //                             5);
-    // if(USART_thread != RT_NULL) rt_thread_startup(USART_thread);
-    // rt_uint32_t t1=SysTick->VAL;
-    // bmi08x_get_sync_data();//42303
-    // rt_uint32_t t2=SysTick->VAL;
-    // rt_uint32_t l=SysTick->LOAD;
-    // rt_kprintf("%d ",t1-t2);
+    // rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
+    //                               RT_NULL,1024,5,5);
+    // if(t != RT_NULL) rt_thread_startup(t);
 
     // rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
     //                                 RT_NULL,1024,0,10);
     // rt_thread_startup(t1);
 
     //串口dma测试
-    rt_thread_t t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
-                                    RT_NULL,1024,0,5);
+    // rt_thread_t t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
+    //                                 RT_NULL,1024,0,5);
+    // rt_thread_startup(t);
+
+    //gps接收线程
+    // rt_thread_t t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
+    //                                 RT_NULL,1024,0,5);
+    // rt_thread_startup(t);
+
+    rt_thread_t t=rt_thread_create("ins_rx_data",ins_rx_thread_entry,
+                                    RT_NULL,1024,0,10);
     rt_thread_startup(t);
     return 0;
+}
+
+rt_sem_t tim_sem;
+
+rt_hwtimerval_t timeout_s={
+    .sec=0,
+    .usec=2500,//留10us用于获取flag？
+};//2375
+
+/**
+ * @brief   定时释放信号量
+*/
+static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
+{
+    //信号量
+    // rt_sem_t sem=rt_object_find("dsem", RT_Object_Class_Semaphore);
+
+    // rt_hw_interrupt_disable();
+
+    while (1)
+    {
+        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+        rt_pin_write(GET_PIN(D,9),PIN_LOW);
+        while(bmi08x_wait_sync_data()!=RT_EOK);
+    }
+    
+
+    rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+
+    //等到flag置位的一瞬间才开启定时器，这样准一点？？
+    while(bmi08x_wait_sync_data()!=RT_EOK);
+
+    //开启定时器
+    // rt_device_write(dev, 0, &timeout_s, sizeof(timeout_s));
+    rt_sem_release(tim_sem);
+
+    rt_pin_write(GET_PIN(D,9),PIN_LOW);
+
+
+    return 0;
+}
+
+/**
+ * @brief   组合导航系统/板载传感器接收线程
+ * @note    接受板载的IMU MGA 气压计
+ */
+void ins_rx_thread_entry(void *parameter)
+{
+    //定时器
+    rt_uint32_t freq = 10000;
+    rt_device_t tim_dev=rt_device_find("timer2");
+    rt_device_open(tim_dev, RT_DEVICE_OFLAG_RDWR);
+    rt_device_control(tim_dev, HWTIMER_CTRL_FREQ_SET, &freq);
+    rt_hwtimer_mode_t mode = HWTIMER_MODE_ONESHOT;//HWTIMER_MODE_ONESHOT HWTIMER_MODE_PERIOD
+    rt_device_control(tim_dev, HWTIMER_CTRL_MODE_SET, &mode);
+    //创建信号量
+    tim_sem=rt_sem_create("tim_sem", 0, RT_IPC_FLAG_PRIO);
+    rt_device_set_rx_indicate(tim_dev, tim_cbk);
+
+    // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+
+    // //等到flag置位的一瞬间才开启定时器，这样准一点？？
+    // if(bmi08x_wait_sync_data()==RT_EOK)
+    // {
+        //开启定时器
+        rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
+    // }
+    // else
+    //     goto _exit;
+
+    // rt_pin_write(GET_PIN(D,9),PIN_LOW);
+
+    //测速度
+    // rt_pin_mode(GET_PIN(D,9),PIN_MODE_OUTPUT);
+    // rt_pin_write(GET_PIN(D,9),PIN_LOW);
+    rt_sem_take(tim_sem, RT_WAITING_FOREVER);
+
+    
+    
+    while (1)
+    {
+        // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+
+        // // rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
+        // bmi08x_get_sync_data();
+
+        // rt_pin_write(GET_PIN(D,9),PIN_LOW);
+
+        // rt_sem_take(tim_sem, RT_WAITING_FOREVER);
+
+        //mag
+        //baro
+
+        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+
+        //等到flag置位的一瞬间才开启定时器，这样准一点？？
+        while(bmi08x_wait_sync_data()!=RT_EOK);
+
+        rt_pin_write(GET_PIN(D,9),PIN_LOW);
+    }
+_exit:
+    return;
 }
 
 void imu_data_thrd(void *parameter)
@@ -130,15 +202,6 @@ void imu_data_thrd(void *parameter)
         rt_device_write(dev,0,test_str,sizeof(test_str));
         rt_device_close(dev);
         rt_thread_mdelay(1000);
-
-        // rt_sem_t sem=rt_object_find("dsem", RT_Object_Class_Semaphore);
-        // rt_sem_take(sem, RT_WAITING_FOREVER);
-        // bmi08x_get_sync_data();//42303
-
-        // rt_thread_mdelay(1);
-        // bmi08x_get_sync_data();//42303
-        // rt_uint32_t t2=SysTick->VAL;
-        // rt_kprintf("aaa\n\t");
     }
 }
 
@@ -152,9 +215,14 @@ void vcom_test(void)
     rt_device_close(dev);
 }MSH_CMD_EXPORT(vcom_test, vcom test);
 
-void USART_enter(void *parameter)
+void can_thread_entry(void *parameter)
 {
-	//   rt_uint32_t count_U = 0;
+    rt_pin_mode(GET_PIN(D,5),PIN_MODE_OUTPUT);
+    rt_pin_write(GET_PIN(D,5),PIN_LOW);//使能终端电阻
+
+    rt_pin_mode(GET_PIN(D,4),PIN_MODE_OUTPUT);
+    rt_pin_write(GET_PIN(D,4),PIN_LOW);//can收发器使能
+
     static rt_device_t can_dev;
     volatile rt_err_t ret;
     can_dev=rt_device_find("fdcan1");
@@ -183,6 +251,7 @@ void USART_enter(void *parameter)
     msg.data[5] = 0x55;
     msg.data[6] = 0x66;
     msg.data[7] = 0x77;
+
     /* 发送一帧 CAN 数据 */
     while(1)
     {
@@ -195,20 +264,9 @@ void USART_enter(void *parameter)
         {
             rt_kprintf("can dev write data success!\n");
         }
-        
-        // while (1)
-        // {
-                rt_thread_mdelay(500);	        
-                // rt_kprintf("thread usart count: %d\r\n",  count_U ++); /* 打印线程计数值输出 */
-                // rt_thread_resume(&led0_thread);		
-                // rt_kprintf("LED_thread 线程被解挂!\r\n");
-                // if(count_U==10)
-                // {
-                // 		rt_thread_detach(&led0_thread);
-                // 		rt_kprintf("LED_thread 线程被删除！\r\n");
-                // }
-            
-        // }
+
+        rt_thread_mdelay(500);	        
+
     }
 }
 
@@ -248,7 +306,7 @@ void rc_rx_thread_entry(void *parameter)
 
     static char msg_pool[256];
     /* 初始化消息队列 */
-    rt_mq_init(&rc_rx_mq, "rx_mq",
+    rt_mq_init(&rc_rx_mq, "rc_rx_mq",
                msg_pool,                 /* 存放消息的缓冲区 */
                sizeof(rt_size_t),    /* 一条消息的最大长度 */
                sizeof(msg_pool),         /* 存放消息的缓冲区大小 */
@@ -272,4 +330,65 @@ void rc_rx_thread_entry(void *parameter)
         }
     }
     
+}
+
+static struct rt_messagequeue gps_rx_mq;
+
+/**
+ * @brief   遥控器接收回调函数
+ */
+static rt_err_t gps_rx_cbk(rt_device_t dev, rt_size_t size)
+{
+    rt_err_t result = rt_mq_send(&gps_rx_mq, &size, sizeof(size));
+    
+    return result;
+}
+
+/**
+ * @brief   gps接收线程
+ */
+void gps_rx_thread_entry(void *parameter)
+{
+    rt_device_t gps_serial = rt_device_find("uart2");
+    if (!gps_serial)
+    {
+        return ;
+    }
+
+    struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;  /* 初始化配置参数 */
+    config.baud_rate = BAUD_RATE_460800;//从4800开始尝试
+    config.rx_bufsz     = 128;                // 修改缓冲区 rx buff size 为 128
+    rt_device_control(gps_serial, RT_DEVICE_CTRL_CONFIG, &config);
+
+    static char msg_pool[256];
+    /* 初始化消息队列 */
+    rt_mq_init(&gps_rx_mq, "gps_rx_mq",
+               msg_pool,                 /* 存放消息的缓冲区 */
+               sizeof(rt_size_t),    /* 一条消息的最大长度 */
+               sizeof(msg_pool),         /* 存放消息的缓冲区大小 */
+               RT_IPC_FLAG_FIFO);        /* 如果有多个线程等待，按照先来先得到的方法分配消息 */
+
+    /* 以 DMA 接收及轮询发送方式打开串口设备 */
+    rt_device_open(gps_serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
+    /* 设置接收回调函数 */
+    rt_device_set_rx_indicate(gps_serial, gps_rx_cbk);
+
+    while (1)
+    {
+        rt_size_t size;
+        /* 从消息队列中读取消息 */
+        rt_err_t result = rt_mq_recv(&gps_rx_mq, &size, sizeof(size), 400);
+        if (result == RT_EOK)
+        {
+            /* 从串口读取数据 */
+            rt_size_t rx_length = rt_device_read(gps_serial, 0, rc_rx_buffer, size);
+            // rc_rx_buffer[rx_length] = '\0';
+        }
+        else if(result == -RT_ETIMEOUT)
+        {
+            //切换波特率
+            struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;  /* 初始化配置参数 */
+            config.baud_rate = BAUD_RATE_4800;        // 修改波特率为 9600
+        }
+    }
 }

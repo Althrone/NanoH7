@@ -61,6 +61,7 @@
         "fcntl.h": "c",
         "_default_fcntl.h": "c",
         "unistd.h": "c",
-        "bmi088_stm32.h": "c"
+        "bmi088_stm32.h": "c",
+        "system_stm32h7xx.h": "c"
     }
 }

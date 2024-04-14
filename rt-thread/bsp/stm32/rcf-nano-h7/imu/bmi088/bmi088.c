@@ -366,6 +366,8 @@ volatile rt_int16_t g_bmi08x_aux_mag_x=0;
 volatile rt_int16_t g_bmi08x_aux_mag_y=0;
 volatile rt_int16_t g_bmi08x_aux_mag_z=0;
 
+struct rt_spi_device * g_acce0_sensor;
+
 /******************************************************************************
  * private functions declaration
  *****************************************************************************/
@@ -380,6 +382,9 @@ static rt_err_t bmi08x_write_reg(rt_sensor_t sensor, rt_uint8_t reg_addr, rt_uin
 
 rt_err_t bmi088_acce_init(rt_sensor_t sensor)
 {
+
+    g_acce0_sensor=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
+
     rt_err_t result=RT_EOK;
     rt_uint8_t raw_data=0;
 
@@ -403,15 +408,19 @@ rt_err_t bmi088_acce_init(rt_sensor_t sensor)
     bmi08x_load_config_file(sensor,bmi088_mm_config_file,sizeof(bmi088_mm_config_file));
 
     //配置采样率之类的
-    raw_data=0xAB;//800
+    // raw_data=0xAB;//800
+    raw_data=0xAA;//400Hz
+    //改了这里记得改gyro
     if(bmi08x_write_reg(sensor,BMI08x_ACC_CONF_ADDR,&raw_data,1)!=RT_EOK)
         goto _exit;
     raw_data=0;
 
     //开启同步功能
-    rt_uint16_t sync_cfg=0x0002;
+    /*! Mode (0 = off, 1 = 400Hz, 2 = 1kHz, 3 = 2kHz) */
+    rt_uint16_t sync_cfg=0x0001;
     bmi08x_config_feature(sensor,0x02,&sync_cfg,1);
 
+    //AUX相关测试
     rt_uint8_t rawd=0x10;
     bmi08x_write_reg(sensor,BMI08x_IF_CONF_ADDR,&rawd,1);
     rawd=0x03;
@@ -604,7 +613,8 @@ rt_err_t bmi088_gyro_init(rt_sensor_t sensor)
         goto _exit;
 
     //配置odr
-    raw_data=0x82;//1000Hz 最高位永远是1
+    raw_data=0x83;//400Hz 最高位永远是1
+    // raw_data=0x82;//1000Hz 最高位永远是1
     result=bmi08x_write_reg(sensor,BMI08x_GYRO_BANDWIDTH_ADDR,&raw_data,1);
     if(result!=RT_EOK)
         goto _exit;
@@ -807,6 +817,45 @@ rt_err_t bmi08x_aux_mag_set_odr(struct rt_sensor_device *sensor, void *args)
     return result;
 }
 
+#include "stm32h7xx.h"
+
+rt_err_t bmi08x_wait_sync_data(void)
+{
+    //由于没有引出acc同步数据中断引脚，建议死循环读取 BMI08x_ACC_INT_STAT_0_ADDR 的 Data_sync_out
+
+    rt_err_t result=RT_EOK;
+    // rt_sensor_t sensor=(rt_sensor_t )rt_device_find("acce_0");
+    struct rt_spi_device * sensor=g_acce0_sensor;
+
+    rt_uint8_t recv_buf[3]={0};
+    rt_uint8_t send_buf[]={0x80|BMI08x_ACC_INT_STAT_0_ADDR,0x00,0x00};
+    // rt_uint8_t send_buf[]={0x80|BMI08x_ACC_INT_STAT_1_ADDR,0x00,0x00};
+
+    #include "drv_spi.h"
+    struct stm32_hw_spi_cs *cs =g_acce0_sensor->parent.user_data;
+    struct stm32_spi *spi_drv =  rt_container_of(g_acce0_sensor->bus, struct stm32_spi, spi_bus);
+
+    do//死循环等待数据准备好
+    {
+        //由于rt的部分函数无法在isr中执行，所以不得已直接使用HAL函数
+        // #include "drv_spi.h"
+        // struct stm32_hw_spi_cs *cs =g_acce0_sensor->parent.user_data;
+        // struct stm32_spi *spi_drv =  rt_container_of(g_acce0_sensor->bus, struct stm32_spi, spi_bus);
+        //上下拉别忘记了
+        HAL_GPIO_WritePin(cs->GPIOx, cs->GPIO_Pin, GPIO_PIN_RESET);
+        HAL_SPI_TransmitReceive(&(spi_drv->handle),send_buf,recv_buf,3,1000);
+        HAL_GPIO_WritePin(cs->GPIOx, cs->GPIO_Pin, GPIO_PIN_SET);
+        // result=rt_spi_send_then_recv(g_acce0_sensor,send_buf,2,recv_buf,1);
+        // result=bmi08x_read_reg(sensor,BMI08x_ACC_INT_STAT_0_ADDR,recv_buf,1);
+        if(result!=RT_EOK)
+            goto _exit;
+    }while((*(Bmi08xAccIntStat0RegUnion*)(&(recv_buf[2]))).B.Data_sync_out!=1);
+    // }while((*(Bmi08xAccIntStat0RegUnion*)(&(recv_buf[2]))).B.error_int_out!=1);
+
+_exit:
+    return result;
+}
+
 /**
  * @note    只读取acc和gyro 88us
  * @note    加上温度100us
@@ -820,15 +869,18 @@ rt_err_t bmi08x_get_sync_data(void)
 
     rt_uint8_t recv_buf[8]={0};
     
-    do//死循环等待数据准备好
-    {
-        if(bmi08x_read_reg(sensor,BMI08x_SENSORTIME_0_ADDR,recv_buf,5)!=RT_EOK)
-            goto _exit;
-    }while((*(Bmi08xAccIntStat0RegUnion*)(&(recv_buf[4]))).B.Data_sync_out!=1);
+    // do//死循环等待数据准备好
+    // {
+    //     if(bmi08x_read_reg(sensor,BMI08x_SENSORTIME_0_ADDR,recv_buf,5)!=RT_EOK)
+    //         goto _exit;
+    // }while((*(Bmi08xAccIntStat0RegUnion*)(&(recv_buf[4]))).B.Data_sync_out!=1);
 
-    g_bmi08x_sensor_time_stamp=((rt_uint32_t)recv_buf[0])|
-                                ((rt_uint32_t)recv_buf[1]<<8)|
-                                ((rt_uint32_t)recv_buf[2]<<16);
+    //获取当前时间戳
+    // bmi08x_read_reg(sensor,BMI08x_SENSORTIME_0_ADDR,recv_buf,3);
+
+    // g_bmi08x_sensor_time_stamp=((rt_uint32_t)recv_buf[0])|
+    //                             ((rt_uint32_t)recv_buf[1]<<8)|
+    //                             ((rt_uint32_t)recv_buf[2]<<16);
 
     //读取xy轴同步数据
     if(bmi08x_read_reg(sensor,BMI08x_GP_0_ADDR,recv_buf,4)!=RT_EOK)
@@ -940,6 +992,11 @@ _exit:
     return result;
 }
 
+/**
+ * @brief   
+ * @param   feature_cfg: 配置字，一个是两字节
+ * @param   feature_len: 配置字长度
+*/
 rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_uint16_t* feature_cfg, rt_size_t feature_len)
 {
     rt_err_t result=RT_EOK;
