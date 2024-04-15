@@ -176,7 +176,7 @@ int rt_hw_spl06_port(void)
 
     return RT_EOK;
 }
-INIT_DEVICE_EXPORT(rt_hw_spl06_port);
+// INIT_DEVICE_EXPORT(rt_hw_spl06_port);
 
 /******************************************************************************
  * private functions definition

@@ -93,8 +93,8 @@ rt_sem_t tim_sem;
 
 rt_hwtimerval_t timeout_s={
     .sec=0,
-    .usec=2500,//留10us用于获取flag？
-};//2375
+    .usec=2480,//留10us用于获取flag？
+};//2480
 
 /**
  * @brief   定时释放信号量
@@ -106,12 +106,12 @@ static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
 
     // rt_hw_interrupt_disable();
 
-    while (1)
-    {
-        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
-        rt_pin_write(GET_PIN(D,9),PIN_LOW);
-        while(bmi08x_wait_sync_data()!=RT_EOK);
-    }
+    // while (1)
+    // {
+    //     rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+    //     rt_pin_write(GET_PIN(D,9),PIN_LOW);
+    //     while(bmi08x_wait_sync_data()!=RT_EOK);
+    // }
     
 
     rt_pin_write(GET_PIN(D,9),PIN_HIGH);
@@ -120,7 +120,7 @@ static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
     while(bmi08x_wait_sync_data()!=RT_EOK);
 
     //开启定时器
-    // rt_device_write(dev, 0, &timeout_s, sizeof(timeout_s));
+    rt_device_write(dev, 0, &timeout_s, sizeof(timeout_s));
     rt_sem_release(tim_sem);
 
     rt_pin_write(GET_PIN(D,9),PIN_LOW);
@@ -148,14 +148,10 @@ void ins_rx_thread_entry(void *parameter)
 
     // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
 
-    // //等到flag置位的一瞬间才开启定时器，这样准一点？？
-    // if(bmi08x_wait_sync_data()==RT_EOK)
-    // {
-        //开启定时器
-        rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
-    // }
-    // else
-    //     goto _exit;
+    //等到flag置位的一瞬间才开启定时器，这样准一点？？
+    while(bmi08x_wait_sync_data()!=RT_EOK);
+    //开启定时器
+    rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
 
     // rt_pin_write(GET_PIN(D,9),PIN_LOW);
 
@@ -164,28 +160,26 @@ void ins_rx_thread_entry(void *parameter)
     // rt_pin_write(GET_PIN(D,9),PIN_LOW);
     rt_sem_take(tim_sem, RT_WAITING_FOREVER);
 
-    
-    
     while (1)
     {
-        // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
 
-        // // rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
-        // bmi08x_get_sync_data();
+        // rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
+        bmi08x_get_sync_data();
 
-        // rt_pin_write(GET_PIN(D,9),PIN_LOW);
+        rt_pin_write(GET_PIN(D,9),PIN_LOW);
 
-        // rt_sem_take(tim_sem, RT_WAITING_FOREVER);
+        rt_sem_take(tim_sem, RT_WAITING_FOREVER);
 
         //mag
         //baro
 
-        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+        // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
 
-        //等到flag置位的一瞬间才开启定时器，这样准一点？？
-        while(bmi08x_wait_sync_data()!=RT_EOK);
+        // //等到flag置位的一瞬间才开启定时器，这样准一点？？
+        // while(bmi08x_wait_sync_data()!=RT_EOK);
 
-        rt_pin_write(GET_PIN(D,9),PIN_LOW);
+        // rt_pin_write(GET_PIN(D,9),PIN_LOW);
     }
 _exit:
     return;

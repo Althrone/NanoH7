@@ -128,7 +128,7 @@ int rt_hw_bn880_port(void)
 
     return RT_EOK;
 }
-INIT_DEVICE_EXPORT(rt_hw_bn880_port);
+// INIT_DEVICE_EXPORT(rt_hw_bn880_port);
 
 /******************************************************************************
  * private functions definition

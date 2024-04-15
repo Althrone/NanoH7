@@ -827,14 +827,16 @@ rt_err_t bmi08x_wait_sync_data(void)
     // rt_sensor_t sensor=(rt_sensor_t )rt_device_find("acce_0");
     struct rt_spi_device * sensor=g_acce0_sensor;
 
-    rt_uint8_t recv_buf[3]={0};
-    rt_uint8_t send_buf[]={0x80|BMI08x_ACC_INT_STAT_0_ADDR,0x00,0x00};
-    // rt_uint8_t send_buf[]={0x80|BMI08x_ACC_INT_STAT_1_ADDR,0x00,0x00};
+    rt_uint8_t recv_buf[6]={0};
+    // rt_uint8_t send_buf[]={0x80|BMI08x_ACC_INT_STAT_0_ADDR,0x00,0x00};
+    rt_uint8_t send_buf[]={0x80|BMI08x_GP_0_ADDR,0x00,0x00,0x00,0x00,0x00};
 
     #include "drv_spi.h"
     struct stm32_hw_spi_cs *cs =g_acce0_sensor->parent.user_data;
     struct stm32_spi *spi_drv =  rt_container_of(g_acce0_sensor->bus, struct stm32_spi, spi_bus);
 
+    rt_int16_t tmp_x;
+    rt_int16_t tmp_y;
     do//死循环等待数据准备好
     {
         //由于rt的部分函数无法在isr中执行，所以不得已直接使用HAL函数
@@ -842,14 +844,23 @@ rt_err_t bmi08x_wait_sync_data(void)
         // struct stm32_hw_spi_cs *cs =g_acce0_sensor->parent.user_data;
         // struct stm32_spi *spi_drv =  rt_container_of(g_acce0_sensor->bus, struct stm32_spi, spi_bus);
         //上下拉别忘记了
-        HAL_GPIO_WritePin(cs->GPIOx, cs->GPIO_Pin, GPIO_PIN_RESET);
-        HAL_SPI_TransmitReceive(&(spi_drv->handle),send_buf,recv_buf,3,1000);
-        HAL_GPIO_WritePin(cs->GPIOx, cs->GPIO_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(cs->GPIOx, cs->GPIO_Pin, GPIO_PIN_RESET);
+    // rt_hw_us_delay(1);
+        HAL_SPI_TransmitReceive(&(spi_drv->handle),send_buf,recv_buf,6,1000);
+    // rt_hw_us_delay(1);
+    HAL_GPIO_WritePin(cs->GPIOx, cs->GPIO_Pin, GPIO_PIN_SET);
+    rt_hw_us_delay(1);
+    tmp_x=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8));
+    tmp_y=(rt_int16_t)(((rt_uint16_t)recv_buf[4])|((rt_uint16_t)recv_buf[5]<<8));
         // result=rt_spi_send_then_recv(g_acce0_sensor,send_buf,2,recv_buf,1);
         // result=bmi08x_read_reg(sensor,BMI08x_ACC_INT_STAT_0_ADDR,recv_buf,1);
         if(result!=RT_EOK)
             goto _exit;
-    }while((*(Bmi08xAccIntStat0RegUnion*)(&(recv_buf[2]))).B.Data_sync_out!=1);
+    }while((g_bmi08x_sync_acc_x==tmp_x)&&(g_bmi08x_sync_acc_y==tmp_y));
+    g_bmi08x_sync_acc_x=tmp_x;
+    g_bmi08x_sync_acc_y=tmp_y;
+    // }while(recv_buf[3]!=0x01);
+    // }while((*(Bmi08xAccIntStat0RegUnion*)(&(recv_buf[3]))).B.Data_sync_out!=1);
     // }while((*(Bmi08xAccIntStat0RegUnion*)(&(recv_buf[2]))).B.error_int_out!=1);
 
 _exit:
@@ -883,10 +894,10 @@ rt_err_t bmi08x_get_sync_data(void)
     //                             ((rt_uint32_t)recv_buf[2]<<16);
 
     //读取xy轴同步数据
-    if(bmi08x_read_reg(sensor,BMI08x_GP_0_ADDR,recv_buf,4)!=RT_EOK)
-        goto _exit;
-    g_bmi08x_sync_acc_x=(rt_int16_t)(((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8));
-    g_bmi08x_sync_acc_y=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8));
+    // if(bmi08x_read_reg(sensor,BMI08x_GP_0_ADDR,recv_buf,4)!=RT_EOK)
+    //     goto _exit;
+    // g_bmi08x_sync_acc_x=(rt_int16_t)(((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8));
+    // g_bmi08x_sync_acc_y=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8));
 
     //读取z轴同步数据
     if(bmi08x_read_reg(sensor,BMI08x_GP_4_ADDR,recv_buf,2)!=RT_EOK)
