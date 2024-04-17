@@ -10,6 +10,7 @@
 #include "dfs_fs.h"
 
 #include "bmi088.h"
+#include "mmc5983ma.h"
 
 void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
@@ -101,19 +102,6 @@ rt_hwtimerval_t timeout_s={
 */
 static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
 {
-    //信号量
-    // rt_sem_t sem=rt_object_find("dsem", RT_Object_Class_Semaphore);
-
-    // rt_hw_interrupt_disable();
-
-    // while (1)
-    // {
-    //     rt_pin_write(GET_PIN(D,9),PIN_HIGH);
-    //     rt_pin_write(GET_PIN(D,9),PIN_LOW);
-    //     while(bmi08x_wait_sync_data()!=RT_EOK);
-    // }
-    
-
     rt_pin_write(GET_PIN(D,9),PIN_HIGH);
 
     //等到flag置位的一瞬间才开启定时器，这样准一点？？
@@ -165,7 +153,8 @@ void ins_rx_thread_entry(void *parameter)
         rt_pin_write(GET_PIN(D,9),PIN_HIGH);
 
         // rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
-        bmi08x_get_sync_data();
+        // bmi08x_get_sync_data();
+        mmc5893ma_polling_get_mag();
 
         rt_pin_write(GET_PIN(D,9),PIN_LOW);
 

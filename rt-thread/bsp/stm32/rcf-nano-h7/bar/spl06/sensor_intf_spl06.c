@@ -102,9 +102,7 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *baro_cfg)
     struct rt_spi_configuration spi_cfg;
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    // spi_cfg.max_hz=5*500*1000;
-    // spi_cfg.max_hz=10*1000*1000;
-    spi_cfg.max_hz=5*1000*1000;
+    spi_cfg.max_hz=9*1000*1000;
     // spi_dev->user_data=
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
@@ -132,7 +130,7 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *baro_cfg)
     // LOG_I("intf_type :%d", info.intf_type);
     // LOG_I("period_min:%d", info.period_min);
 
-    spl06_init();
+    spl06_init(sensor_baro);
 
     //读取设备ID，这里开始用到自己写的东西了
     rt_uint8_t id = 0x00;
@@ -176,7 +174,7 @@ int rt_hw_spl06_port(void)
 
     return RT_EOK;
 }
-// INIT_DEVICE_EXPORT(rt_hw_spl06_port);
+INIT_DEVICE_EXPORT(rt_hw_spl06_port);
 
 /******************************************************************************
  * private functions definition

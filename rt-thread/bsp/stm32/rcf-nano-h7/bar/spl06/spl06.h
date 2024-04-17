@@ -70,12 +70,99 @@ typedef enum
     SPL06_COEF_C30L_REG_ADDR    = 0x21
 }SPL06RegAddrEnum;
 
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t PM_PRC  :4;
+        volatile rt_uint8_t PM_RATE :3;
+        volatile rt_uint8_t         :1;
+    }B;
+}Spl06PrsCfgRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t TMP_PRC     :3;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t TMP_RATE    :3;
+        volatile rt_uint8_t TMP_EXT     :1;
+    }B;
+}Spl06TmpCfgRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t MEAS_CRTL   :3;
+        volatile rt_uint8_t             :1;
+        volatile rt_uint8_t PRS_RDY     :1;
+        volatile rt_uint8_t TMP_RDY     :1;
+        volatile rt_uint8_t SENSOR_RDY  :1;
+        volatile rt_uint8_t COEF_RDY    :1;
+    }B;
+}Spl06MeasCfgRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t SPI_MODE        :1;
+        volatile rt_uint8_t FIFO_EN         :1;
+        volatile rt_uint8_t PRS_SHIFT_EN    :1;
+        volatile rt_uint8_t TMP_SHIFT_EN    :1;
+        volatile rt_uint8_t INT_TMP         :1;
+        volatile rt_uint8_t INT_PRS         :1;
+        volatile rt_uint8_t INT_FIFO        :1;
+        volatile rt_uint8_t INT_HL          :1;
+    }B;
+}Spl06CfgRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t INT_PRS         :1;
+        volatile rt_uint8_t INT_TMP         :1;
+        volatile rt_uint8_t INT_FIFO_FULL   :1;
+        volatile rt_uint8_t                 :5;
+    }B;
+}Spl06IntStsRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t FIFO_EMPTY  :1;
+        volatile rt_uint8_t FIFO_FULL   :1;
+        volatile rt_uint8_t             :6;
+    }B;
+}Spl06FifoStsRegUnion;
+
+typedef union
+{
+    volatile rt_uint8_t r;
+    struct
+    {
+        volatile rt_uint8_t SOFT_RST    :4;
+        volatile rt_uint8_t             :3;
+        volatile rt_uint8_t FIFO_FLUSH  :1;
+    }B;
+}Spl06ResetRegUnion;
+
 /******************************************************************************
  * pubilc functions
  *****************************************************************************/
 
-void spl06_init(void);
-void spl06_reset(void);
+void spl06_init(rt_sensor_t sensor);
+void spl06_reset(rt_sensor_t sensor);
 
 rt_err_t spl06_get_id(struct rt_sensor_device *sensor, void *args);
 

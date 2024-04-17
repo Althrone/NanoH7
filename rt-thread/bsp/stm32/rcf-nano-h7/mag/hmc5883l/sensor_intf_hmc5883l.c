@@ -203,4 +203,4 @@ int rt_hw_hmc5883l_port(void)
 
     return RT_EOK;
 }
-INIT_DEVICE_EXPORT(rt_hw_hmc5883l_port);
+// INIT_DEVICE_EXPORT(rt_hw_hmc5883l_port);

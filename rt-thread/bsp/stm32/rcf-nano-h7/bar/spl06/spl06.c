@@ -29,40 +29,51 @@
  * pubilc functions definition
  *****************************************************************************/
 
-void spl06_init(void)
+void spl06_init(rt_sensor_t sensor)
 {
-    spl06_reset();
+    spl06_reset(sensor);
 
     rt_err_t result=RT_EOK;
     //查找总线设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi13");
+    spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
 
-    rt_uint8_t send_buf[2]={SPL06_CFG_REG_ADDR,0b10100001};//压力数据就绪终端，三线spi模式
-    result=rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+    Spl06CfgRegUnion cfg={
+        .B.SPI_MODE=1,//3wire
+        .B.INT_PRS=1,
+        .B.INT_HL=1,
+    };
+    rt_uint8_t send_buf[2]={SPL06_CFG_REG_ADDR,cfg.r};//压力数据就绪中断，三线spi模式
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    send_buf[0]=SPL06_TMP_CFG_REG_ADDR;
+    //Enable P shift
+    //Sports (addr 0x09)Start background measurements (addr 0x08)
+
+    send_buf[0]=SPL06_TMP_CFG_REG_ADDR;//Sports 0xA0
     send_buf[1]=0b11110000;
-    result=rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);//tmp使用外部
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);//tmp使用外部
 
-    send_buf[0]=SPL06_PRS_CFG_REG_ADDR;
+    send_buf[0]=SPL06_PRS_CFG_REG_ADDR;//Sports 0x26
     send_buf[1]=0b01110001;
-    result=rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);//tmp使用外部
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);//tmp使用外部
 
     send_buf[0]=SPL06_MEAS_CFG_REG_ADDR;
     send_buf[1]=0b00000111;//连续采样温度和压力
-    result=rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 }
 
-void spl06_reset(void)
+void spl06_reset(rt_sensor_t sensor)
 {
     rt_err_t result=RT_EOK;
     //查找总线设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi13");
+    spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
 
-    rt_uint8_t send_buf[2]={SPL06_RESET_REG_ADDR,0x09};//0b1001
-    result=rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+    Spl06ResetRegUnion rst_cmd={
+        .B.SOFT_RST=9,
+    };
+    rt_uint8_t send_buf[2]={SPL06_RESET_REG_ADDR,rst_cmd.r};//0b1001
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
     rt_thread_mdelay(52);//12+40
 }

@@ -495,7 +495,10 @@ rt_err_t bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args)
         goto _exit;
 
     if(chip_id!=0x1E)
+    {
+        result=-RT_ERROR;
         goto _exit;
+    }
     
     *(rt_uint8_t *)args = chip_id;
 
@@ -669,7 +672,10 @@ rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args)
         goto _exit;
     
     if(chip_id!=0x0F)
+    {
+        result=-RT_ERROR;
         goto _exit;
+    }
     
     *(rt_uint8_t *)args = chip_id;
 
