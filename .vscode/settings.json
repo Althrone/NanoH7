@@ -63,6 +63,7 @@
         "unistd.h": "c",
         "bmi088_stm32.h": "c",
         "system_stm32h7xx.h": "c",
-        "drv_log.h": "c"
+        "drv_log.h": "c",
+        "sensor.h": "c"
     }
 }

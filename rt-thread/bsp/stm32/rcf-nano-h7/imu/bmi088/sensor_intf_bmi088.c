@@ -119,7 +119,7 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
 
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    spi_cfg.max_hz=9*1000*1000;
+    spi_cfg.max_hz=1*1000*1000;
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
 
@@ -250,7 +250,7 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
 
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    spi_cfg.max_hz=9*1000*1000;
+    spi_cfg.max_hz=1*1000*1000;
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
 
@@ -381,7 +381,7 @@ int rt_hw_bmi088_temp_init(const char *name, struct rt_sensor_config *temp_cfg)
 
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    spi_cfg.max_hz=9*1000*1000;
+    spi_cfg.max_hz=1*1000*1000;
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
 

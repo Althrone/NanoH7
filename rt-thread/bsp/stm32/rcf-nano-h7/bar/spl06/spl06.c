@@ -21,9 +21,24 @@
  * private types
  *****************************************************************************/
 
+typedef struct
+{
+    rt_int16_t c0;
+    rt_int16_t c1;
+    rt_int32_t c00;
+    rt_int32_t c10;
+    rt_int16_t c01;
+    rt_int16_t c11;
+    rt_int16_t c20;
+    rt_int16_t c21;
+    rt_int16_t c30;
+}Spl06CoefStruct;
+
 /******************************************************************************
  * private functions declaration
  *****************************************************************************/
+
+static Spl06CoefStruct s_spl06_coef={0};
 
 /******************************************************************************
  * pubilc functions definition
@@ -75,7 +90,7 @@ void spl06_reset(rt_sensor_t sensor)
     rt_uint8_t send_buf[2]={SPL06_RESET_REG_ADDR,rst_cmd.r};//0b1001
     rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    rt_thread_mdelay(52);//12+40
+    rt_thread_mdelay(52);//12ms Time to sensor ready + 40ms Time to coefficients are available 
 }
 
 /**
@@ -95,11 +110,45 @@ rt_err_t spl06_get_id(struct rt_sensor_device *sensor, void *args)
     rt_uint8_t send_buf[2]={0x80|SPL06_ID_REG_ADDR,0x00};
     rt_uint8_t recv_buf[2]={0};
 
-    result=rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+    rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
 
     *(rt_uint32_t *)args = (rt_uint32_t)recv_buf[1];
 
     return result;
+}
+
+rt_err_t spl06_polling_get_coef(void)
+{
+    rt_err_t result=RT_EOK;
+    //查找总线设备
+    struct rt_spi_device *spi_dev=RT_NULL;
+    spi_dev=(struct rt_spi_device *)rt_device_find("spi13");
+
+    rt_uint8_t send_buf[]={0x80|SPL06_COEF_C0_REG_ADDR};
+    rt_uint8_t recv_buf[18]={0};
+
+    rt_spi_send_then_recv(spi_dev,send_buf,1,recv_buf,18);
+
+    s_spl06_coef.c0=((recv_buf[0]&0x80)>0)?0xF000|(((rt_uint16_t)recv_buf[0])<<4)|(recv_buf[1]>>4):
+                                                  (((rt_uint16_t)recv_buf[0])<<4)|(recv_buf[1]>>4);
+
+    s_spl06_coef.c1=(((recv_buf[1]<<4)&0x80)>0)?0xF000|(((rt_uint16_t)recv_buf[1])<<8)|recv_buf[2]:
+                                                       (((rt_uint16_t)recv_buf[1])<<8)|recv_buf[2];
+
+    // s_spl06_coef.c00=((recv_buf[3]&0x80)>0)?
+}
+
+// rt_err_t spl06_polling_get_mag(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
+rt_err_t spl06_polling_get_baro(void)
+{
+    rt_err_t result=RT_EOK;
+    //查找总线设备
+    struct rt_spi_device *spi_dev=RT_NULL;
+    spi_dev=(struct rt_spi_device *)rt_device_find("spi13");
+    //读取stat？
+    rt_uint8_t send_buf[]={0x80|SPL06_INT_STS_REG_ADDR,0x00};
+    rt_uint8_t recv_buf[2]={0};
+    rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
 }
 
 /******************************************************************************
