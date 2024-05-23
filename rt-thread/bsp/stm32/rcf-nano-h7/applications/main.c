@@ -20,7 +20,6 @@ void ins_rx_thread_entry(void *parameter);
 // #define CAN_
 // #define CAN_Pin GET_PIN(B, 14)
 
-
 int main(void)
 {
     // volatile rt_uint32_t sysclk=HAL_RCC_GetSysClockFreq();
@@ -29,31 +28,24 @@ int main(void)
     rt_pin_mode(GET_PIN(D,9),PIN_MODE_OUTPUT);
     rt_pin_write(GET_PIN(D,9),PIN_LOW);
 
-    char test_str[]="vcom success!\n\t";
+    // char test_str[]="vcom success!\n\t";
 
-    //usb测试
-    rt_device_t dev = RT_NULL;
-    dev = rt_device_find("vcom");
-    rt_device_init(dev);
-    rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+    // //usb测试
+    // rt_device_t dev = RT_NULL;
+    // dev = rt_device_find("vcom");
+    // rt_device_init(dev);
+    // rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
 
     // if(dev)
     // {
     //     while(1)
     //     {
-    //         rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
+    //         // rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
     //         rt_device_write(dev,0,test_str,sizeof(test_str));
     //         rt_thread_mdelay(1000);
     //         // rt_device_close(dev);
     //     }
     // }
-        
-    // rt_uint16_t sensor_data;
-    // rt_device_t dev = rt_device_find("temp_0");
-    // // rt_device_init(dev);
-    // rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
-
-    // rt_device_read(dev, 0, &sensor_data, 1);
 
     struct rt_device_pwm *pwm_dev=(struct rt_device_pwm *)rt_device_find("pwm12");
     rt_pwm_set(pwm_dev, 1, 500000, 150000);
@@ -64,7 +56,7 @@ int main(void)
     rt_pwm_enable(pwm_dev, 2);
 
     //挂载文件系统
-    dfs_mount("sd0","/","elm",0,0);
+    // dfs_mount("sd0","/","elm",0,0);
 
     // rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
     //                               RT_NULL,1024,5,5);
@@ -84,9 +76,15 @@ int main(void)
     //                                 RT_NULL,1024,0,5);
     // rt_thread_startup(t);
 
-    rt_thread_t t=rt_thread_create("ins_rx_data",ins_rx_thread_entry,
-                                    RT_NULL,1024,0,10);
-    rt_thread_startup(t);
+    // rt_thread_t t=rt_thread_create("ins_rx_data",ins_rx_thread_entry,
+    //                                 RT_NULL,1024,0,10);
+    // rt_thread_startup(t);
+    
+    // while(1)
+    // {
+    //     mmc5893ma_polling_get_mag();
+    //     rt_thread_mdelay(50);
+    // }
     return 0;
 }
 
@@ -155,7 +153,7 @@ void ins_rx_thread_entry(void *parameter)
         // rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
         // bmi08x_get_sync_data();
         // mmc5893ma_polling_get_mag();
-        spl06_polling_get_baro();
+        // spl06_polling_get_baro();
 
         rt_pin_write(GET_PIN(D,9),PIN_LOW);
 

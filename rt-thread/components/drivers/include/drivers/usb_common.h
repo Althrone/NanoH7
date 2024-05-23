@@ -19,7 +19,7 @@ extern "C" {
 
 #include <rtthread.h>
 
-#define RT_DEBUG_USB                    0x00
+#define RT_DEBUG_USB                    0x01
 #define USB_DYNAMIC                     0x00
 
 #define USB_CLASS_DEVICE                0x00

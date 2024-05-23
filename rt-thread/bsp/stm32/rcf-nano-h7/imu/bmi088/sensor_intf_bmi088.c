@@ -175,7 +175,7 @@ int rt_hw_bmi088_acce_port(void)
 
     return RT_EOK;
 }
-INIT_DEVICE_EXPORT(rt_hw_bmi088_acce_port);
+// INIT_DEVICE_EXPORT(rt_hw_bmi088_acce_port);
 
 static struct rt_sensor_ops gyro_sensor_ops =
 {
@@ -306,7 +306,7 @@ int rt_hw_bmi088_gyro_port(void)
 
     return RT_EOK;
 }
-INIT_DEVICE_EXPORT(rt_hw_bmi088_gyro_port);
+// INIT_DEVICE_EXPORT(rt_hw_bmi088_gyro_port);
 
 static struct rt_sensor_ops temp_sensor_ops =
 {
