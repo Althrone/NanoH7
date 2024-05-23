@@ -75,22 +75,22 @@ void mmc5893ma_init(rt_sensor_t sensor)
         rt_thread_mdelay(1);
     }
 
-    //读取温度测试
+    // 读取温度测试
 
-    // while(1)
-    // {
-    //     send_buf[0]=0x80|MMC5983MA_SR_ADDR;
-    //     send_buf[1]=0;
-    //     rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-    //     if((recv_buf[1]&0x02)==0x02)
-    //         break;
-    //     rt_thread_mdelay(1);
-    // }
+    while(1)
+    {
+        send_buf[0]=0x80|MMC5983MA_SR_ADDR;
+        send_buf[1]=0;
+        rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+        if((recv_buf[1]&0x02)==0x02)
+            break;
+        rt_thread_mdelay(1);
+    }
 
-    // send_buf[0]=0x80|MMC5983MA_T_OUT_ADDR;
-    // send_buf[1]=0;
-    // rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-    // while(1);
+    send_buf[0]=0x80|MMC5983MA_T_OUT_ADDR;
+    send_buf[1]=0;
+    rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+    while(1);
 }
 
 void mmc5893ma_reset(rt_sensor_t sensor)
