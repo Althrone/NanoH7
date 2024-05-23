@@ -2,17 +2,18 @@
 #include <drv_log.h>
 
 #include "mmc5983ma.h"
-#include "stm32h7xx.h"
+
+//由于5983无法读出寄存器值，因此只能维护一个寄存器表保存写入的cr0-cr3
+
 //需要测试连续模式下temp是不是也是连续的，还是说只有mag连续
+//连续模式下温度采样不连续，需要手动触发
+
 void mmc5893ma_init(rt_sensor_t sensor)
 {
     rt_err_t result=RT_EOK;
     //查找总线设备
     struct rt_spi_device *spi_dev=RT_NULL;
     spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
-
-    #include "drv_spi.h"
-    struct stm32_spi *spi_drv =  rt_container_of(spi_dev->bus, struct stm32_spi, spi_bus);
 
     mmc5893ma_reset(sensor);//复位命令感觉无效
 
@@ -27,14 +28,8 @@ void mmc5893ma_init(rt_sensor_t sensor)
         rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
     }while(((Mmc5893maStatRegUnion*)(&recv_buf[1]))->B.OTP_Rd_Done!=1);
 
-    while(1)
-    {
-        send_buf[0]=0x80|MMC5983MA_PID1_ADDR;
-        send_buf[1]=0;
-        rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-        if(recv_buf[1]==0x30)
-            break;
-    }
+    rt_uint8_t mag_id=0;
+    mmc5893ma_get_id(sensor,&mag_id);
 
     //cr1 设置BW
     Mmc5893maCtrl1RegUnion cr1={
@@ -48,7 +43,7 @@ void mmc5893ma_init(rt_sensor_t sensor)
     Mmc5893maCtrl0RegUnion cr0={
         .B.Auto_SR_en=1,//开启自动sr
         .B.INT_meas_done_en=1,//开启测量完成中断
-        .B.TM_T=1,
+        // .B.TM_T=1,
     };
     send_buf[0]=MMC5983MA_CR0_ADDR;
     send_buf[1]=cr0.r;
@@ -71,26 +66,25 @@ void mmc5893ma_init(rt_sensor_t sensor)
         send_buf[1]=0;
         rt_spi_transfer(spi_dev,send_buf,recv_buf,9);
         
-
         rt_thread_mdelay(1);
     }
 
     // 读取温度测试
 
-    while(1)
-    {
-        send_buf[0]=0x80|MMC5983MA_SR_ADDR;
-        send_buf[1]=0;
-        rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-        if((recv_buf[1]&0x02)==0x02)
-            break;
-        rt_thread_mdelay(1);
-    }
+    // while(1)
+    // {
+    //     send_buf[0]=0x80|MMC5983MA_SR_ADDR;
+    //     send_buf[1]=0;
+    //     rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+    //     if((recv_buf[1]&0x02)==0x02)
+    //         break;
+    //     rt_thread_mdelay(1);
+    // }
 
-    send_buf[0]=0x80|MMC5983MA_T_OUT_ADDR;
-    send_buf[1]=0;
-    rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-    while(1);
+    // send_buf[0]=0x80|MMC5983MA_T_OUT_ADDR;
+    // send_buf[1]=0;
+    // rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+    // while(1);
 }
 
 void mmc5893ma_reset(rt_sensor_t sensor)
@@ -109,8 +103,6 @@ void mmc5893ma_reset(rt_sensor_t sensor)
     rt_thread_mdelay(10);//MEMSIC MMC5983MA Rev A Page 15 of 20 Formal release date: 4/3/2019
 }
 
-// #include "stm32h7xx.h"
-
 /**
  * @brief   获取传感器ID
  * @param   sensor:
@@ -126,33 +118,12 @@ rt_err_t mmc5893ma_get_id(struct rt_sensor_device *sensor, void *args)
     rt_uint8_t send_buf[]={0x80|MMC5983MA_PID1_ADDR,0x00};
     rt_uint8_t recv_buf[2]={0};
 
-    // #include "drv_spi.h"
-    // struct stm32_spi *spi_drv =  rt_container_of(spi_dev->bus, struct stm32_spi, spi_bus);
+    rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+    if(recv_buf[1]!=0x30)
+        result=RT_ERROR;
+    else
+        *(rt_uint8_t *)args = recv_buf[1];
 
-    // while(1)
-    // {
-    //     // HAL_GPIO_WritePin(GPIOB,7, GPIO_PIN_RESET);
-    //     // rt_hw_us_delay(1);
-    //     // HAL_SPI_TransmitReceive(&(spi_drv->handle),send_buf,recv_buf,2,1000);
-    //     // rt_hw_us_delay(1);
-    //     // HAL_GPIO_WritePin(GPIOB,7, GPIO_PIN_SET);
-    //     // rt_hw_us_delay(1);
-    // rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-    // }
-    int a=0;
-    while(1)
-    {
-        a++;
-        rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-        if(recv_buf[1]==0x30)
-            break;
-    }
-    
-
-    
-    // result=rt_spi_send_then_recv(spi_dev,send_buf,sizeof(send_buf),recv_buf,sizeof(recv_buf));
-    // if(result==RT_EOK)
-    *(rt_uint8_t *)args = recv_buf[1];
     return result;
 }
 
