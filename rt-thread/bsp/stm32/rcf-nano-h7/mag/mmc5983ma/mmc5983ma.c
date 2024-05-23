@@ -4,9 +4,12 @@
 #include "mmc5983ma.h"
 
 //由于5983无法读出寄存器值，因此只能维护一个寄存器表保存写入的cr0-cr3
+static Mmc5893maCtrl0RegUnion gs_mmc5983ma_cr0={0};
+static Mmc5893maCtrl1RegUnion gs_mmc5983ma_cr1={0};
+static Mmc5893maCtrl2RegUnion gs_mmc5983ma_cr2={0};
+static Mmc5893maCtrl3RegUnion gs_mmc5983ma_cr3={0};
 
-//需要测试连续模式下temp是不是也是连续的，还是说只有mag连续
-//连续模式下温度采样不连续，需要手动触发
+//连续模式下温度寄存器也有值，但是温度很稳定，不知道有没有更新
 
 void mmc5893ma_init(rt_sensor_t sensor)
 {
@@ -32,42 +35,40 @@ void mmc5893ma_init(rt_sensor_t sensor)
     mmc5893ma_get_id(sensor,&mag_id);
 
     //cr1 设置BW
-    Mmc5893maCtrl1RegUnion cr1={
-        .B.BW=3,//bw 0.5ms 800Hz
-    };
-    send_buf[0]=MMC5983MA_CR1_ADDR;//
-    send_buf[1]=cr1.r;
+    gs_mmc5983ma_cr1.B.BW=3;//bw 0.5ms 800Hz
+
+    send_buf[0]=MMC5983MA_CR1_ADDR;
+    send_buf[1]=gs_mmc5983ma_cr1.r;
     rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
     //CR0
-    Mmc5893maCtrl0RegUnion cr0={
-        .B.Auto_SR_en=1,//开启自动sr
-        .B.INT_meas_done_en=1,//开启测量完成中断
-        // .B.TM_T=1,
-    };
+    gs_mmc5983ma_cr0.B.Auto_SR_en=1;//开启自动sr
+    gs_mmc5983ma_cr0.B.INT_meas_done_en=1;//开启测量完成中断
+    // gs_mmc5983ma_cr0.B.TM_T=1,
+
     send_buf[0]=MMC5983MA_CR0_ADDR;
-    send_buf[1]=cr0.r;
+    send_buf[1]=gs_mmc5983ma_cr0.r;
     rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
     // cr2 CM_Freq
-    Mmc5893maCtrl2RegUnion cr2={
-        .B.Cm_freq=7,
-        .B.Cmm_en=1,
-        // .B.En_prd_set=1,
-        // Prd_set不知道干嘛用的
-    };
+    gs_mmc5983ma_cr2.B.Cm_freq=7;
+    gs_mmc5983ma_cr2.B.Cmm_en=1;
+    // .B.En_prd_set=1,
+    // Prd_set不知道干嘛用的
+
     send_buf[0]=MMC5983MA_CR2_ADDR;
-    send_buf[1]=cr2.r;
+    send_buf[1]=gs_mmc5983ma_cr2.r;
     rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    while(1)
-    {
-        send_buf[0]=0x80|MMC5983MA_X_OUT_0_ADDR;
-        send_buf[1]=0;
-        rt_spi_transfer(spi_dev,send_buf,recv_buf,9);
+    // // 读取地磁和温度
+    // while(1)
+    // {
+    //     send_buf[0]=0x80|MMC5983MA_X_OUT_0_ADDR;
+    //     send_buf[1]=0;
+    //     rt_spi_transfer(spi_dev,send_buf,recv_buf,9);
         
-        rt_thread_mdelay(1);
-    }
+    //     rt_thread_mdelay(1);
+    // }
 
     // 读取温度测试
 
@@ -134,40 +135,55 @@ rt_err_t mmc5893ma_set_odr(struct rt_sensor_device *sensor, void *args)
     struct rt_spi_device *spi_dev=RT_NULL;
     spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
 
-    rt_uint8_t send_buf[]={0x80|MMC5983MA_CR1_ADDR};
-    rt_uint8_t recv_buf[2]={0};
-
-    //读取CR1 CR2原始值
-    result=rt_spi_send_then_recv(spi_dev,send_buf,sizeof(send_buf),recv_buf,sizeof(recv_buf));
+    rt_uint8_t send_buf[2]={0};
+    // rt_uint8_t recv_buf[2]={0};
 
     //判断是否为连续测量模式
-    if((*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cmm_en)//连续模式
+    if(gs_mmc5983ma_cr2.B.Cmm_en)//连续模式
     {
-        (*(Mmc5893maCtrl1RegUnion*)(&recv_buf[0])).B.BW=0;
         switch (*(rt_uint16_t*)args)
         {
         case 1://hz
-            (*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cm_freq=1;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==1)&&(gs_mmc5983ma_cr1.B.BW==0))
+                break;
+            gs_mmc5983ma_cr2.B.Cm_freq=1;
+            gs_mmc5983ma_cr1.B.BW=0;
             break;
         case 10:
-            (*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cm_freq=2;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==2)&&(gs_mmc5983ma_cr1.B.BW==0))
+                break;
+            gs_mmc5983ma_cr2.B.Cm_freq=2;
+            gs_mmc5983ma_cr1.B.BW=0;
             break;
         case 20:
-            (*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cm_freq=3;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==3)&&(gs_mmc5983ma_cr1.B.BW==0))
+                break;
+            gs_mmc5983ma_cr2.B.Cm_freq=3;
+            gs_mmc5983ma_cr1.B.BW=0;
             break;
         case 50:
-            (*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cm_freq=4;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==4)&&(gs_mmc5983ma_cr1.B.BW==0))
+                break;
+            gs_mmc5983ma_cr2.B.Cm_freq=4;
+            gs_mmc5983ma_cr1.B.BW=0;
             break;
         case 100:
-            (*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cm_freq=5;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==5)&&(gs_mmc5983ma_cr1.B.BW==0))
+                break;
+            gs_mmc5983ma_cr2.B.Cm_freq=5;
+            gs_mmc5983ma_cr1.B.BW=0;
             break;
         case 200:
-            (*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cm_freq=6;
-            (*(Mmc5893maCtrl1RegUnion*)(&recv_buf[0])).B.BW=1;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==6)&&(gs_mmc5983ma_cr1.B.BW==1))
+                break;
+            gs_mmc5983ma_cr2.B.Cm_freq=6;
+            gs_mmc5983ma_cr1.B.BW=1;
             break;
         case 1000:
-            (*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cm_freq=7;
-            (*(Mmc5893maCtrl1RegUnion*)(&recv_buf[0])).B.BW=3;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==7)&&(gs_mmc5983ma_cr1.B.BW==3))
+                break;
+            gs_mmc5983ma_cr2.B.Cm_freq=7;
+            gs_mmc5983ma_cr1.B.BW=3;
             break;
         default:
             result=-RT_ERROR;
@@ -175,22 +191,33 @@ rt_err_t mmc5893ma_set_odr(struct rt_sensor_device *sensor, void *args)
             break;
         }
     }
-    else//单次模式
+    else//单次模式输入的参数是采样带宽
     {
-        (*(Mmc5893maCtrl2RegUnion*)(&recv_buf[1])).B.Cm_freq=0;
         switch (*(rt_uint16_t*)args)
         {
         case 100:
-            (*(Mmc5893maCtrl1RegUnion*)(&recv_buf[0])).B.BW=0;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==0)&&(gs_mmc5983ma_cr1.B.BW==0))
+                break;
+            gs_mmc5983ma_cr1.B.BW=0;
+            gs_mmc5983ma_cr2.B.Cm_freq=0;
             break;
         case 200:
-            (*(Mmc5893maCtrl1RegUnion*)(&recv_buf[0])).B.BW=1;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==0)&&(gs_mmc5983ma_cr1.B.BW==1))
+                break;
+            gs_mmc5983ma_cr1.B.BW=1;
+            gs_mmc5983ma_cr2.B.Cm_freq=0;
             break;
         case 400:
-            (*(Mmc5893maCtrl1RegUnion*)(&recv_buf[0])).B.BW=2;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==0)&&(gs_mmc5983ma_cr1.B.BW==2))
+                break;
+            gs_mmc5983ma_cr1.B.BW=2;
+            gs_mmc5983ma_cr2.B.Cm_freq=0;
             break;
         case 800:
-            (*(Mmc5893maCtrl1RegUnion*)(&recv_buf[0])).B.BW=3;
+            if((gs_mmc5983ma_cr2.B.Cm_freq==0)&&(gs_mmc5983ma_cr1.B.BW==3))
+                break;
+            gs_mmc5983ma_cr1.B.BW=3;
+            gs_mmc5983ma_cr2.B.Cm_freq=0;
             break;
         default:
             result=-RT_ERROR;
@@ -202,15 +229,18 @@ rt_err_t mmc5893ma_set_odr(struct rt_sensor_device *sensor, void *args)
     if(result==RT_EOK)
     {
         send_buf[0]=MMC5983MA_CR1_ADDR;
-        rt_spi_send_then_send(spi_dev,send_buf,sizeof(send_buf),
-                              recv_buf,sizeof(recv_buf));
+        send_buf[1]=gs_mmc5983ma_cr1.r;
+        rt_spi_transfer(spi_dev,send_buf,RT_NULL,sizeof(send_buf));
+
+        send_buf[0]=MMC5983MA_CR2_ADDR;
+        send_buf[1]=gs_mmc5983ma_cr2.r;
+        rt_spi_transfer(spi_dev,send_buf,RT_NULL,sizeof(send_buf));
     }
 
     return result;
 }
 
-// rt_err_t mmc5893ma_polling_get_mag(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
-rt_err_t mmc5893ma_polling_get_mag(void)
+rt_err_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
 {
     rt_err_t result=RT_EOK;
     //查找总线设备
@@ -234,17 +264,17 @@ rt_err_t mmc5893ma_polling_get_mag(void)
     // send_buf[1]=0;
     // rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
 
-    // send_buf[0]=0x80|MMC5983MA_X_OUT_0_ADDR;
-    // result=rt_spi_send_then_recv(spi_dev,send_buf,1,recv_buf,7);
+    send_buf[0]=0x80|MMC5983MA_X_OUT_0_ADDR;
+    result=rt_spi_send_then_recv(spi_dev,send_buf,1,recv_buf,7);
 
-    // rt_int32_t x=((recv_buf[0]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[0])<<10)|(((rt_uint32_t)recv_buf[1])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Xout:
-    //                                                (((rt_uint32_t)recv_buf[0])<<10)|(((rt_uint32_t)recv_buf[1])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Xout;
+    rt_int32_t x=((recv_buf[0]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[0])<<10)|(((rt_uint32_t)recv_buf[1])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Xout:
+                                                   (((rt_uint32_t)recv_buf[0])<<10)|(((rt_uint32_t)recv_buf[1])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Xout;
 
-    // rt_int32_t y=((recv_buf[2]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[2])<<10)|(((rt_uint32_t)recv_buf[3])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Yout:
-    //                                                (((rt_uint32_t)recv_buf[2])<<10)|(((rt_uint32_t)recv_buf[3])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Yout;
+    rt_int32_t y=((recv_buf[2]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[2])<<10)|(((rt_uint32_t)recv_buf[3])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Yout:
+                                                   (((rt_uint32_t)recv_buf[2])<<10)|(((rt_uint32_t)recv_buf[3])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Yout;
 
-    // rt_int32_t z=((recv_buf[4]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[4])<<10)|(((rt_uint32_t)recv_buf[5])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Zout:
-    //                                                (((rt_uint32_t)recv_buf[4])<<10)|(((rt_uint32_t)recv_buf[5])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Zout;
+    rt_int32_t z=((recv_buf[4]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[4])<<10)|(((rt_uint32_t)recv_buf[5])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Zout:
+                                                   (((rt_uint32_t)recv_buf[4])<<10)|(((rt_uint32_t)recv_buf[5])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Zout;
 
     // sensor_data->type = RT_SENSOR_CLASS_ACCE
     // sensor_data->data.acce.x = acceleration.x;
