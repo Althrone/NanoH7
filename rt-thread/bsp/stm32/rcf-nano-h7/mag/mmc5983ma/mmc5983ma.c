@@ -240,13 +240,13 @@ rt_err_t mmc5893ma_set_odr(struct rt_sensor_device *sensor, void *args)
     return result;
 }
 
-rt_err_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
+rt_size_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
 {
-    rt_err_t result=RT_EOK;
     //查找总线设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    // spi_dev=(struct rt_spi_device *)rt_device_find("spi12");
     spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
+    if(spi_dev==RT_NULL)
+        return 0;//传感器数据返回长度只有0和1，0表示失败
 
     //通过向sr的MEAS_T_DONE和MEAS_M_DONE写1清除中断标志
     // Mmc5893maStatRegUnion sr_clear={
@@ -265,7 +265,8 @@ rt_err_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struct
     // rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
 
     send_buf[0]=0x80|MMC5983MA_X_OUT_0_ADDR;
-    result=rt_spi_transfer(spi_dev,send_buf,recv_buf,8);
+    if(rt_spi_transfer(spi_dev,send_buf,recv_buf,8)!=8)
+        return 0;//传感器数据返回长度只有0和1，0表示失败
 
     rt_int32_t x=((recv_buf[1]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[1])<<10)|(((rt_uint32_t)recv_buf[2])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Xout:
                                                    (((rt_uint32_t)recv_buf[1])<<10)|(((rt_uint32_t)recv_buf[2])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Xout;
@@ -286,24 +287,38 @@ rt_err_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struct
     sensor_data->data.acce.z = z;
     sensor_data->timestamp = rt_sensor_get_ts();
 
-    return result;
+    return 1;
 }
 
-rt_err_t mmc5893ma_polling_get_temp(void)
+rt_size_t _mmc5893ma_temp_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
 {
-    rt_err_t result=RT_EOK;
     //查找总线设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi12");
-    // spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
+    spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
+    if(spi_dev==RT_NULL)
+        return 0;//传感器数据返回长度只有0和1，0表示失败
 
+    //考虑增加清中断操作
     //温度不做int清除的操作
 
     rt_uint8_t send_buf[]={0x80|MMC5983MA_T_OUT_ADDR,0x00};
     rt_uint8_t recv_buf[2]={0};
     rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
 
-    float t=-75+recv_buf[1]*0.8f;
+    float t=(-75+recv_buf[1]*0.8f)*10;
 
-    return result;
+    sensor_data->type = RT_SENSOR_CLASS_TEMP;
+    sensor_data->data.temp=t;
+    sensor_data->timestamp = rt_sensor_get_ts();
+
+    return 1;
+}
+
+/**
+ * @brief   主要用来设置open_flag
+ * @param   args: RT_SENSOR_MODE_POLLING RT_SENSOR_MODE_INT RT_SENSOR_MODE_FIFO
+ **/
+rt_err_t _mmc5893ma_set_mode(struct rt_sensor_device *sensor, void *args)
+{
+    sensor->parent.open_flag=*(rt_uint16_t*)args;
 }

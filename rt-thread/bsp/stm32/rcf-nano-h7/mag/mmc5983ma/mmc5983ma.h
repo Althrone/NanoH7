@@ -111,6 +111,9 @@ void mmc5893ma_reset(rt_sensor_t sensor);
 rt_err_t mmc5893ma_get_id(struct rt_sensor_device *sensor, void *args);
 rt_err_t mmc5893ma_set_odr(struct rt_sensor_device *sensor, void *args);
 
-rt_err_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
+rt_size_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
+rt_size_t _mmc5893ma_temp_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
+
+rt_err_t _mmc5893ma_set_mode(struct rt_sensor_device *sensor, void *args);
 
 #endif /* __HMC5883L_H__ */
