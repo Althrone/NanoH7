@@ -320,5 +320,5 @@ rt_size_t _mmc5893ma_temp_polling_get_data(struct rt_sensor_device *sensor, stru
  **/
 rt_err_t _mmc5893ma_set_mode(struct rt_sensor_device *sensor, void *args)
 {
-    sensor->parent.open_flag=*(rt_uint16_t*)args;
+    sensor->parent.open_flag=(rt_uint16_t)args;
 }
