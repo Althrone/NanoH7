@@ -79,6 +79,16 @@ int main(void)
     // rt_thread_t t=rt_thread_create("ins_rx_data",ins_rx_thread_entry,
     //                                 RT_NULL,1024,0,10);
     // rt_thread_startup(t);
+
+    //传感器获取
+    struct rt_sensor_data data;
+    rt_device_t dev=rt_device_find("mag_0");
+    rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
+    while (1)
+    {
+        rt_device_read(dev, 0, &data, 1);
+        rt_thread_mdelay(2);
+    }
     
     // while(1)
     // {

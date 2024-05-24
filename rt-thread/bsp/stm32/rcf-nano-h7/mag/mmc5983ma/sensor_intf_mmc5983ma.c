@@ -174,22 +174,22 @@ INIT_DEVICE_EXPORT(rt_hw_mmc5983ma_port);
 
 static rt_size_t mmc5983ma_fetch_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len)
 {
-    if(sensor->parent.open_flag&RT_DEVICE_FLAG_RDONLY)
-    {
-        // return _mmc5983ma_mag_polling_get_data(sensor, buf, len);
-    }
-    else if (sensor->parent.open_flag & RT_DEVICE_FLAG_INT_RX)
-    {
-        // return _xxx_acc_int_get_data(sensor, buf, len);
-    }
-    else if (sensor->parent.open_flag & RT_DEVICE_FLAG_FIFO_RX)
-    {
-        // return _xxx_acc_fifo_get_data(sensor, buf, len);
-    }
-    else
-    {
-        return 0;
-    }
+    // if(sensor->parent.open_flag&RT_DEVICE_FLAG_RDONLY)
+    // {
+        return _mmc5893ma_mag_polling_get_data(sensor, buf, len);
+    // }
+    // else if (sensor->parent.open_flag & RT_DEVICE_FLAG_INT_RX)
+    // {
+    //     // return _xxx_acc_int_get_data(sensor, buf, len);
+    // }
+    // else if (sensor->parent.open_flag & RT_DEVICE_FLAG_FIFO_RX)
+    // {
+    //     // return _xxx_acc_fifo_get_data(sensor, buf, len);
+    // }
+    // else
+    // {
+    //     return 0;
+    // }
 }
 
 static rt_err_t mmc5983ma_control(struct rt_sensor_device *sensor, int cmd, void *args)//args是32位(指针都是4个字节)

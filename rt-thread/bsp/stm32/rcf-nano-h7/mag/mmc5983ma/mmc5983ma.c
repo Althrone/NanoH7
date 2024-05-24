@@ -245,42 +245,46 @@ rt_err_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struct
     rt_err_t result=RT_EOK;
     //查找总线设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi12");
-    // spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
+    // spi_dev=(struct rt_spi_device *)rt_device_find("spi12");
+    spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
 
     //通过向sr的MEAS_T_DONE和MEAS_M_DONE写1清除中断标志
-    Mmc5893maStatRegUnion sr_clear={
-        .B.Meas_M_Done=1,
-        .B.Meas_T_Done=1,
-    };
-    rt_uint8_t send_buf[]={MMC5983MA_SR_ADDR,sr_clear.r};
-    rt_uint8_t recv_buf[7]={0};
+    // Mmc5893maStatRegUnion sr_clear={
+    //     .B.Meas_M_Done=1,
+    //     .B.Meas_T_Done=1,
+    // };
+    rt_uint8_t send_buf[8]={0};
+    rt_uint8_t recv_buf[8]={0};
 
     // rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    rt_spi_send_then_send(spi_dev,send_buf,1,send_buf+1,1);
+    // rt_spi_send_then_send(spi_dev,send_buf,1,send_buf+1,1);
 
     // send_buf[0]=0x80|MMC5983MA_CR2_ADDR;
     // send_buf[1]=0;
     // rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
 
     send_buf[0]=0x80|MMC5983MA_X_OUT_0_ADDR;
-    result=rt_spi_send_then_recv(spi_dev,send_buf,1,recv_buf,7);
+    result=rt_spi_transfer(spi_dev,send_buf,recv_buf,8);
 
-    rt_int32_t x=((recv_buf[0]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[0])<<10)|(((rt_uint32_t)recv_buf[1])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Xout:
-                                                   (((rt_uint32_t)recv_buf[0])<<10)|(((rt_uint32_t)recv_buf[1])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Xout;
+    rt_int32_t x=((recv_buf[1]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[1])<<10)|(((rt_uint32_t)recv_buf[2])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Xout:
+                                                   (((rt_uint32_t)recv_buf[1])<<10)|(((rt_uint32_t)recv_buf[2])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Xout;
 
-    rt_int32_t y=((recv_buf[2]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[2])<<10)|(((rt_uint32_t)recv_buf[3])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Yout:
-                                                   (((rt_uint32_t)recv_buf[2])<<10)|(((rt_uint32_t)recv_buf[3])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Yout;
+    rt_int32_t y=((recv_buf[3]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[3])<<10)|(((rt_uint32_t)recv_buf[4])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Yout:
+                                                   (((rt_uint32_t)recv_buf[3])<<10)|(((rt_uint32_t)recv_buf[4])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Yout;
 
-    rt_int32_t z=((recv_buf[4]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[4])<<10)|(((rt_uint32_t)recv_buf[5])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Zout:
-                                                   (((rt_uint32_t)recv_buf[4])<<10)|(((rt_uint32_t)recv_buf[5])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[6]))->B.Zout;
+    rt_int32_t z=((recv_buf[5]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[5])<<10)|(((rt_uint32_t)recv_buf[6])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Zout:
+                                                   (((rt_uint32_t)recv_buf[5])<<10)|(((rt_uint32_t)recv_buf[6])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Zout;
 
-    // sensor_data->type = RT_SENSOR_CLASS_ACCE
-    // sensor_data->data.acce.x = acceleration.x;
-    // sensor_data->data.acce.y = acceleration.y;
-    // sensor_data->data.acce.z = acceleration.z;
-    // sensor_data->timestamp = rt_sensor_get_ts();
+    x*=0.0625;//系数是0.0625mG
+    y*=0.0625;
+    z*=0.0625;
+
+    sensor_data->type = RT_SENSOR_CLASS_MAG;
+    sensor_data->data.acce.x = x;
+    sensor_data->data.acce.y = y;
+    sensor_data->data.acce.z = z;
+    sensor_data->timestamp = rt_sensor_get_ts();
 
     return result;
 }
