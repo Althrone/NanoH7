@@ -53,6 +53,15 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
 {
     rt_int8_t result;
     rt_sensor_t sensor_acce = RT_NULL;
+    rt_sensor_t sensor_temp = RT_NULL;
+    struct rt_sensor_module *module = RT_NULL;
+
+    module = rt_calloc(1, sizeof(struct rt_sensor_module));
+    if (module == RT_NULL)
+    {
+        result = -RT_ENOMEM;
+        goto __exit;
+    }
 
     sensor_acce = rt_calloc(1, sizeof(struct rt_sensor_device));
     if (sensor_acce == RT_NULL)//空间开辟失败
@@ -143,6 +152,25 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *acce_cfg)
     LOG_I("device id: 0x%x!", id);
 
     return RT_EOK;
+__exit:
+    if(sensor_acce) 
+    {
+        if(sensor_acce->data_buf)
+            rt_free(sensor_acce->data_buf);
+
+        rt_free(sensor_acce);
+    }
+    if(sensor_temp) 
+    {
+        if(sensor_temp->data_buf)
+            rt_free(sensor_temp->data_buf);
+
+        rt_free(sensor_temp);
+    }
+    if (module)
+        rt_free(module);
+
+    return result;
 }
 
 /**
@@ -159,19 +187,20 @@ int rt_hw_bmi088_acce_port(void)
     // cfg.irq_pin.pin = irq_pin;
     // cfg.irq_pin.mode = PIN_MODE_INPUT_PULLDOWN;
 
+    //由于是复合传感器，不用旧方法
     //查找是否存在 acce_0,acce_1...
-    char new_dev_name[]="0";
-    char exist_dev_name[]="acce_0";//rtt中加速度计缩写是acce
-    while(rt_device_find(exist_dev_name))//如果是NULL的话就会跳出while
-    {
-        ++new_dev_name[0];
-        ++exist_dev_name[4];
-        if(new_dev_name[0]>'9')
-        {
-            return -RT_ERROR;//超过10个acce了
-        }
-    }
-    rt_hw_bmi088_acce_init(new_dev_name,&cfg);
+    // char new_dev_name[]="0";
+    // char exist_dev_name[]="acce_0";//rtt中加速度计缩写是acce
+    // while(rt_device_find(exist_dev_name))//如果是NULL的话就会跳出while
+    // {
+    //     ++new_dev_name[0];
+    //     ++exist_dev_name[4];
+    //     if(new_dev_name[0]>'9')
+    //     {
+    //         return -RT_ERROR;//超过10个acce了
+    //     }
+    // }
+    rt_hw_bmi088_acce_init("bmi088",&cfg);
 
     return RT_EOK;
 }
