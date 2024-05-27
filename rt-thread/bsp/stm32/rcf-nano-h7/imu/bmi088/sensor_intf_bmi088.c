@@ -111,7 +111,7 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *cfg)
         // sensor_temp->info.fifo_max   = 1024;//bst-mis-an005.pdf
 
         rt_memcpy(&sensor_temp->config, cfg, sizeof(struct rt_sensor_config));
-        sensor_temp->ops = &temp_sensor_ops;
+        sensor_temp->ops = &acce_sensor_ops;
         sensor_temp->module = module;
 
         result = rt_hw_sensor_register(sensor_temp, name, RT_DEVICE_FLAG_RDWR, RT_NULL);

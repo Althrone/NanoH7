@@ -29,6 +29,8 @@ void mmc5893ma_init(rt_sensor_t sensor)
         send_buf[0]=0x80|MMC5983MA_SR_ADDR;
         send_buf[1]=0;
         rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+        // rt_thread_mdelay(1);
+    // }while(1);
     }while(((Mmc5893maStatRegUnion*)(&recv_buf[1]))->B.OTP_Rd_Done!=1);
 
     rt_uint8_t mag_id=0;
@@ -42,23 +44,23 @@ void mmc5893ma_init(rt_sensor_t sensor)
     rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
     //CR0
-    // // gs_mmc5983ma_cr0.B.Auto_SR_en=1;//开启自动sr
-    // gs_mmc5983ma_cr0.B.INT_meas_done_en=1;//开启测量完成中断
-    // // gs_mmc5983ma_cr0.B.TM_T=1,
+    gs_mmc5983ma_cr0.B.Auto_SR_en=1;//开启自动sr
+    gs_mmc5983ma_cr0.B.INT_meas_done_en=1;//开启测量完成中断
+    // gs_mmc5983ma_cr0.B.TM_T=1,
 
-    // send_buf[0]=MMC5983MA_CR0_ADDR;
-    // send_buf[1]=gs_mmc5983ma_cr0.r;
-    // rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+    send_buf[0]=MMC5983MA_CR0_ADDR;
+    send_buf[1]=gs_mmc5983ma_cr0.r;
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    // // cr2 CM_Freq
+    // cr2 CM_Freq
     // gs_mmc5983ma_cr2.B.Cm_freq=7;
     // gs_mmc5983ma_cr2.B.Cmm_en=1;
-    // // .B.En_prd_set=1,
-    // // Prd_set不知道干嘛用的
+    // .B.En_prd_set=1,
+    // Prd_set不知道干嘛用的
 
-    // send_buf[0]=MMC5983MA_CR2_ADDR;
-    // send_buf[1]=gs_mmc5983ma_cr2.r;
-    // rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+    send_buf[0]=MMC5983MA_CR2_ADDR;
+    send_buf[1]=gs_mmc5983ma_cr2.r;
+    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
     // // 读取地磁和温度
     // while(1)
@@ -72,8 +74,8 @@ void mmc5893ma_init(rt_sensor_t sensor)
 
     // 读取温度测试
     send_buf[0]=MMC5983MA_CR0_ADDR;
-    send_buf[1]=2;
-    // send_buf[1]=gs_mmc5983ma_cr0.r|2;
+    // send_buf[1]=2;
+    send_buf[1]=gs_mmc5983ma_cr0.r|2;
     rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
     while(1)
@@ -83,9 +85,11 @@ void mmc5893ma_init(rt_sensor_t sensor)
         rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
         if((recv_buf[1]&1)==1)
         {
-            send_buf[0]=MMC5983MA_SR_ADDR;//MMC5983MA_SR_ADDR
-            send_buf[1]=1;
+            gs_mmc5983ma_cr0.B.OTP_Read=1;
+            send_buf[0]=MMC5983MA_CR2_ADDR;//MMC5983MA_SR_ADDR
+            send_buf[1]=gs_mmc5983ma_cr0.r;
             rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+            rt_thread_mdelay(1);
         }
         if((recv_buf[1]&0x02)==0x02)
             break;
