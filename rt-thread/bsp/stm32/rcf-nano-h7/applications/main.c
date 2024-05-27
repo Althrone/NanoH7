@@ -125,7 +125,6 @@ static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
 
     rt_pin_write(GET_PIN(D,9),PIN_LOW);
 
-
     return 0;
 }
 
@@ -189,6 +188,34 @@ _exit:
 
 void imu_data_thrd(void *parameter)
 {
+    //定时器
+    rt_uint32_t freq = 10000;
+    rt_device_t tim_dev=rt_device_find("timer2");
+    rt_device_open(tim_dev, RT_DEVICE_OFLAG_RDWR);
+    rt_device_control(tim_dev, HWTIMER_CTRL_FREQ_SET, &freq);
+    rt_hwtimer_mode_t mode = HWTIMER_MODE_ONESHOT;//HWTIMER_MODE_ONESHOT HWTIMER_MODE_PERIOD
+    rt_device_control(tim_dev, HWTIMER_CTRL_MODE_SET, &mode);
+    //创建信号量
+    tim_sem=rt_sem_create("tim_sem", 0, RT_IPC_FLAG_PRIO);
+    rt_device_set_rx_indicate(tim_dev, tim_cbk);
+    
+    struct rt_sensor_data bmi08x_acce_data;
+    struct rt_sensor_data bmi08x_acce_next_data;
+    rt_device_t acce_dev=rt_device_find("acce_bmi088");
+    rt_device_open(acce_dev, RT_DEVICE_FLAG_RDONLY);
+    rt_device_read(acce_dev, 0, &bmi08x_acce_data, 1);//第一次读取
+    do
+    {
+        rt_device_read(acce_dev, 0, &bmi08x_acce_next_data, 1);
+    } while ((bmi08x_acce_next_data.data.acce.x==bmi08x_acce_data.data.acce.x)&&
+             (bmi08x_acce_next_data.data.acce.y==bmi08x_acce_data.data.acce.y)&&
+             (bmi08x_acce_next_data.data.acce.z==bmi08x_acce_data.data.acce.z));//值没变化，说明没更新，继续读
+    //至于为什么不读sr，看rm文档
+
+    //更新了，开启定时器
+    rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
+
+    ////////////////////////////////////
     rt_device_t dev = RT_NULL;
     dev = rt_device_find("vcom");
     char test_str[]="vcom success!\n\t";

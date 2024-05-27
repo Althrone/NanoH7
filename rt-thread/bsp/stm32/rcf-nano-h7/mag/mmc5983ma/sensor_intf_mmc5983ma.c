@@ -69,7 +69,7 @@ int rt_hw_mmc5983ma_init(const char *name, struct rt_sensor_config *cfg)
         sensor_mag->info.unit       = RT_SENSOR_UNIT_MGAUSS;
         sensor_mag->info.intf_type  = RT_SENSOR_INTF_SPI;
         sensor_mag->info.range_max  = 8000;//范围不可调
-        sensor_mag->info.range_min  = 8000;
+        sensor_mag->info.range_min  = -8000;
         sensor_mag->info.period_min = 1;
         sensor_mag->info.fifo_max   = 0;
 
@@ -244,7 +244,7 @@ static rt_size_t mmc5983ma_fetch_data(struct rt_sensor_device *sensor, void *buf
 {
     if(sensor->info.type==RT_SENSOR_CLASS_MAG)
     {
-        if(sensor->parent.open_flag&RT_SENSOR_MODE_POLLING)
+        if(sensor->parent.open_flag & RT_SENSOR_MODE_POLLING)
         {
             return _mmc5893ma_mag_polling_get_data(sensor, buf, len);
         }
@@ -284,7 +284,6 @@ static rt_size_t mmc5983ma_fetch_data(struct rt_sensor_device *sensor, void *buf
     {
         return 0;
     }
-    
 }
 
 static rt_err_t mmc5983ma_control(struct rt_sensor_device *sensor, int cmd, void *args)//args是32位(指针都是4个字节)

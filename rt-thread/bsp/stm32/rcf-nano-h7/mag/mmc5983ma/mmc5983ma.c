@@ -287,14 +287,10 @@ rt_size_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struc
     rt_int32_t z=((recv_buf[5]&0x80)>0)?0xFFFC0000|(((rt_uint32_t)recv_buf[5])<<10)|(((rt_uint32_t)recv_buf[6])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Zout:
                                                    (((rt_uint32_t)recv_buf[5])<<10)|(((rt_uint32_t)recv_buf[6])<<2)|((Mmc5893maXyzOut2RegUnion*)(&recv_buf[7]))->B.Zout;
 
-    x*=0.0625;//系数是0.0625mG
-    y*=0.0625;
-    z*=0.0625;
-
     sensor_data->type = RT_SENSOR_CLASS_MAG;
-    sensor_data->data.acce.x = x;
-    sensor_data->data.acce.y = y;
-    sensor_data->data.acce.z = z;
+    sensor_data->data.mag.x = x*0.0625;//系数是0.0625mG
+    sensor_data->data.mag.y = y*0.0625;
+    sensor_data->data.mag.z = z*0.0625;
     sensor_data->timestamp = rt_sensor_get_ts();
 
     return 1;
@@ -333,10 +329,10 @@ rt_size_t _mmc5893ma_temp_polling_get_data(struct rt_sensor_device *sensor, stru
     send_buf[1]=0x00;
     rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
 
-    float t=(-75+recv_buf[1]*0.8f)*10;
+    float t=-75+recv_buf[1]*0.8f;
 
     sensor_data->type = RT_SENSOR_CLASS_TEMP;
-    sensor_data->data.temp=t;
+    sensor_data->data.temp=t*10;
     sensor_data->timestamp = rt_sensor_get_ts();
 
     return 1;

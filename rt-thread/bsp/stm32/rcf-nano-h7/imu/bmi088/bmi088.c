@@ -368,6 +368,11 @@ volatile rt_int16_t g_bmi08x_aux_mag_z=0;
 
 struct rt_spi_device * g_acce0_sensor;
 
+//维护一个状态，保存当前设置的阈值
+static rt_bool_t gs_bmi08x_is_sync_mode=RT_FALSE;//默认不开启同步功能
+static rt_int16_t gs_bmi08x_acce_range=6000;//默认+-6g
+//周期可能不需要？
+
 /******************************************************************************
  * private functions declaration
  *****************************************************************************/
@@ -419,6 +424,8 @@ rt_err_t bmi088_acce_init(rt_sensor_t sensor)
     /*! Mode (0 = off, 1 = 400Hz, 2 = 1kHz, 3 = 2kHz) */
     rt_uint16_t sync_cfg=0x0001;
     bmi08x_config_feature(sensor,0x02,&sync_cfg,1);
+    gs_bmi08x_is_sync_mode=RT_TRUE;
+    gs_bmi08x_acce_range=4000;
 
     //AUX相关测试
     rt_uint8_t rawd=0x10;
@@ -485,7 +492,7 @@ _exit:
     return result;
 }
 
-rt_err_t bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args)
+rt_err_t _bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args)
 {
     rt_err_t result=RT_EOK;
 
@@ -508,35 +515,61 @@ _exit:
 
 rt_err_t bmi088_acce_set_range(struct rt_sensor_device *sensor, void *args)
 {
-    //芯片默认6g 0x01
-
     rt_err_t result=RT_EOK;
 
     rt_uint8_t send_buf;
     //判断args是多少
-    switch (*(rt_int32_t*)args)
+    if(gs_bmi08x_is_sync_mode)//同步模式
     {
-    case 3000:
-        send_buf=0x00;
-        break;
-    case 6000:
-        send_buf=0x01;
-        break;
-    case 12000:
-        send_buf=0x02;
-        break;
-    case 24000:
-        send_buf=0x03;
-        break;
-    default:
-        result=-RT_ERROR;
-        LOG_E("输入值必须是3000，6000，12000或者24000");
-        break;
+        switch (*(rt_int32_t*)args)
+        {
+        /* 同步模式的阈值 */
+        case 2000:
+            send_buf=0x00;
+            break;
+        case 4000://默认
+            send_buf=0x01;
+            break;
+        case 8000:
+            send_buf=0x02;
+            break;
+        case 16000:
+            send_buf=0x03;
+            break;
+        default:
+            result=-RT_ERROR;
+            LOG_E("同步模式2/4/8/16*1000");
+            break;
+        }
+    }
+    else//普通模式
+    {
+        switch (*(rt_int32_t*)args)
+        {
+        case 3000:
+            send_buf=0x00;
+            break;
+        case 6000://默认
+            send_buf=0x01;
+            break;
+        case 12000:
+            send_buf=0x02;
+            break;
+        case 24000:
+            send_buf=0x03;
+            break;
+        default:
+            result=-RT_ERROR;
+            LOG_E("普通模式3/6/12/24*1000");
+            break;
+        }
     }
 
     if(result==RT_EOK)
     {
         result=bmi08x_write_reg(sensor,BMI08x_ACC_RANGE_ADDR,&send_buf,1);
+        if(result==RT_EOK)
+            gs_bmi08x_acce_range=*(rt_int32_t*)args;
     }
 
     return result;
@@ -604,6 +637,30 @@ _exit:
     return result;
 }
 
+rt_size_t _bmi088_acce_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
+{
+    //需要添加判断，如果没做同步配置就要读正常的寄存器
+    rt_uint8_t recv_buf[4]={0};
+
+    if(bmi08x_read_reg(sensor,BMI08x_GP_0_ADDR,recv_buf,4)!=RT_EOK)
+        return 0;
+
+    rt_int16_t x=(rt_int16_t)(((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8));
+    rt_int16_t y=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8));
+
+    if(bmi08x_read_reg(sensor,BMI08x_GP_4_ADDR,recv_buf,2)!=RT_EOK)
+        return 0;
+
+    rt_int16_t z=(rt_int16_t)(((rt_uint16_t)recv_buf[0])|((rt_uint16_t)recv_buf[1]<<8));
+
+    sensor_data->type = RT_SENSOR_CLASS_ACCE;
+    sensor_data->data.acce.x = x/32768.f*gs_bmi08x_acce_range;//先按照默认的+-4g
+    sensor_data->data.acce.y = y/32768.f*gs_bmi08x_acce_range;
+    sensor_data->data.acce.z = z/32768.f*gs_bmi08x_acce_range;
+    sensor_data->timestamp = rt_sensor_get_ts();
+
+    return 1;
+}
 
 rt_err_t bmi088_gyro_init(rt_sensor_t sensor)
 {
@@ -683,52 +740,14 @@ _exit:
     return result;
 }
 
-void bmi088_temp_init(void)
+rt_size_t _bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
 {
-    rt_err_t result=RT_EOK;
-    //查找总线设备
-    struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi10");
+    rt_uint8_t recv_buf[2]={0};
 
-    //不执行复位，只要弄成是spi模式就行了
+    if(bmi08x_read_reg(sensor,BMI08x_TEMP_MSB_ADDR,recv_buf,sizeof(recv_buf))!=RT_EOK)
+        return 0;
 
-    rt_uint8_t send_buf[3]={0x80|ACC_CHIP_ID,0x00,0x00};
-    rt_uint8_t recv_buf[3]={0};
-
-    //切换回spi模式
-    while (recv_buf[2]!=0x1E)
-    {
-        result=rt_spi_transfer(spi_dev,send_buf,recv_buf,3);
-    }
-
-    //使能acc
-    send_buf[0]=ACC_PWR_CTRL;
-    send_buf[1]=0x04;
-    result=rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);//相当于电源开关
-
-    //等待50ms
-    rt_thread_mdelay(50);
-
-    //进入运行模式
-    send_buf[0]=ACC_PWR_CONF;
-    send_buf[1]=0x00;
-    result=rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);//Suspend mode是挂起模式，相当于省电一些
-}
-
-rt_size_t bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len)
-{
-    rt_err_t result=RT_EOK;
-
-    //查找总线设备
-    struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
-
-    rt_uint8_t send_buf[]={0x80|TEMP_MSB,0x00,0x00,0x00};
-    rt_uint8_t recv_buf[sizeof(send_buf)]={0};
-
-    result=rt_spi_transfer(spi_dev,send_buf,recv_buf,sizeof(send_buf));
-
-    rt_uint16_t Temp_uint11=(rt_uint16_t)(recv_buf[2])<<3|recv_buf[3]>>5;
+    rt_uint16_t Temp_uint11=(rt_uint16_t)(recv_buf[0])<<3|recv_buf[1]>>5;
     rt_int16_t Temp_int11;
 
     if(Temp_uint11>1023)
@@ -738,7 +757,11 @@ rt_size_t bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, void *bu
 
     float Temperature=Temp_int11*0.125f+23;
 
-    return result;
+    sensor_data->type = RT_SENSOR_CLASS_TEMP;
+    sensor_data->data.temp = Temperature*10;//分摄氏度
+    sensor_data->timestamp = rt_sensor_get_ts();
+
+    return 1;
 }
 
 /**
