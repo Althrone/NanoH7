@@ -40,63 +40,118 @@ static struct rt_sensor_ops sensor_ops =
     spl06_control
 };
 
-int rt_hw_spl06_init(const char *name, struct rt_sensor_config *baro_cfg)
+int rt_hw_spl06_init(const char *name, struct rt_sensor_config *cfg)
 {
-    rt_int8_t result;
+    rt_err_t result;
     rt_sensor_t sensor_baro = RT_NULL;
+    rt_sensor_t sensor_temp = RT_NULL;
+    struct rt_sensor_module *module = RT_NULL;
 
-    sensor_baro = rt_calloc(1, sizeof(struct rt_sensor_device));
-    if (sensor_baro == RT_NULL)//空间开辟失败
-        return -RT_ERROR;
-
-    sensor_baro->info.type       = RT_SENSOR_CLASS_BARO;
-    sensor_baro->info.vendor     = RT_SENSOR_VENDOR_GOERTEK;
-    sensor_baro->info.model      = "spl06-001";
-    sensor_baro->info.unit       = RT_SENSOR_UNIT_PA;
-    sensor_baro->info.intf_type  = RT_SENSOR_INTF_SPI;
-    sensor_baro->info.range_max  = 110000;
-    sensor_baro->info.range_min  = 30000;
-    sensor_baro->info.period_min = 8;//实际上是7.8125ms
-    sensor_baro->info.fifo_max   = 32;
-
-    rt_memcpy(&sensor_baro->config, baro_cfg, sizeof(struct rt_sensor_config));
-    sensor_baro->ops = &sensor_ops;
-
-    result = rt_hw_sensor_register(sensor_baro, name, RT_DEVICE_FLAG_RDWR, RT_NULL);
-    if (result != RT_EOK)
+    module = rt_calloc(1, sizeof(struct rt_sensor_module));
+    if (module == RT_NULL)
     {
-        LOG_E("device register err code: %d", result);
-        rt_free(sensor_baro);
-        return -RT_ERROR;
+        result = -RT_ENOMEM;
+        goto __exit;
     }
-    LOG_I("sensor register success");//注册成功
+
+    /* 注册baro模块 */
+    {
+        sensor_baro = rt_calloc(1, sizeof(struct rt_sensor_device));
+        if (sensor_baro == RT_NULL)//空间开辟失败
+        {
+            result = -RT_ENOMEM;
+            goto __exit;
+        }
+
+        sensor_baro->info.type       = RT_SENSOR_CLASS_BARO;
+        sensor_baro->info.vendor     = RT_SENSOR_VENDOR_GOERTEK;
+        sensor_baro->info.model      = name;
+        sensor_baro->info.unit       = RT_SENSOR_UNIT_PA;
+        sensor_baro->info.intf_type  = RT_SENSOR_INTF_SPI;
+        sensor_baro->info.range_max  = 110000;
+        sensor_baro->info.range_min  = 30000;
+        sensor_baro->info.period_min = 8;//实际上是7.8125ms
+        sensor_baro->info.fifo_max   = 32;
+
+        rt_memcpy(&sensor_baro->config, cfg, sizeof(struct rt_sensor_config));
+        sensor_baro->ops = &sensor_ops;
+        sensor_baro->module = module;
+
+        result = rt_hw_sensor_register(sensor_baro, name, RT_DEVICE_FLAG_RDWR, RT_NULL);
+        if (result != RT_EOK)
+        {
+            LOG_E("device register err code: %d", result);
+            result = -RT_ERROR;
+            goto __exit;
+        }
+    }
+
+    /* 注册temp模块 */
+    {
+        sensor_temp = rt_calloc(1, sizeof(struct rt_sensor_device));
+        if (sensor_temp == RT_NULL)
+        {
+            result = -RT_ENOMEM;
+            goto __exit;
+        }
+
+        sensor_temp->info.type       = RT_SENSOR_CLASS_TEMP;
+        sensor_temp->info.vendor     = RT_SENSOR_VENDOR_GOERTEK;
+        sensor_temp->info.model      = name;
+        sensor_temp->info.unit       = RT_SENSOR_UNIT_DCELSIUS;//分度，记得乘10
+        sensor_temp->info.intf_type  = RT_SENSOR_INTF_SPI;
+        sensor_temp->info.range_max  = 125;//还没改
+        sensor_temp->info.range_min  = -75;//还没改
+        sensor_temp->info.period_min = 1;//还没改
+        sensor_temp->info.fifo_max   = 0;//还没改
+
+        rt_memcpy(&sensor_temp->config, cfg, sizeof(struct rt_sensor_config));
+        sensor_temp->ops = &sensor_ops;
+        sensor_temp->module = module;
+
+        result = rt_hw_sensor_register(sensor_temp, name, RT_DEVICE_FLAG_RDWR, RT_NULL);
+        if (result != RT_EOK)
+        {
+            LOG_E("device register err code: %d", result);
+            result = -RT_ERROR;
+            goto __exit;
+        }
+    }
+
+    module->sen[0]=sensor_baro;
+    module->sen[1]=sensor_temp;
+    module->sen_num=2;
+
+    char spi_bus_name[5]={0};
+    rt_strncpy(spi_bus_name,cfg->intf.dev_name,4);
 
     //查找通讯总线
-    if(rt_device_find("spi1")==RT_NULL)
+    if(rt_device_find(spi_bus_name)==RT_NULL)
     {
-        LOG_E("Can't find %s bus device",baro_cfg->intf.dev_name);
-        rt_free(sensor_baro);
-        return -RT_ERROR;
+        LOG_E("Can't find %s bus device",spi_bus_name);
+        result = -RT_ERROR;
+        goto __exit;
     }//建议放在_init中
 
     //挂载到SPI总线
-    result = rt_hw_spi_device_attach("spi1","spi13",
+    result = rt_hw_spi_device_attach(spi_bus_name,
+                                     cfg->intf.dev_name,
                                      GPIOD, GPIO_PIN_7);
     if (result != RT_EOK)
     {
         LOG_E("attach fail");
-        rt_free(sensor_baro);
-        return -RT_ERROR;
+        result = -RT_ERROR;
+        goto __exit;
     }
 
     //配置SPI设备
     struct rt_spi_device *spi_dev=RT_NULL;
-    spi_dev=(struct rt_spi_device *)rt_device_find("spi13");
+    spi_dev=(struct rt_spi_device *)rt_device_find(cfg->intf.dev_name);
     if (spi_dev == RT_NULL)
     {
         LOG_E("spi device not find");
-        rt_free(sensor_baro);
-        return -RT_ERROR;
+        result = -RT_ERROR;
+        goto __exit;
     }
 
     struct rt_spi_configuration spi_cfg;
@@ -114,21 +169,6 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *baro_cfg)
         rt_free(sensor_baro);
         return -RT_ERROR;
     }
-    
-
-    //将初始化命令放到这里
-    //获取设备信息
-    // struct rt_sensor_info info;
-    // if(rt_device_control(sensor_mag,RT_SENSOR_CTRL_GET_INFO,&info))//sensor_mag的父类是rt_device_t 不知道行不行
-    // {
-    //     LOG_E("get device info faile");
-    //     return -RT_ERROR;
-    // }
-    // LOG_I("vendor :%d", info.vendor);
-    // LOG_I("model  :%s", info.model);
-    // LOG_I("unit   :%d", info.unit);
-    // LOG_I("intf_type :%d", info.intf_type);
-    // LOG_I("period_min:%d", info.period_min);
 
     spl06_init(sensor_baro);
 
@@ -142,6 +182,26 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *baro_cfg)
     LOG_I("device id: 0x%x!", id);
 
     return RT_EOK;
+__exit:
+
+    if(sensor_baro) 
+    {
+        if(sensor_baro->data_buf)
+            rt_free(sensor_baro->data_buf);
+
+        rt_free(sensor_baro);
+    }
+    if(sensor_temp) 
+    {
+        if(sensor_temp->data_buf)
+            rt_free(sensor_temp->data_buf);
+
+        rt_free(sensor_temp);
+    }
+    if (module)
+        rt_free(module);
+
+    return result;
 }
 
 /**
@@ -158,19 +218,20 @@ int rt_hw_spl06_port(void)
     // cfg.irq_pin.pin = irq_pin;
     // cfg.irq_pin.mode = PIN_MODE_INPUT_PULLDOWN;
 
-    //查找是否存在 baro_0,baro_1...
-    char new_dev_name[]="0";
-    char exist_dev_name[]="baro_0";//rtt中气压计缩写是baro
-    while(rt_device_find(exist_dev_name))//如果是NULL的话就会跳出while
-    {
-        ++new_dev_name[0];
-        ++exist_dev_name[4];
-        if(new_dev_name[0]>'9')
-        {
-            return -RT_ERROR;//超过10个baro了
-        }
-    }
-    rt_hw_spl06_init(new_dev_name,&cfg);
+    //由于是复合传感器，不用旧方法
+    // //查找是否存在 baro_0,baro_1...
+    // char new_dev_name[]="0";
+    // char exist_dev_name[]="baro_0";//rtt中气压计缩写是baro
+    // while(rt_device_find(exist_dev_name))//如果是NULL的话就会跳出while
+    // {
+    //     ++new_dev_name[0];
+    //     ++exist_dev_name[4];
+    //     if(new_dev_name[0]>'9')
+    //     {
+    //         return -RT_ERROR;//超过10个baro了
+    //     }
+    // }
+    rt_hw_spl06_init("spl06",&cfg);
 
     return RT_EOK;
 }
@@ -217,6 +278,7 @@ static rt_err_t spl06_control(struct rt_sensor_device *sensor, int cmd, void *ar
     case RT_SENSOR_CTRL_SET_ODR:
         break;
     case RT_SENSOR_CTRL_SET_MODE:
+        sensor->parent.open_flag=(rt_uint16_t)args;
         break;
     case RT_SENSOR_CTRL_SET_POWER:
         break;

@@ -248,7 +248,7 @@ static struct rt_sensor_ops gyro_sensor_ops =
     bmi088_gyro_control
 };
 
-int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
+int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *cfg)
 {
     rt_int8_t result;
     rt_sensor_t sensor_gyro = RT_NULL;
@@ -259,7 +259,7 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
 
     sensor_gyro->info.type       = RT_SENSOR_CLASS_GYRO;
     sensor_gyro->info.vendor     = RT_SENSOR_VENDOR_BOSCH;
-    sensor_gyro->info.model      = "bmi088";
+    sensor_gyro->info.model      = name;
     sensor_gyro->info.unit       = RT_SENSOR_UNIT_MDPS;
     sensor_gyro->info.intf_type  = RT_SENSOR_INTF_SPI;
     sensor_gyro->info.range_max  = 2000000;
@@ -267,7 +267,7 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *gyro_cfg)
     sensor_gyro->info.period_min = 1;//实际上最小是0.5ms
     // sensor_gyro->info.fifo_max   = 3200;//bst-mis-an005.pdf
 
-    rt_memcpy(&sensor_gyro->config, gyro_cfg, sizeof(struct rt_sensor_config));
+    rt_memcpy(&sensor_gyro->config, cfg, sizeof(struct rt_sensor_config));
     sensor_gyro->ops = &gyro_sensor_ops;
 
     result = rt_hw_sensor_register(sensor_gyro, name, RT_DEVICE_FLAG_RDWR, RT_NULL);
@@ -355,19 +355,20 @@ int rt_hw_bmi088_gyro_port(void)
     // cfg.irq_pin.pin = irq_pin;
     // cfg.irq_pin.mode = PIN_MODE_INPUT_PULLDOWN;
 
-    //查找是否存在 gyro_0,gyro_1...
-    char new_dev_name[]="0";
-    char exist_dev_name[]="gyro_0";//rtt中加速度计缩写是acce
-    while(rt_device_find(exist_dev_name))//如果是NULL的话就会跳出while
-    {
-        ++new_dev_name[0];
-        ++exist_dev_name[4];
-        if(new_dev_name[0]>'9')
-        {
-            return -RT_ERROR;//超过10个gyro了
-        }
-    }
-    rt_hw_bmi088_gyro_init(new_dev_name,&cfg);
+    //由于是复合传感器，不用旧方法
+    // //查找是否存在 gyro_0,gyro_1...
+    // char new_dev_name[]="0";
+    // char exist_dev_name[]="gyro_0";//rtt中加速度计缩写是acce
+    // while(rt_device_find(exist_dev_name))//如果是NULL的话就会跳出while
+    // {
+    //     ++new_dev_name[0];
+    //     ++exist_dev_name[4];
+    //     if(new_dev_name[0]>'9')
+    //     {
+    //         return -RT_ERROR;//超过10个gyro了
+    //     }
+    // }
+    rt_hw_bmi088_gyro_init("bmi088",&cfg);
 
     return RT_EOK;
 }
@@ -486,6 +487,7 @@ static rt_err_t bmi088_gyro_control(struct rt_sensor_device *sensor, int cmd, vo
     case RT_SENSOR_CTRL_SET_ODR:
         break;
     case RT_SENSOR_CTRL_SET_MODE:
+        sensor->parent.open_flag=(rt_uint16_t)args;
         break;
     case RT_SENSOR_CTRL_SET_POWER:
         break;

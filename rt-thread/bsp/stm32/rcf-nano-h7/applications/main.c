@@ -186,6 +186,9 @@ _exit:
     return;
 }
 
+struct rt_sensor_data g_bmi08x_acce;
+struct rt_sensor_data g_bmi08x_gyro;
+
 void imu_data_thrd(void *parameter)
 {
     //定时器
@@ -198,22 +201,42 @@ void imu_data_thrd(void *parameter)
     //创建信号量
     tim_sem=rt_sem_create("tim_sem", 0, RT_IPC_FLAG_PRIO);
     rt_device_set_rx_indicate(tim_dev, tim_cbk);
-    
-    struct rt_sensor_data bmi08x_acce_data;
-    struct rt_sensor_data bmi08x_acce_next_data;
-    rt_device_t acce_dev=rt_device_find("acce_bmi088");
-    rt_device_open(acce_dev, RT_DEVICE_FLAG_RDONLY);
-    rt_device_read(acce_dev, 0, &bmi08x_acce_data, 1);//第一次读取
-    do
-    {
-        rt_device_read(acce_dev, 0, &bmi08x_acce_next_data, 1);
-    } while ((bmi08x_acce_next_data.data.acce.x==bmi08x_acce_data.data.acce.x)&&
-             (bmi08x_acce_next_data.data.acce.y==bmi08x_acce_data.data.acce.y)&&
-             (bmi08x_acce_next_data.data.acce.z==bmi08x_acce_data.data.acce.z));//值没变化，说明没更新，继续读
-    //至于为什么不读sr，看rm文档
 
-    //更新了，开启定时器
-    rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
+    rt_device_t acce_dev=rt_device_find("acce_bmi088");//加速度
+    rt_device_open(acce_dev, RT_DEVICE_FLAG_RDONLY);
+
+    rt_device_t gyro_dev=rt_device_find("gyro_bmi088");//陀螺仪
+    rt_device_open(gyro_dev, RT_DEVICE_FLAG_RDONLY);
+
+    rt_device_t mag_dev=rt_device_find("mag_mmc5983ma");//磁力计
+    rt_device_open(mag_dev, RT_DEVICE_FLAG_RDONLY);
+
+    // rt_device_t baro_dev=rt_device_find("baro_spl06");//气压计
+    // rt_device_open(baro_dev, RT_DEVICE_FLAG_RDONLY);
+
+    rt_device_read(acce_dev, 0, &g_bmi08x_acce, 1);//第一次读取
+    
+    while(1)
+    {
+        struct rt_sensor_data tmp_bmi08x_acce;
+        do
+        {
+            rt_device_read(acce_dev, 0, &tmp_bmi08x_acce, 1);
+        } while ((tmp_bmi08x_acce.data.acce.x==g_bmi08x_acce.data.acce.x)&&
+                 (tmp_bmi08x_acce.data.acce.y==g_bmi08x_acce.data.acce.y)&&
+                 (tmp_bmi08x_acce.data.acce.z==g_bmi08x_acce.data.acce.z));//值没变化，说明没更新，继续读
+        //至于为什么不读sr，看rm文档
+        g_bmi08x_acce=tmp_bmi08x_acce;
+        //更新了，开启定时器
+        rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));//定时器时间要做修改
+
+        // 读其他传感器
+        rt_device_read(gyro_dev, 0, &g_bmi08x_gyro, 1);
+
+
+        //等待回调，回调函数里面释放信号量
+        rt_sem_take(tim_sem, RT_WAITING_FOREVER);
+    }
 
     ////////////////////////////////////
     rt_device_t dev = RT_NULL;
