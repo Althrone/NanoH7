@@ -62,9 +62,9 @@ int main(void)
     //                               RT_NULL,1024,5,5);
     // if(t != RT_NULL) rt_thread_startup(t);
 
-    // rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
-    //                                 RT_NULL,1024,0,10);
-    // rt_thread_startup(t1);
+    rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
+                                    RT_NULL,1024,0,10);
+    rt_thread_startup(t1);
 
     //串口dma测试
     // rt_thread_t t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
@@ -80,19 +80,19 @@ int main(void)
     //                                 RT_NULL,1024,0,10);
     // rt_thread_startup(t);
 
-    //传感器获取
-    struct rt_sensor_data data;
-    struct rt_sensor_data temp_data;
-    // rt_device_t dev=rt_device_find("mag_mmc5983ma");
-    rt_device_t temp_dev=rt_device_find("temp_mmc5983ma");
-    // rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
-    rt_device_open(temp_dev, RT_DEVICE_FLAG_RDONLY);
-    while (1)
-    {
-        // rt_device_read(dev, 0, &data, 1);//pos不使用
-        rt_device_read(temp_dev, 0, &temp_data, 1);//pos不使用
-        rt_thread_mdelay(2);
-    }
+    // //传感器获取
+    // struct rt_sensor_data data;
+    // struct rt_sensor_data temp_data;
+    // // rt_device_t dev=rt_device_find("mag_mmc5983ma");
+    // rt_device_t temp_dev=rt_device_find("temp_mmc5983ma");
+    // // rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
+    // rt_device_open(temp_dev, RT_DEVICE_FLAG_RDONLY);
+    // while (1)
+    // {
+    //     // rt_device_read(dev, 0, &data, 1);//pos不使用
+    //     rt_device_read(temp_dev, 0, &temp_data, 1);//pos不使用
+    //     rt_thread_mdelay(2);
+    // }
     
     // while(1)
     // {
@@ -117,7 +117,7 @@ static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
     rt_pin_write(GET_PIN(D,9),PIN_HIGH);
 
     //等到flag置位的一瞬间才开启定时器，这样准一点？？
-    while(bmi08x_wait_sync_data()!=RT_EOK);
+    // while(bmi08x_wait_sync_data()!=RT_EOK);
 
     //开启定时器
     rt_device_write(dev, 0, &timeout_s, sizeof(timeout_s));
@@ -208,8 +208,8 @@ void imu_data_thrd(void *parameter)
     rt_device_t gyro_dev=rt_device_find("gyro_bmi088");//陀螺仪
     rt_device_open(gyro_dev, RT_DEVICE_FLAG_RDONLY);
 
-    rt_device_t mag_dev=rt_device_find("mag_mmc5983ma");//磁力计
-    rt_device_open(mag_dev, RT_DEVICE_FLAG_RDONLY);
+    // rt_device_t mag_dev=rt_device_find("mag_mmc5983ma");//磁力计
+    // rt_device_open(mag_dev, RT_DEVICE_FLAG_RDONLY);
 
     // rt_device_t baro_dev=rt_device_find("baro_spl06");//气压计
     // rt_device_open(baro_dev, RT_DEVICE_FLAG_RDONLY);
