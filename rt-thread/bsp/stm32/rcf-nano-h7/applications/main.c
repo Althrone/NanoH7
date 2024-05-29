@@ -166,7 +166,6 @@ void ins_rx_thread_entry(void *parameter)
         // rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
         // bmi08x_get_sync_data();
         // mmc5893ma_polling_get_mag();
-        // spl06_polling_get_baro();
 
         rt_pin_write(GET_PIN(D,9),PIN_LOW);
 

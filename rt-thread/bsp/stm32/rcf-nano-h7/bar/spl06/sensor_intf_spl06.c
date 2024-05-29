@@ -166,8 +166,8 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *cfg)
     if (result != RT_EOK)
     {
         LOG_E("spi config fail");
-        rt_free(sensor_baro);
-        return -RT_ERROR;
+        result = -RT_ERROR;
+        goto __exit;
     }
 
     spl06_init(sensor_baro);
@@ -177,7 +177,8 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *cfg)
     if(rt_device_control(sensor_baro, RT_SENSOR_CTRL_GET_ID, &id)==-RT_ENOSYS)
     {
         LOG_E("get device id faile");
-        return -RT_ERROR;
+        result = -RT_ERROR;
+        goto __exit;
     }
     LOG_I("device id: 0x%x!", id);
 
@@ -243,17 +244,43 @@ int rt_hw_spl06_port(void)
 
 static rt_size_t spl06_fetch_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len)
 {
-    if(sensor->parent.open_flag&RT_DEVICE_FLAG_RDONLY)
+    if(sensor->info.type==RT_SENSOR_CLASS_BARO)
     {
-        // return _hmc5883l_mag_polling_get_data(sensor, buf, len);
+        if(sensor->parent.open_flag & RT_SENSOR_MODE_POLLING)
+        {
+            return _spl06_baro_polling_get_data(sensor, buf, len);
+        }
+        // else if (sensor->parent.open_flag & RT_SENSOR_MODE_INT)
+        // {
+        //     // return _xxx_acc_int_get_data(sensor, buf, len);
+        // }
+        // else if (sensor->parent.open_flag & RT_SENSOR_MODE_FIFO)
+        // {
+        //     // return _xxx_acc_fifo_get_data(sensor, buf, len);
+        // }
+        else
+        {
+            return 0;
+        }
     }
-    else if (sensor->parent.open_flag & RT_DEVICE_FLAG_INT_RX)
+    else if(sensor->info.type==RT_SENSOR_CLASS_TEMP)
     {
-        // return _xxx_acc_int_get_data(sensor, buf, len);
-    }
-    else if (sensor->parent.open_flag & RT_DEVICE_FLAG_FIFO_RX)
-    {
-        // return _xxx_acc_fifo_get_data(sensor, buf, len);
+        if(sensor->parent.open_flag&RT_SENSOR_MODE_POLLING)
+        {
+            return _spl06_temp_polling_get_data(sensor, buf, len);
+        }
+        // else if (sensor->parent.open_flag & RT_SENSOR_MODE_INT)
+        // {
+        //     // return _xxx_acc_int_get_data(sensor, buf, len);
+        // }
+        // else if (sensor->parent.open_flag & RT_SENSOR_MODE_FIFO)
+        // {
+        //     // return _xxx_acc_fifo_get_data(sensor, buf, len);
+        // }
+        else
+        {
+            return 0;
+        }
     }
     else
     {

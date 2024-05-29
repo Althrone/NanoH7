@@ -165,7 +165,7 @@ void spl06_init(rt_sensor_t sensor);
 void spl06_reset(rt_sensor_t sensor);
 
 rt_err_t spl06_get_id(struct rt_sensor_device *sensor, void *args);
-rt_err_t spl06_polling_get_baro(void);
+rt_size_t _spl06_baro_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
 
 #ifdef __cplusplus
 }
