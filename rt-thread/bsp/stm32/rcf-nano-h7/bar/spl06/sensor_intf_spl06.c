@@ -157,7 +157,7 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *cfg)
     struct rt_spi_configuration spi_cfg;
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    spi_cfg.max_hz=5*1000*1000;
+    spi_cfg.max_hz=1*1000*1000;
     // spi_dev->user_data=
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
@@ -236,7 +236,7 @@ int rt_hw_spl06_port(void)
 
     return RT_EOK;
 }
-// INIT_DEVICE_EXPORT(rt_hw_spl06_port);
+INIT_DEVICE_EXPORT(rt_hw_spl06_port);
 
 /******************************************************************************
  * private functions definition
@@ -267,7 +267,7 @@ static rt_size_t spl06_fetch_data(struct rt_sensor_device *sensor, void *buf, rt
     {
         if(sensor->parent.open_flag&RT_SENSOR_MODE_POLLING)
         {
-            return _spl06_temp_polling_get_data(sensor, buf, len);
+            // return _spl06_temp_polling_get_data(sensor, buf, len);
         }
         // else if (sensor->parent.open_flag & RT_SENSOR_MODE_INT)
         // {

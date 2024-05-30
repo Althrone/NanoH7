@@ -58,9 +58,9 @@ void mmc5893ma_init(rt_sensor_t sensor)
     // .B.En_prd_set=1,
     // Prd_set不知道干嘛用的
 
-    send_buf[0]=MMC5983MA_CR2_ADDR;
-    send_buf[1]=gs_mmc5983ma_cr2.r;
-    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+    // send_buf[0]=MMC5983MA_CR2_ADDR;
+    // send_buf[1]=gs_mmc5983ma_cr2.r;
+    // rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
     // // 读取地磁和温度
     // while(1)
