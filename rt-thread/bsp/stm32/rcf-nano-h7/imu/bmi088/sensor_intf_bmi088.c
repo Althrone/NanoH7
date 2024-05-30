@@ -431,18 +431,18 @@ static rt_err_t bmi088_acce_control(struct rt_sensor_device *sensor, int cmd, vo
     // case RT_SENSOR_CTRL_GET_INFO://由框架实现，在驱动中不需要实现
     //     break;
     case RT_SENSOR_CTRL_SET_RANGE:
-        result=bmi088_acce_set_range(sensor,(rt_int32_t)args);
+        result=_bmi088_acce_set_range(sensor,(rt_int8_t)args);
         break;
     case RT_SENSOR_CTRL_SET_ODR:
-        result=bmi088_acce_set_odr(sensor,(rt_uint16_t)args);
+        result=_bmi088_acce_set_odr(sensor,(rt_uint16_t)args);
         break;
     case RT_SENSOR_CTRL_SET_MODE:
         sensor->parent.open_flag=(rt_uint16_t)args;
         break;
-    case RT_SENSOR_CTRL_SET_POWER:
-        break;
-    case RT_SENSOR_CTRL_SELF_TEST:
-        break;
+    // case RT_SENSOR_CTRL_SET_POWER://todo
+    //     break;
+    // case RT_SENSOR_CTRL_SELF_TEST:
+    //     break;
     default:
         result=-RT_ERROR;
         break;
@@ -454,7 +454,7 @@ static rt_size_t bmi088_gyro_fetch_data(struct rt_sensor_device *sensor, void *b
 {
     if(sensor->parent.open_flag&RT_DEVICE_FLAG_RDONLY)
     {
-        // return _hmc5883l_mag_polling_get_data(sensor, buf, len);
+        return _bmi08x_gyro_polling_get_data(sensor, buf, len);
     }
     else if (sensor->parent.open_flag & RT_DEVICE_FLAG_INT_RX)
     {
@@ -478,21 +478,23 @@ static rt_err_t bmi088_gyro_control(struct rt_sensor_device *sensor, int cmd, vo
     {
         //考虑添加一个复位命令
     case RT_SENSOR_CTRL_GET_ID:
-        result=bmi088_gyro_get_id(sensor,args);
+        result=_bmi088_gyro_get_id(sensor,args);
         break;
-    case RT_SENSOR_CTRL_GET_INFO:
-        break;
+    // case RT_SENSOR_CTRL_GET_INFO:
+    //     break;
     case RT_SENSOR_CTRL_SET_RANGE:
+        result=_bmi088_gyro_set_range(sensor, (rt_uint16_t)args);//最高2000
         break;
     case RT_SENSOR_CTRL_SET_ODR:
+        result=_bmi088_gyro_set_odr(sensor, (char*)args);//最高2000
         break;
     case RT_SENSOR_CTRL_SET_MODE:
         sensor->parent.open_flag=(rt_uint16_t)args;
         break;
-    case RT_SENSOR_CTRL_SET_POWER:
-        break;
-    case RT_SENSOR_CTRL_SELF_TEST:
-        break;
+    // case RT_SENSOR_CTRL_SET_POWER:
+    //     break;
+    // case RT_SENSOR_CTRL_SELF_TEST:
+    //     break;
     default:
         result=-RT_ERROR;
         break;

@@ -618,25 +618,25 @@ typedef enum
     kBmi088AccRange24G,
 }Bmi088AccRangeEnum;
 
-typedef enum 
-{
-    GYRO_CHIP_ID        = 0x00,
-    RATE_X_LSB          = 0x02,
-    RATE_X_MSB          = 0x03,
-    RATE_Y_LSB          = 0x04,
-    RATE_Y_MSB          = 0x05,
-    RATE_Z_LSB          = 0x06,
-    RATE_Z_MSB          = 0x07,
-    GYRO_INT_STAT_1     = 0x0A,
-    GYRO_RANGE          = 0x0F,
-    GYRO_BANDWIDTH      = 0x10,
-    GYRO_LPM1           = 0x11,
-    GYRO_SOFTRESET      = 0x14,
-    GYRO_INT_CTRL       = 0x15,
-    INT3_INT4_IO_CONF   = 0x16,
-    INT3_INT4_IO_MAP    = 0x18,
-    GYRO_SELF_TEST      = 0x3C
-}BMI088GyroRegEnum;
+// typedef enum 
+// {
+//     GYRO_CHIP_ID        = 0x00,
+//     RATE_X_LSB          = 0x02,
+//     RATE_X_MSB          = 0x03,
+//     RATE_Y_LSB          = 0x04,
+//     RATE_Y_MSB          = 0x05,
+//     RATE_Z_LSB          = 0x06,
+//     RATE_Z_MSB          = 0x07,
+//     GYRO_INT_STAT_1     = 0x0A,
+//     GYRO_RANGE          = 0x0F,
+//     GYRO_BANDWIDTH      = 0x10,
+//     GYRO_LPM1           = 0x11,
+//     GYRO_SOFTRESET      = 0x14,
+//     GYRO_INT_CTRL       = 0x15,
+//     INT3_INT4_IO_CONF   = 0x16,
+//     INT3_INT4_IO_MAP    = 0x18,
+//     GYRO_SELF_TEST      = 0x3C
+// }BMI088GyroRegEnum;
 
 /******************************************************************************
  * pubilc functions
@@ -645,20 +645,27 @@ typedef enum
 rt_err_t bmi088_acce_init(rt_sensor_t sensor);
 rt_err_t bmi08x_acce_reset(rt_sensor_t sensor);
 
+rt_err_t bmi08x_load_config_file(rt_sensor_t sensor, const rt_uint8_t* file_ptr,rt_size_t file_size);
+rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_uint16_t* feature_cfg, rt_size_t feature_len);
+//control
 rt_err_t _bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args);
-rt_err_t bmi088_acce_set_range(struct rt_sensor_device *sensor, void *args);
-rt_err_t bmi088_acce_set_odr(struct rt_sensor_device *sensor, void *args);
+rt_err_t _bmi088_acce_set_range(struct rt_sensor_device *sensor, void *args);
+rt_err_t _bmi088_acce_set_odr(struct rt_sensor_device *sensor, void *args);
+//data
+rt_size_t _bmi088_acce_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
+rt_size_t _bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
+
+/* GYRO */
 
 rt_err_t bmi088_gyro_init(rt_sensor_t sensor);
 rt_err_t bmi08x_gyro_reset(rt_sensor_t sensor);
 
-rt_err_t bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args);
+rt_err_t _bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args);
+rt_err_t _bmi088_gyro_set_range(struct rt_sensor_device *sensor, void *args);
+rt_err_t _bmi088_gyro_set_odr(struct rt_sensor_device *sensor, void *args);
 
-rt_size_t _bmi088_acce_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
-rt_size_t _bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
+rt_size_t _bmi08x_gyro_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
 
-rt_err_t bmi08x_load_config_file(rt_sensor_t sensor, const rt_uint8_t* file_ptr,rt_size_t file_size);
-rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_uint16_t* feature_cfg, rt_size_t feature_len);
 rt_err_t bmi08x_get_sync_data(void);
 rt_err_t bmi08x_wait_sync_data(void);
 

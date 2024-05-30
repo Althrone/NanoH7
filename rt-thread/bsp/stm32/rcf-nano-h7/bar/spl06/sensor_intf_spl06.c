@@ -267,7 +267,7 @@ static rt_size_t spl06_fetch_data(struct rt_sensor_device *sensor, void *buf, rt
     {
         if(sensor->parent.open_flag&RT_SENSOR_MODE_POLLING)
         {
-            // return _spl06_temp_polling_get_data(sensor, buf, len);
+            return _spl06_temp_polling_get_data(sensor, buf, len);
         }
         // else if (sensor->parent.open_flag & RT_SENSOR_MODE_INT)
         // {
@@ -296,7 +296,7 @@ static rt_err_t spl06_control(struct rt_sensor_device *sensor, int cmd, void *ar
     {
         //考虑添加一个复位命令
     case RT_SENSOR_CTRL_GET_ID:
-        result=spl06_get_id(sensor,args);
+        result=_spl06_get_id(sensor,args);
         break;
     case RT_SENSOR_CTRL_GET_INFO:
         break;
