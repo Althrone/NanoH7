@@ -760,6 +760,21 @@ _exit:
     return result;
 }
 
+/**
+ * @brief   实际上用这个函数来获取 ACC_INT_STAT_0 寄存器的值
+ **/
+rt_err_t _bmi088_acce_self_test(struct rt_sensor_device *sensor, void *args)
+{
+    rt_err_t result=RT_EOK;
+
+    Bmi08xAccIntStat0RegUnion stat={0};
+
+    result=bmi08x_read_reg(sensor,BMI08x_ACC_INT_STAT_0_ADDR,&stat,1);
+    if(result==RT_EOK)
+        *(rt_uint8_t*)args=stat.r;
+
+    return result;
+}
 
 rt_size_t _bmi088_acce_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
 {

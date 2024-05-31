@@ -26,7 +26,9 @@ int main(void)
     // volatile rt_uint32_t coreid=DBGMCU->IDCODE;
     
     rt_pin_mode(GET_PIN(D,9),PIN_MODE_OUTPUT);
+    rt_pin_mode(GET_PIN(D,8),PIN_MODE_OUTPUT);
     rt_pin_write(GET_PIN(D,9),PIN_LOW);
+    rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
     // char test_str[]="vcom success!\n\t";
 
@@ -115,15 +117,17 @@ rt_hwtimerval_t timeout_s={
 static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
 {
     rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+    rt_pin_write(GET_PIN(D,8),PIN_HIGH);
 
     //等到flag置位的一瞬间才开启定时器，这样准一点？？
     // while(bmi08x_wait_sync_data()!=RT_EOK);
 
     //开启定时器
-    rt_device_write(dev, 0, &timeout_s, sizeof(timeout_s));
+    // rt_device_write(dev, 0, &timeout_s, sizeof(timeout_s));
     rt_sem_release(tim_sem);
 
     rt_pin_write(GET_PIN(D,9),PIN_LOW);
+    rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
     return 0;
 }
@@ -217,6 +221,9 @@ void imu_data_thrd(void *parameter)
     
     while(1)
     {
+
+        rt_pin_write(GET_PIN(D,8),PIN_HIGH);
+
         struct rt_sensor_data tmp_bmi08x_acce;
         do
         {
@@ -224,14 +231,33 @@ void imu_data_thrd(void *parameter)
         } while ((tmp_bmi08x_acce.data.acce.x==g_bmi08x_acce.data.acce.x)&&
                  (tmp_bmi08x_acce.data.acce.y==g_bmi08x_acce.data.acce.y)&&
                  (tmp_bmi08x_acce.data.acce.z==g_bmi08x_acce.data.acce.z));//值没变化，说明没更新，继续读
-        //至于为什么不读sr，看rm文档
-        g_bmi08x_acce=tmp_bmi08x_acce;
+        //至于为什么不直接读sr，看rm文档
+        
+        //读 ACC_INT_STAT_0
+        Bmi08xAccIntStat0RegUnion stat={0};
+        rt_device_control(acce_dev,RT_SENSOR_CTRL_SELF_TEST,&stat);
+
+        if(stat.B.Data_sync_out==1)
+        {
+            //再读一次确定值没问题，这个值是绝对完全更新的
+            rt_device_read(acce_dev, 0, &g_bmi08x_acce, 1);
+        }
+        else//读出来发现sr还没好，很有可能值是部分更新了（比如只更新了x轴，甚至只更新了一个字节）
+        {
+            g_bmi08x_acce=tmp_bmi08x_acce;//应该很少出现
+        }
+
+        rt_pin_write(GET_PIN(D,8),PIN_LOW);
+
         //更新了，开启定时器
         rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));//定时器时间要做修改
 
         // 读其他传感器
+        rt_pin_write(GET_PIN(D,8),PIN_HIGH);
+
         rt_device_read(gyro_dev, 0, &g_bmi08x_gyro, 1);
 
+        rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
         //等待回调，回调函数里面释放信号量
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);
