@@ -90,9 +90,9 @@ void SystemClock_Config(void)
     RCC_PeriphCLKInitStruct.PLL2.PLL2Q=8;//100MHz FDCAN UART
     RCC_PeriphCLKInitStruct.PLL2.PLL2R=4;//200MHz SDMMC
     RCC_PeriphCLKInitStruct.PLL3.PLL3M=1;
-    RCC_PeriphCLKInitStruct.PLL3.PLL3N=120;//800
-    RCC_PeriphCLKInitStruct.PLL3.PLL3P=15;//96MHz SPI
-    RCC_PeriphCLKInitStruct.PLL3.PLL3Q=16;//50MHz USB//usb不用这个
+    RCC_PeriphCLKInitStruct.PLL3.PLL3N=120;//960
+    RCC_PeriphCLKInitStruct.PLL3.PLL3P=10;//96MHz SPI
+    RCC_PeriphCLKInitStruct.PLL3.PLL3Q=16;//60MHz USB//usb不用这个
     RCC_PeriphCLKInitStruct.PLL3.PLL3R=8;//120MHz IIC
     RCC_PeriphCLKInitStruct.SdmmcClockSelection=RCC_SDMMCCLKSOURCE_PLL2;//250
     RCC_PeriphCLKInitStruct.Spi123ClockSelection=RCC_SPI123CLKSOURCE_PLL3;//32

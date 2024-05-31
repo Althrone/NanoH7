@@ -29,11 +29,11 @@
 
 static rt_size_t bmi088_acce_fetch_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len);
 
-static rt_err_t bmi088_acce_control(struct rt_sensor_device *sensor, int cmd, void *args);//args是32位(指针都是4个字节)
+static rt_err_t bmi088_acce_control(struct rt_sensor_device *sensor, int cmd, void *args);
 
 static rt_size_t bmi088_gyro_fetch_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len);
 
-static rt_err_t bmi088_gyro_control(struct rt_sensor_device *sensor, int cmd, void *args);//args是32位(指针都是4个字节)
+static rt_err_t bmi088_gyro_control(struct rt_sensor_device *sensor, int cmd, void *args);
 
 /******************************************************************************
  * pubilc functions definition
@@ -163,7 +163,7 @@ int rt_hw_bmi088_acce_init(const char *name, struct rt_sensor_config *cfg)
 
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    spi_cfg.max_hz=8*1000*1000;
+    spi_cfg.max_hz=6*1000*1000;
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
 
@@ -315,7 +315,7 @@ int rt_hw_bmi088_gyro_init(const char *name, struct rt_sensor_config *cfg)
 
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    spi_cfg.max_hz=8*1000*1000;
+    spi_cfg.max_hz=6*1000*1000;
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
 

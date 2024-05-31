@@ -1,13 +1,36 @@
-#ifndef __MMC5983MA_H__
-#define __MMC5983MA_H__
+/******************************************************************************
+ * NanoH7 - UAV firmware base on RT-Thread
+ * Copyright (C) 2023 - 2024 Althrone <mail>
+ * 
+ * @file    rt-thread\bsp\stm32\rcf-nano-h7\mag\mmc5983ma\mmc5983ma.h
+ * 
+ * ref: Specification of <some UM RM or Datasheet>
+ *****************************************************************************/
+
+#ifndef NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_MAG_MMC5983MA_MMC5983MA_H_
+#define NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_MAG_MMC5983MA_MMC5983MA_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/******************************************************************************
+ * includes
+ *****************************************************************************/
 
 #include <rtthread.h>
 #include <rtdevice.h>
 #include "sensor.h"
-// #include "drv_gpio.h"
-// #include "drv_spi.h"
 
-typedef enum 
+/******************************************************************************
+ * macros
+ *****************************************************************************/
+
+/******************************************************************************
+ * pubilc types
+ *****************************************************************************/
+
+typedef enum
 {
     MMC5983MA_X_OUT_0_ADDR      = 0x00,
     MMC5983MA_X_OUT_1_ADDR      = 0x01,
@@ -105,6 +128,14 @@ typedef union
     }B;
 }Mmc5893maCtrl3RegUnion;
 
+/******************************************************************************
+ * pubilc variables declaration
+ *****************************************************************************/
+
+/******************************************************************************
+ * pubilc functions declaration
+ *****************************************************************************/
+
 void mmc5893ma_init(rt_sensor_t sensor);
 void mmc5893ma_reset(rt_sensor_t sensor);
 
@@ -116,4 +147,8 @@ rt_size_t _mmc5893ma_temp_polling_get_data(struct rt_sensor_device *sensor, stru
 
 rt_err_t _mmc5893ma_set_mode(struct rt_sensor_device *sensor, void *args);
 
-#endif /* __HMC5883L_H__ */
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_MAG_MMC5983MA_MMC5983MA_H_ */

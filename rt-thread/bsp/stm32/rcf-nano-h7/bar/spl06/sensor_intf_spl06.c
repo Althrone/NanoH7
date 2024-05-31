@@ -28,7 +28,7 @@
  *****************************************************************************/
 
 static rt_size_t spl06_fetch_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len);
-static rt_err_t spl06_control(struct rt_sensor_device *sensor, int cmd, void *args);//args是32位(指针都是4个字节)
+static rt_err_t spl06_control(struct rt_sensor_device *sensor, int cmd, void *args);
 
 /******************************************************************************
  * pubilc functions definition
@@ -157,7 +157,7 @@ int rt_hw_spl06_init(const char *name, struct rt_sensor_config *cfg)
     struct rt_spi_configuration spi_cfg;
     spi_cfg.mode=RT_SPI_MASTER | RT_SPI_MODE_3 | RT_SPI_MSB;
     spi_cfg.data_width=8;
-    spi_cfg.max_hz=8*1000*1000;
+    spi_cfg.max_hz=6*1000*1000;
     // spi_dev->user_data=
 
     spi_dev->bus->owner=spi_dev;//将bus->owner变量赋值为自身
@@ -298,19 +298,20 @@ static rt_err_t spl06_control(struct rt_sensor_device *sensor, int cmd, void *ar
     case RT_SENSOR_CTRL_GET_ID:
         result=_spl06_get_id(sensor,args);
         break;
-    case RT_SENSOR_CTRL_GET_INFO:
-        break;
-    case RT_SENSOR_CTRL_SET_RANGE:
-        break;
+    // case RT_SENSOR_CTRL_GET_INFO:
+    //     break;
+    // case RT_SENSOR_CTRL_SET_RANGE:
+    //     break;
     case RT_SENSOR_CTRL_SET_ODR:
+        _spl06_set_odr(sensor,(rt_uint8_t)args);
         break;
     case RT_SENSOR_CTRL_SET_MODE:
         sensor->parent.open_flag=(rt_uint16_t)args;
         break;
-    case RT_SENSOR_CTRL_SET_POWER:
-        break;
-    case RT_SENSOR_CTRL_SELF_TEST:
-        break;
+    // case RT_SENSOR_CTRL_SET_POWER:
+    //     break;
+    // case RT_SENSOR_CTRL_SELF_TEST:
+    //     break;
     default:
         result=-RT_ERROR;
         break;
