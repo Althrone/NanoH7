@@ -222,6 +222,7 @@ void imu_data_thrd(void *parameter)
     while(1)
     {
 
+        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
         rt_pin_write(GET_PIN(D,8),PIN_HIGH);
 
         struct rt_sensor_data tmp_bmi08x_acce;
@@ -247,16 +248,19 @@ void imu_data_thrd(void *parameter)
             g_bmi08x_acce=tmp_bmi08x_acce;//应该很少出现
         }
 
+        rt_pin_write(GET_PIN(D,9),PIN_LOW);
         rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
         //更新了，开启定时器
         rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));//定时器时间要做修改
 
         // 读其他传感器
+        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
         rt_pin_write(GET_PIN(D,8),PIN_HIGH);
 
         rt_device_read(gyro_dev, 0, &g_bmi08x_gyro, 1);
 
+        rt_pin_write(GET_PIN(D,9),PIN_LOW);
         rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
         //等待回调，回调函数里面释放信号量
