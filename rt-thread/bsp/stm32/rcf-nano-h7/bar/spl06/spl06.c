@@ -77,7 +77,7 @@ void spl06_init(rt_sensor_t sensor)
         rt_uint8_t send_buf=0x80|SPL06_MEAS_CFG_REG_ADDR;
         rt_spi_send_then_recv(spi_dev,&send_buf,1,&meas_cfg,1);
         
-    } while ((meas_cfg.B.COEF_RDY==1)&&(meas_cfg.B.SENSOR_RDY==1));
+    } while ((meas_cfg.B.COEF_RDY!=1)||(meas_cfg.B.SENSOR_RDY!=1));
 
     //读取coef
     spl06_polling_get_coef(sensor);
