@@ -106,10 +106,14 @@ int main(void)
 
 rt_sem_t tim_sem;
 
+/**
+ * 2300 cnt 8 这个可以很准
+ * 用陀螺仪的sr更准，真的傻逼
+*/
 rt_hwtimerval_t timeout_s={
     .sec=0,
-    .usec=2000,//留10us用于获取flag？
-};//2480
+    .usec=2400,//留10us用于获取flag？
+};//貌似最高精度是2400 在加也是计数到2.4ms，估计要调tim的参数
 
 /**
  * @brief   定时释放信号量
@@ -119,74 +123,12 @@ static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
     // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
     // rt_pin_write(GET_PIN(D,8),PIN_HIGH);
 
-    //等到flag置位的一瞬间才开启定时器，这样准一点？？
-    // while(bmi08x_wait_sync_data()!=RT_EOK);
-
-    //开启定时器
-    // rt_device_write(dev, 0, &timeout_s, sizeof(timeout_s));
     rt_sem_release(tim_sem);
 
     // rt_pin_write(GET_PIN(D,9),PIN_LOW);
     // rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
     return 0;
-}
-
-/**
- * @brief   组合导航系统/板载传感器接收线程
- * @note    接受板载的IMU MGA 气压计
- */
-void ins_rx_thread_entry(void *parameter)
-{
-    //定时器
-    rt_uint32_t freq = 10000;
-    rt_device_t tim_dev=rt_device_find("timer2");
-    rt_device_open(tim_dev, RT_DEVICE_OFLAG_RDWR);
-    rt_device_control(tim_dev, HWTIMER_CTRL_FREQ_SET, &freq);
-    rt_hwtimer_mode_t mode = HWTIMER_MODE_ONESHOT;//HWTIMER_MODE_ONESHOT HWTIMER_MODE_PERIOD
-    rt_device_control(tim_dev, HWTIMER_CTRL_MODE_SET, &mode);
-    //创建信号量
-    tim_sem=rt_sem_create("tim_sem", 0, RT_IPC_FLAG_PRIO);
-    rt_device_set_rx_indicate(tim_dev, tim_cbk);
-
-    // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
-
-    //等到flag置位的一瞬间才开启定时器，这样准一点？？
-    while(bmi08x_wait_sync_data()!=RT_EOK);
-    //开启定时器
-    rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
-
-    // rt_pin_write(GET_PIN(D,9),PIN_LOW);
-
-    //测速度
-    // rt_pin_mode(GET_PIN(D,9),PIN_MODE_OUTPUT);
-    // rt_pin_write(GET_PIN(D,9),PIN_LOW);
-    rt_sem_take(tim_sem, RT_WAITING_FOREVER);
-
-    while (1)
-    {
-        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
-
-        // rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
-        // bmi08x_get_sync_data();
-        // mmc5893ma_polling_get_mag();
-
-        rt_pin_write(GET_PIN(D,9),PIN_LOW);
-
-        rt_sem_take(tim_sem, RT_WAITING_FOREVER);
-
-        //mag
-        //baro
-
-        // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
-
-        // //等到flag置位的一瞬间才开启定时器，这样准一点？？
-        // while(bmi08x_wait_sync_data()!=RT_EOK);
-
-        // rt_pin_write(GET_PIN(D,9),PIN_LOW);
-    }
-_exit:
-    return;
 }
 
 struct rt_sensor_data g_bmi08x_acce;
@@ -217,66 +159,32 @@ void imu_data_thrd(void *parameter)
     // rt_device_t baro_dev=rt_device_find("baro_spl06");//气压计
     // rt_device_open(baro_dev, RT_DEVICE_FLAG_RDONLY);
 
-    rt_device_read(acce_dev, 0, &g_bmi08x_acce, 1);//第一次读取
-    
     while(1)
     {
-
+        Bmi08xGyroIntStat1RegUnion stat={0};
         // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
         // rt_pin_write(GET_PIN(D,8),PIN_HIGH);
-
-        struct rt_sensor_data tmp_bmi08x_acce;
         do
         {
-            rt_device_read(acce_dev, 0, &tmp_bmi08x_acce, 1);
-        } while ((tmp_bmi08x_acce.data.acce.x==g_bmi08x_acce.data.acce.x)&&
-                 (tmp_bmi08x_acce.data.acce.y==g_bmi08x_acce.data.acce.y)&&
-                 (tmp_bmi08x_acce.data.acce.z==g_bmi08x_acce.data.acce.z));//值没变化，说明没更新，继续读
-        //至于为什么不直接读sr，看rm文档
-        
-        //读 ACC_INT_STAT_0
-        Bmi08xAccIntStat0RegUnion stat={0};
-        rt_device_control(acce_dev,RT_SENSOR_CTRL_SELF_TEST,&stat);
-
-        if(stat.B.Data_sync_out==1)
-        {
-            //再读一次确定值没问题，这个值是绝对完全更新的
-            rt_device_read(acce_dev, 0, &g_bmi08x_acce, 1);
-        }
-        else//读出来发现sr还没好，很有可能值是部分更新了（比如只更新了x轴，甚至只更新了一个字节）
-        {
-            g_bmi08x_acce=tmp_bmi08x_acce;//应该很少出现
-        }
+            rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+            rt_pin_write(GET_PIN(D,8),PIN_HIGH);
+            rt_device_control(gyro_dev,RT_SENSOR_CTRL_SELF_TEST,&stat);
+            rt_pin_write(GET_PIN(D,9),PIN_LOW);
+            rt_pin_write(GET_PIN(D,8),PIN_LOW);
+        } while (stat.B.gyro_drdy!=1);
 
         // rt_pin_write(GET_PIN(D,9),PIN_LOW);
         // rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
-        //更新了，开启定时器
-        rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));//定时器时间要做修改
+        rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));
 
-        // 读其他传感器
-        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
-        rt_pin_write(GET_PIN(D,8),PIN_HIGH);
+        //先读陀螺仪，加速度有35us延迟
+        rt_device_read(gyro_dev, 0, &g_bmi08x_gyro, 1);//27us
+        rt_device_read(acce_dev, 0, &g_bmi08x_acce, 1);
 
-        rt_device_read(gyro_dev, 0, &g_bmi08x_gyro, 1);
+        rt_kprintf("%d,%d,%d\n",g_bmi08x_acce.data.acce.x,g_bmi08x_acce.data.acce.y,g_bmi08x_acce.data.acce.z);
 
-        rt_pin_write(GET_PIN(D,9),PIN_LOW);
-        rt_pin_write(GET_PIN(D,8),PIN_LOW);
-
-        //等待回调，回调函数里面释放信号量
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);
-    }
-
-    ////////////////////////////////////
-    rt_device_t dev = RT_NULL;
-    dev = rt_device_find("vcom");
-    char test_str[]="vcom success!\n\t";
-    while (1)
-    {
-        rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
-        rt_device_write(dev,0,test_str,sizeof(test_str));
-        rt_device_close(dev);
-        rt_thread_mdelay(1000);
     }
 }
 

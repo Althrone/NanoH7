@@ -441,8 +441,9 @@ static rt_err_t bmi088_acce_control(struct rt_sensor_device *sensor, int cmd, vo
         break;
     // case RT_SENSOR_CTRL_SET_POWER://todo
     //     break;
-    // case RT_SENSOR_CTRL_SELF_TEST:
-    //     break;
+    case RT_SENSOR_CTRL_SELF_TEST:
+        result=_bmi088_acce_self_test(sensor,args);
+        break;
     default:
         result=-RT_ERROR;
         break;
@@ -493,8 +494,9 @@ static rt_err_t bmi088_gyro_control(struct rt_sensor_device *sensor, int cmd, vo
         break;
     // case RT_SENSOR_CTRL_SET_POWER:
     //     break;
-    // case RT_SENSOR_CTRL_SELF_TEST:
-    //     break;
+    case RT_SENSOR_CTRL_SELF_TEST:
+        result=_bmi088_gyro_self_test(sensor,args);
+        break;
     default:
         result=-RT_ERROR;
         break;

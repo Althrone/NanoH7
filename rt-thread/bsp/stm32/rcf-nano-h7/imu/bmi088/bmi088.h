@@ -651,6 +651,7 @@ rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_u
 rt_err_t _bmi088_acce_get_id(struct rt_sensor_device *sensor, void *args);
 rt_err_t _bmi088_acce_set_range(struct rt_sensor_device *sensor, void *args);
 rt_err_t _bmi088_acce_set_odr(struct rt_sensor_device *sensor, void *args);
+rt_err_t _bmi088_acce_self_test(struct rt_sensor_device *sensor, void *args);
 //data
 rt_size_t _bmi088_acce_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
 rt_size_t _bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
@@ -663,12 +664,9 @@ rt_err_t bmi08x_gyro_reset(rt_sensor_t sensor);
 rt_err_t _bmi088_gyro_get_id(struct rt_sensor_device *sensor, void *args);
 rt_err_t _bmi088_gyro_set_range(struct rt_sensor_device *sensor, void *args);
 rt_err_t _bmi088_gyro_set_odr(struct rt_sensor_device *sensor, void *args);
+rt_err_t _bmi088_gyro_self_test(struct rt_sensor_device *sensor, void *args);
 
 rt_size_t _bmi08x_gyro_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len);
-
-rt_err_t bmi08x_get_sync_data(void);
-rt_err_t bmi08x_wait_sync_data(void);
-
 
 #ifdef __cplusplus
 }
