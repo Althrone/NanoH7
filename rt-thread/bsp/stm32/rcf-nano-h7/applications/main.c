@@ -133,6 +133,7 @@ static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
 
 struct rt_sensor_data g_bmi08x_acce;
 struct rt_sensor_data g_bmi08x_gyro;
+struct rt_sensor_data g_mmc5983ma_mag;
 
 void imu_data_thrd(void *parameter)
 {
@@ -153,8 +154,8 @@ void imu_data_thrd(void *parameter)
     rt_device_t gyro_dev=rt_device_find("gyro_bmi088");//陀螺仪
     rt_device_open(gyro_dev, RT_DEVICE_FLAG_RDONLY);
 
-    // rt_device_t mag_dev=rt_device_find("mag_mmc5983ma");//磁力计
-    // rt_device_open(mag_dev, RT_DEVICE_FLAG_RDONLY);
+    rt_device_t mag_dev=rt_device_find("mag_mmc5983ma");//磁力计
+    rt_device_open(mag_dev, RT_DEVICE_FLAG_RDONLY);
 
     // rt_device_t baro_dev=rt_device_find("baro_spl06");//气压计
     // rt_device_open(baro_dev, RT_DEVICE_FLAG_RDONLY);
@@ -176,25 +177,34 @@ void imu_data_thrd(void *parameter)
         // rt_pin_write(GET_PIN(D,9),PIN_LOW);
         // rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
-        rt_pin_write(GET_PIN(D,9),PIN_HIGH);
-        rt_pin_write(GET_PIN(D,8),PIN_HIGH);
-
         rt_device_write(tim_dev, 0, &timeout_s, sizeof(timeout_s));//2us
 
         //先读陀螺仪，加速度有35us延迟
         rt_device_read(gyro_dev, 0, &g_bmi08x_gyro, 1);//21
         
         //考虑在这里读一下磁力计？
-        rt_hw_us_delay(35-23);
-        rt_pin_write(GET_PIN(D,9),PIN_LOW);
-        rt_pin_write(GET_PIN(D,8),PIN_LOW);
-
+        // rt_hw_us_delay(35-23);
         rt_pin_write(GET_PIN(D,9),PIN_HIGH);
         rt_pin_write(GET_PIN(D,8),PIN_HIGH);
-        rt_device_read(acce_dev, 0, &g_bmi08x_acce, 1);
+        rt_device_read(mag_dev, 0, &g_mmc5983ma_mag, 1);
         rt_pin_write(GET_PIN(D,9),PIN_LOW);
         rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
+        // rt_pin_write(GET_PIN(D,9),PIN_HIGH);
+        // rt_pin_write(GET_PIN(D,8),PIN_HIGH);
+        rt_device_read(acce_dev, 0, &g_bmi08x_acce, 1);
+        // rt_pin_write(GET_PIN(D,9),PIN_LOW);
+        // rt_pin_write(GET_PIN(D,8),PIN_LOW);
+
+        static rt_uint8_t spl06_250ms_cnt=0;
+
+        if(spl06_250ms_cnt==100)
+        {
+            //读取spl06的温度和气压
+            spl06_250ms_cnt=0;
+        }
+
+        spl06_250ms_cnt++;
         // rt_kprintf("%d,%d,%d\n",g_bmi08x_acce.data.acce.x,g_bmi08x_acce.data.acce.y,g_bmi08x_acce.data.acce.z);
 
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);

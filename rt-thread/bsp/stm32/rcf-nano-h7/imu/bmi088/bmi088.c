@@ -351,23 +351,6 @@ const rt_uint8_t bmi088_mm_config_file[] = {
     0x00, 0x80, 0x2e, 0x18, 0x00, 0xfd, 0x2d
 };
 
-volatile rt_uint32_t g_bmi08x_sensor_time_stamp=0;
-volatile rt_int16_t g_bmi08x_tmp=0;
-volatile rt_int16_t g_bmi08x_sync_acc_x=0;
-volatile rt_int16_t g_bmi08x_sync_acc_y=0;
-volatile rt_int16_t g_bmi08x_sync_acc_z=0;
-
-volatile rt_int16_t g_bmi08x_sync_gyro_x=0;
-volatile rt_int16_t g_bmi08x_sync_gyro_y=0;
-volatile rt_int16_t g_bmi08x_sync_gyro_z=0;
-
-volatile rt_int16_t g_bmi08x_aux_mag_r=0;
-volatile rt_int16_t g_bmi08x_aux_mag_x=0;
-volatile rt_int16_t g_bmi08x_aux_mag_y=0;
-volatile rt_int16_t g_bmi08x_aux_mag_z=0;
-
-struct rt_spi_device * g_acce0_sensor;
-
 //维护一个状态，保存当前设置的阈值
 static rt_bool_t gs_bmi08x_is_sync_mode=RT_FALSE;//默认不开启同步功能
 static rt_int16_t gs_bmi08x_acce_range=6;//默认+-6g
@@ -391,9 +374,6 @@ static rt_err_t bmi08x_write_reg(rt_sensor_t sensor, rt_uint8_t reg_addr, rt_uin
 
 rt_err_t bmi088_acce_init(rt_sensor_t sensor)
 {
-
-    g_acce0_sensor=(struct rt_spi_device *)rt_device_find(sensor->config.intf.dev_name);
-
     rt_err_t result=RT_EOK;
     rt_uint8_t raw_data=0;
 

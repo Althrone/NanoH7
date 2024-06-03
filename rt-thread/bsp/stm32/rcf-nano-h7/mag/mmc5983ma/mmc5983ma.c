@@ -92,41 +92,44 @@ void mmc5893ma_init(rt_sensor_t sensor)
     send_buf[1]=gs_mmc5983ma_cr2.r;
     rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    //读sr
-    send_buf[0]=0x80|MMC5983MA_SR_ADDR;
-    send_buf[1]=0;
-    do
-    {
-        rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-    }while(((Mmc5893maStatRegUnion*)(&recv_buf[1]))->B.Meas_M_Done!=1);//等到数据ok
+    //测试确实可以通过关闭连续采样->复位的方式彻底关闭连续采样
+    //但是关闭连续采样->清状态位的方法好像不行
 
-    send_buf[0]=MMC5983MA_CR2_ADDR;
-    send_buf[1]=0;
-    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+    // //读sr
+    // send_buf[0]=0x80|MMC5983MA_SR_ADDR;
+    // send_buf[1]=0;
+    // do
+    // {
+    //     rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+    // }while(((Mmc5893maStatRegUnion*)(&recv_buf[1]))->B.Meas_M_Done!=1);//等到数据ok
 
-    // mmc5893ma_reset(sensor);
+    // send_buf[0]=MMC5983MA_CR2_ADDR;
+    // send_buf[1]=0;
+    // rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    send_buf[0]=MMC5983MA_SR_ADDR;
-    send_buf[1]=1;
-    rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
+    // // mmc5893ma_reset(sensor);
 
-    //读sr
-    send_buf[0]=0x80|MMC5983MA_SR_ADDR;
-    send_buf[1]=0;
-    do
-    {
-        rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-    }while(((Mmc5893maStatRegUnion*)(&recv_buf[1]))->B.OTP_Rd_Done!=1);//等到数据ok
+    // send_buf[0]=MMC5983MA_SR_ADDR;
+    // send_buf[1]=1;
+    // rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    //读sr
-    send_buf[0]=0x80|MMC5983MA_SR_ADDR;
-    send_buf[1]=0;
-    do
-    {
-        rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
-    }while(((Mmc5893maStatRegUnion*)(&recv_buf[1]))->B.Meas_M_Done!=1);//等到数据ok
+    // //读sr
+    // send_buf[0]=0x80|MMC5983MA_SR_ADDR;
+    // send_buf[1]=0;
+    // do
+    // {
+    //     rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+    // }while(((Mmc5893maStatRegUnion*)(&recv_buf[1]))->B.OTP_Rd_Done!=1);//等到数据ok
 
-    while(1);
+    // //读sr
+    // send_buf[0]=0x80|MMC5983MA_SR_ADDR;
+    // send_buf[1]=0;
+    // do
+    // {
+    //     rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
+    // }while(((Mmc5893maStatRegUnion*)(&recv_buf[1]))->B.Meas_M_Done!=1);//等到数据ok
+
+    // while(1);
 }
 
 void mmc5893ma_reset(rt_sensor_t sensor)
@@ -289,21 +292,8 @@ rt_size_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struc
     if(spi_dev==RT_NULL)
         return 0;//传感器数据返回长度只有0和1，0表示失败
 
-    //通过向sr的MEAS_T_DONE和MEAS_M_DONE写1清除中断标志
-    // Mmc5893maStatRegUnion sr_clear={
-    //     .B.Meas_M_Done=1,
-    //     .B.Meas_T_Done=1,
-    // };
     rt_uint8_t send_buf[8]={0};
     rt_uint8_t recv_buf[8]={0};
-
-    // rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
-
-    // rt_spi_send_then_send(spi_dev,send_buf,1,send_buf+1,1);
-
-    // send_buf[0]=0x80|MMC5983MA_CR2_ADDR;
-    // send_buf[1]=0;
-    // rt_spi_transfer(spi_dev,send_buf,recv_buf,2);
 
     send_buf[0]=0x80|MMC5983MA_X_OUT_0_ADDR;
     if(rt_spi_transfer(spi_dev,send_buf,recv_buf,8)!=8)
