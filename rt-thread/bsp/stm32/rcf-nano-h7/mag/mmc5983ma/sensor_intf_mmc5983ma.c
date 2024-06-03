@@ -234,7 +234,7 @@ int rt_hw_mmc5983ma_port(void)
 
     return RT_EOK;
 }
-// INIT_DEVICE_EXPORT(rt_hw_mmc5983ma_port);
+INIT_DEVICE_EXPORT(rt_hw_mmc5983ma_port);
 
 /******************************************************************************
  * private functions definition

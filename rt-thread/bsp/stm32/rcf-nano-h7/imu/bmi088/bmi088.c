@@ -849,6 +849,9 @@ rt_size_t _bmi088_acce_polling_get_data(struct rt_sensor_device *sensor, struct 
     #endif
 }
 
+/**
+ * @brief   1.28s更新一次
+ **/
 rt_size_t _bmi088_temp_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
 {
     rt_uint8_t recv_buf[2]={0};
@@ -1080,7 +1083,9 @@ _exit:
     return result;
 }
 
-
+/**
+ * @brief   21us
+ **/
 rt_size_t _bmi08x_gyro_polling_get_data(struct rt_sensor_device *sensor, struct rt_sensor_data *sensor_data, rt_size_t len)
 {
     rt_uint8_t recv_buf[6]={0};
