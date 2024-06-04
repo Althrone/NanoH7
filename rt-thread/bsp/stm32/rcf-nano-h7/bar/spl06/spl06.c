@@ -71,12 +71,12 @@ void spl06_init(rt_sensor_t sensor)
     rt_uint8_t send_buf[2]={SPL06_CFG_REG_ADDR,cfg.r};//压力数据就绪中断，三线spi模式
     rt_spi_transfer(spi_dev,send_buf,RT_NULL,2);
 
-    //读取MMEAS_CFG确定coef和sensor两个位置
+    //读取MEAS_CFG确定coef和sensor两个位置
     Spl06MeasCfgRegUnion meas_cfg;
     do
     {
-        rt_uint8_t send_buf=0x80|SPL06_MEAS_CFG_REG_ADDR;
-        rt_spi_send_then_recv(spi_dev,&send_buf,1,&meas_cfg,1);
+        rt_uint8_t meas_cfg_addr=0x80|SPL06_MEAS_CFG_REG_ADDR;
+        rt_spi_send_then_recv(spi_dev,&meas_cfg_addr,1,&meas_cfg,1);
         
     } while ((meas_cfg.B.COEF_RDY!=1)||(meas_cfg.B.SENSOR_RDY!=1));
 
@@ -84,6 +84,17 @@ void spl06_init(rt_sensor_t sensor)
     spl06_polling_get_coef(sensor);
     
     spl06_set_with_use_case(sensor,"high");//内部会自动处理shift和开启连续采样
+
+    // 读一下int_sts
+    Spl06IntStsRegUnion intsts;
+    do
+    {
+        rt_uint8_t intstsaddr=0x80|SPL06_MEAS_CFG_REG_ADDR;
+        rt_spi_send_then_recv(spi_dev,&intstsaddr,1,&intsts,1);
+        
+    } while (intsts.B.INT_PRS!=1);
+
+    while(1);
 }
 
 void spl06_reset(rt_sensor_t sensor)
@@ -384,6 +395,7 @@ static rt_err_t spl06_polling_get_coef(rt_sensor_t sensor)
 /**
  * @brief   按照手册的三个应用场景
  * @param   args: "low" "std" "high"
+ * @note    spl06 spi不支持连续写入模式
  **/
 static rt_err_t spl06_set_with_use_case(struct rt_sensor_device *sensor, const char *args)
 {
@@ -409,54 +421,112 @@ static rt_err_t spl06_set_with_use_case(struct rt_sensor_device *sensor, const c
         send_buf[0]=SPL06_PRS_CFG_REG_ADDR;
         send_buf[1]=0x01;//1hz 2次超采
         gs_p_osr_indx=1;
-        send_buf[2]=0x80;//1hz 1次超采
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
+            result = -RT_ERROR;
+            goto _exit;
+        }
+
+        send_buf[0]=SPL06_TMP_CFG_REG_ADDR;
+        send_buf[1]=0x80;//1hz 1次超采
         gs_t_osr_indx=0;
-        //连续采样
-        (*(Spl06MeasCfgRegUnion*)&recv_buf[3]).B.MEAS_CRTL=7;
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
+            result = -RT_ERROR;
+            goto _exit;
+        }
+
         //手动清空shift
+        send_buf[0]=SPL06_CFG_REG_ADDR;
         (*(Spl06CfgRegUnion*)&recv_buf[4]).B.TMP_SHIFT_EN=0;
         (*(Spl06CfgRegUnion*)&recv_buf[4]).B.PRS_SHIFT_EN=0;
-        send_buf[3]=recv_buf[3];
-        send_buf[4]=recv_buf[4];
-        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,sizeof(send_buf))!=sizeof(send_buf))
+        send_buf[1]=recv_buf[4];
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
             result = -RT_ERROR;
+            goto _exit;
+        }
     }
     else if(!strcmp(args,"std"))//室内导航模式
     {
         send_buf[0]=SPL06_PRS_CFG_REG_ADDR;
         send_buf[1]=0x14;//2hz 16次超采
         gs_p_osr_indx=4;
-        send_buf[2]=0x80;//1hz 1次超采
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
+            result = -RT_ERROR;
+            goto _exit;
+        }
+
+        send_buf[0]=SPL06_TMP_CFG_REG_ADDR;
+        send_buf[1]=0x80;//1hz 1次超采
         gs_t_osr_indx=0;
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
+            result = -RT_ERROR;
+            goto _exit;
+        }
+
         //连续采样
         (*(Spl06MeasCfgRegUnion*)&recv_buf[3]).B.MEAS_CRTL=7;
         //Enable Pshift
-        (*(Spl06CfgRegUnion*)&recv_buf[1]).B.TMP_SHIFT_EN=0;
-        (*(Spl06CfgRegUnion*)&recv_buf[1]).B.PRS_SHIFT_EN=1;
-        send_buf[3]=recv_buf[3];
-        send_buf[4]=recv_buf[4];
-        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,sizeof(send_buf))!=sizeof(send_buf))
+        send_buf[0]=SPL06_CFG_REG_ADDR;
+        (*(Spl06CfgRegUnion*)&recv_buf[4]).B.TMP_SHIFT_EN=0;
+        (*(Spl06CfgRegUnion*)&recv_buf[4]).B.PRS_SHIFT_EN=1;
+        send_buf[1]=recv_buf[4];
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
             result = -RT_ERROR;
+            goto _exit;
+        }
+
     }
     else if(!strcmp(args,"high"))//运动模式
     {
         send_buf[0]=SPL06_PRS_CFG_REG_ADDR;
         send_buf[1]=0x26;//4Hz 64次超采
         gs_p_osr_indx=6;
-        send_buf[2]=0xA0;//4Hz 1次超采
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
+            result = -RT_ERROR;
+            goto _exit;
+        }
+
+        send_buf[0]=SPL06_TMP_CFG_REG_ADDR;
+        send_buf[1]=0xA0;//4Hz 1次超采
         gs_t_osr_indx=0;
-        //连续采样
-        (*(Spl06MeasCfgRegUnion*)&recv_buf[3]).r=7;
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
+            result = -RT_ERROR;
+            goto _exit;
+        }
+
         //Enable Pshift
+        send_buf[0]=SPL06_CFG_REG_ADDR;
         (*(Spl06CfgRegUnion*)&recv_buf[4]).B.TMP_SHIFT_EN=0;
         (*(Spl06CfgRegUnion*)&recv_buf[4]).B.PRS_SHIFT_EN=1;
-        send_buf[3]=recv_buf[3];
-        send_buf[4]=recv_buf[4];
-        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,sizeof(send_buf))!=sizeof(send_buf))
+        send_buf[1]=recv_buf[4];
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
             result = -RT_ERROR;
+            goto _exit;
+        }
     }
     else
         result=-RT_EINVAL;//args参数非法
+
+    if(result==RT_EOK)
+    {
+        //连续采样
+        send_buf[0]=SPL06_MEAS_CFG_REG_ADDR;
+        send_buf[1]=7;//温度和压力都连续采样
+        if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,2)!=2)
+        {
+            result = -RT_ERROR;
+            goto _exit;
+        }
+    }
+
 _exit:
     return result;
 }
