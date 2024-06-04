@@ -85,16 +85,16 @@ void spl06_init(rt_sensor_t sensor)
     
     spl06_set_with_use_case(sensor,"high");//内部会自动处理shift和开启连续采样
 
-    // 读一下int_sts
-    Spl06IntStsRegUnion intsts;
-    do
-    {
-        rt_uint8_t intstsaddr=0x80|SPL06_MEAS_CFG_REG_ADDR;
-        rt_spi_send_then_recv(spi_dev,&intstsaddr,1,&intsts,1);
+    // // 读一下int_sts
+    // Spl06IntStsRegUnion intsts;
+    // do
+    // {
+    //     rt_uint8_t intstsaddr=0x80|SPL06_MEAS_CFG_REG_ADDR;
+    //     rt_spi_send_then_recv(spi_dev,&intstsaddr,1,&intsts,1);
         
-    } while (intsts.B.INT_PRS!=1);
+    // } while (intsts.B.INT_PRS!=1);
 
-    while(1);
+    // while(1);
 }
 
 void spl06_reset(rt_sensor_t sensor)
