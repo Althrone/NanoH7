@@ -446,10 +446,10 @@ static rt_err_t spl06_set_with_use_case(struct rt_sensor_device *sensor, const c
         send_buf[2]=0xA0;//4Hz 1次超采
         gs_t_osr_indx=0;
         //连续采样
-        (*(Spl06MeasCfgRegUnion*)&recv_buf[3]).B.MEAS_CRTL=7;
+        (*(Spl06MeasCfgRegUnion*)&recv_buf[3]).r=7;
         //Enable Pshift
-        (*(Spl06CfgRegUnion*)&recv_buf[1]).B.TMP_SHIFT_EN=0;
-        (*(Spl06CfgRegUnion*)&recv_buf[1]).B.PRS_SHIFT_EN=1;
+        (*(Spl06CfgRegUnion*)&recv_buf[4]).B.TMP_SHIFT_EN=0;
+        (*(Spl06CfgRegUnion*)&recv_buf[4]).B.PRS_SHIFT_EN=1;
         send_buf[3]=recv_buf[3];
         send_buf[4]=recv_buf[4];
         if(rt_spi_transfer(spi_dev,send_buf,RT_NULL,sizeof(send_buf))!=sizeof(send_buf))
