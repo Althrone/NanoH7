@@ -64,9 +64,9 @@ int main(void)
     //                               RT_NULL,1024,5,5);
     // if(t != RT_NULL) rt_thread_startup(t);
 
-    rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
-                                    RT_NULL,1024,0,10);
-    rt_thread_startup(t1);
+    // rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
+    //                                 RT_NULL,1024,0,10);
+    // rt_thread_startup(t1);
 
     //串口dma测试
     // rt_thread_t t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
@@ -82,25 +82,6 @@ int main(void)
     //                                 RT_NULL,1024,0,10);
     // rt_thread_startup(t);
 
-    // //传感器获取
-    // struct rt_sensor_data data;
-    // struct rt_sensor_data temp_data;
-    // // rt_device_t dev=rt_device_find("mag_mmc5983ma");
-    // rt_device_t temp_dev=rt_device_find("temp_mmc5983ma");
-    // // rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
-    // rt_device_open(temp_dev, RT_DEVICE_FLAG_RDONLY);
-    // while (1)
-    // {
-    //     // rt_device_read(dev, 0, &data, 1);//pos不使用
-    //     rt_device_read(temp_dev, 0, &temp_data, 1);//pos不使用
-    //     rt_thread_mdelay(2);
-    // }
-    
-    // while(1)
-    // {
-    //     mmc5893ma_polling_get_mag();
-    //     rt_thread_mdelay(50);
-    // }
     return 0;
 }
 
@@ -134,6 +115,7 @@ static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
 struct rt_sensor_data g_bmi08x_acce;
 struct rt_sensor_data g_bmi08x_gyro;
 struct rt_sensor_data g_mmc5983ma_mag;
+struct rt_sensor_data g_spl06_baro;
 
 void imu_data_thrd(void *parameter)
 {
@@ -157,8 +139,8 @@ void imu_data_thrd(void *parameter)
     rt_device_t mag_dev=rt_device_find("mag_mmc5983ma");//磁力计
     rt_device_open(mag_dev, RT_DEVICE_FLAG_RDONLY);
 
-    // rt_device_t baro_dev=rt_device_find("baro_spl06");//气压计
-    // rt_device_open(baro_dev, RT_DEVICE_FLAG_RDONLY);
+    rt_device_t baro_dev=rt_device_find("baro_spl06");//气压计
+    rt_device_open(baro_dev, RT_DEVICE_FLAG_RDONLY);
 
     while(1)
     {
@@ -196,15 +178,17 @@ void imu_data_thrd(void *parameter)
         // rt_pin_write(GET_PIN(D,9),PIN_LOW);
         // rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
-        static rt_uint8_t spl06_250ms_cnt=0;
+        // static rt_uint8_t spl06_250ms_cnt=0;
 
-        if(spl06_250ms_cnt==100)
-        {
+        // if(spl06_250ms_cnt==100)
+        // {
             //读取spl06的温度和气压
-            spl06_250ms_cnt=0;
-        }
+            // rt_device_read(baro_dev, 0, &g_spl06_baro, 1);
 
-        spl06_250ms_cnt++;
+        //     spl06_250ms_cnt=0;
+        // }
+
+        // spl06_250ms_cnt++;
         // rt_kprintf("%d,%d,%d\n",g_bmi08x_acce.data.acce.x,g_bmi08x_acce.data.acce.y,g_bmi08x_acce.data.acce.z);
 
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);

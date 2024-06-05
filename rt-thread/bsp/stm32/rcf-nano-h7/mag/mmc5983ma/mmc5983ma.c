@@ -295,6 +295,13 @@ rt_size_t _mmc5893ma_mag_polling_get_data(struct rt_sensor_device *sensor, struc
     rt_uint8_t send_buf[8]={0};
     rt_uint8_t recv_buf[8]={0};
 
+    //写入sr
+    send_buf[0]=MMC5983MA_SR_ADDR;
+    send_buf[1]=1;
+    if(rt_spi_transfer(spi_dev,send_buf,recv_buf,2)!=2)
+        return 0;//传感器数据返回长度只有0和1，0表示失败
+
+
     send_buf[0]=0x80|MMC5983MA_X_OUT_0_ADDR;
     if(rt_spi_transfer(spi_dev,send_buf,recv_buf,8)!=8)
         return 0;//传感器数据返回长度只有0和1，0表示失败

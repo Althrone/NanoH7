@@ -253,7 +253,7 @@
 #define RT_USING_ADC
 #define RT_USING_SPI
 #define RT_USING_USB_DEVICE
-// #define RT_USING_SDIO
+#define RT_USING_SDIO
 #define RT_USING_HWTIMER
 #define RT_USING_PWM
 
@@ -403,8 +403,8 @@
 // #define BSP_SPI1_RX_USING_DMA
 // #define BSP_SPI1_TX_USING_DMA
 #define BSP_USING_FDCAN1
-// #define BSP_USING_SDIO
-// #define BSP_USING_SDIO1
+#define BSP_USING_SDIO
+#define BSP_USING_SDIO1
 #define BSP_USING_USBD
 #define BSP_USING_PWM1
 #define BSP_USING_PWM1_CH1
