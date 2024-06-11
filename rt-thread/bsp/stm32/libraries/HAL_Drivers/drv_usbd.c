@@ -196,14 +196,14 @@ static rt_err_t _init(rt_device_t device)
     memset(&pcd->Init, 0, sizeof pcd->Init);
     pcd->Init.dev_endpoints = 8;
     pcd->Init.speed = USBD_PCD_SPEED;
-    pcd->Init.ep0_mps = EP_MPS_64;//DEP0CTL_MPS_64;
+    pcd->Init.ep0_mps = DEP0CTL_MPS_64;//EP_MPS_64 DEP0CTL_MPS_64;
 #if !defined(SOC_SERIES_STM32F1)
     pcd->Init.phy_itface = USBD_PCD_PHY_MODULE;
 #endif
 
-#if defined(SOC_SERIES_STM32H7)
-    pcd->Init.dma_enable=DISABLE;
-#endif
+// #if defined(SOC_SERIES_STM32H7)
+//     pcd->Init.dma_enable=DISABLE;
+// #endif
     /* Initialize LL Driver */
     HAL_PCD_Init(pcd);
     /* USB interrupt Init */

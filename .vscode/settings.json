@@ -64,6 +64,7 @@
         "bmi088_stm32.h": "c",
         "system_stm32h7xx.h": "c",
         "drv_log.h": "c",
-        "sensor.h": "c"
+        "sensor.h": "c",
+        "serial.h": "c"
     }
 }

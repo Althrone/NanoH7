@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2021, RT-Thread Development Team
+ * Copyright (c) 2006-2018, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,7 +20,5 @@ struct winusb_descriptor
     struct uendpoint_descriptor ep_in_desc;
 };
 typedef struct winusb_descriptor* winusb_desc_t;
-
-#define RT_WINUSB_GUID "{6860DC3C-C05F-4807-8807-1CA861CC1D66}"
 
 #endif

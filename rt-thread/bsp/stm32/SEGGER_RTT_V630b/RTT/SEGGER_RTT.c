@@ -259,8 +259,8 @@ static unsigned char _aTerminalId[16] = { '0', '1', '2', '3', '4', '5', '6', '7'
 //指定地址
 SEGGER_RTT_CB _SEGGER_RTT __attribute__((section(".segger_rtt")));
 
-static char _acUpBuffer  [BUFFER_SIZE_UP] __attribute__((section(".segger_rtt")));
-static char _acDownBuffer[BUFFER_SIZE_DOWN] __attribute__((section(".segger_rtt")));
+__attribute__((section(".segger_rtt"))) static char _acUpBuffer  [BUFFER_SIZE_UP]   ={0};
+__attribute__((section(".segger_rtt"))) static char _acDownBuffer[BUFFER_SIZE_DOWN] ={0};
 
 static char _ActiveTerminal;
 

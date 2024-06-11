@@ -269,7 +269,7 @@
 
 /* Using USB */
 
-#define RT_USB_DEVICE_COMPOSITE
+// #define RT_USB_DEVICE_COMPOSITE
 #define RT_USB_DEVICE_CDC
 // #define RT_USB_DEVICE_MSTORAGE
 // #define RT_USB_MSTORAGE_DISK_NAME "sd0"

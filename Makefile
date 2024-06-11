@@ -97,7 +97,9 @@ C_DEFS = \
 -D__need_time_t \
 -D__need_timespec \
 -DBSP_SCB_ENABLE_I_CACHE \
--DBSP_SCB_ENABLE_D_CACHE
+-DBSP_SCB_ENABLE_D_CACHE \
+-D__ARM_ARCH_7EM__ \
+# -DSDIO_MAX_FREQ=20000000
 # -D__FPU_PRESENT\#在stm32h750xx.h中定义了
 # -DARM_MATH_CM4 \#数学库以后再说
 # -DARM_MATH_MATRIX_CHECK

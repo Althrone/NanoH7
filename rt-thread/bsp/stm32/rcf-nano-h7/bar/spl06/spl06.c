@@ -294,13 +294,13 @@ rt_size_t _spl06_baro_polling_get_data(struct rt_sensor_device *sensor, struct r
     rt_uint8_t send_buf[1+6]={0};
     rt_uint8_t recv_buf[1+6]={0};
 
-    // 读取stat清除中断
-    send_buf[0]=0x80|SPL06_INT_STS_REG_ADDR;
-    if(rt_spi_transfer(spi_dev,send_buf,recv_buf,2)!=2)
-        return 0;
+    // // 读取stat清除中断
+    // send_buf[0]=0x80|SPL06_INT_STS_REG_ADDR;
+    // if(rt_spi_transfer(spi_dev,send_buf,recv_buf,2)!=2)
+    //     return 0;
 
-    if(((Spl06IntStsRegUnion)recv_buf[1]).B.INT_PRS==0)
-        return 0;
+    // if(((Spl06IntStsRegUnion)recv_buf[1]).B.INT_PRS==0)
+    //     return 0;
     
 
     send_buf[0]=0x80|SPL06_PSR_B2_REG_ADDR;
@@ -320,6 +320,10 @@ rt_size_t _spl06_baro_polling_get_data(struct rt_sensor_device *sensor, struct r
                   Praw_sc*(gs_spl06_coef.c10+Praw_sc*(gs_spl06_coef.c20+Praw_sc*gs_spl06_coef.c30))+
                   Traw_sc*gs_spl06_coef.c01+
                   Traw_sc*Praw_sc*(gs_spl06_coef.c11+Praw_sc*gs_spl06_coef.c21);
+
+    float Altitude=44330*(1-pow((Pcomp/101325.f),1/5.255f));
+    Altitude*=100;
+    rt_kprintf("%d.%d\n",((int32_t)Altitude)/100,((int32_t)Altitude)%100);
     
     sensor_data->type = RT_SENSOR_CLASS_BARO;
     sensor_data->data.baro = Pcomp;
@@ -343,7 +347,7 @@ rt_size_t _spl06_temp_polling_get_data(struct rt_sensor_device *sensor, struct r
     if(rt_spi_transfer(spi_dev,send_buf,recv_buf,sizeof(send_buf))!=sizeof(send_buf))
         return 0;
     
-    rt_int32_t Traw=(recv_buf[4]&0x80)?0xFF000000|(((rt_uint32_t)recv_buf[1])<<16)|(((rt_uint32_t)recv_buf[2])<<8)|((rt_uint32_t)recv_buf[3]):
+    rt_int32_t Traw=(recv_buf[1]&0x80)?0xFF000000|(((rt_uint32_t)recv_buf[1])<<16)|(((rt_uint32_t)recv_buf[2])<<8)|((rt_uint32_t)recv_buf[3]):
                                                   (((rt_uint32_t)recv_buf[1])<<16)|(((rt_uint32_t)recv_buf[2])<<8)|((rt_uint32_t)recv_buf[3]);
     
     float Traw_sc=Traw/kgs_scale_factor_tbl[gs_t_osr_indx];

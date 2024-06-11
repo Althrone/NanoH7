@@ -36,6 +36,7 @@
                 "USE_HAL_DRIVER",
                 "HSE_VALUE=8000000UL",
                 "USE_FULL_LL_DRIVER"
+                // "__ARM_ARCH_7EM__"
             ],
             // "compilerPath": "D:\\NXP\\S32DS.3.4\\S32DS\\build_tools\\gcc_v10.2\\gcc-10.2-arm32-eabi\\bin\\arm-none-eabi-gcc.exe",
             "compilerPath": "D:\\Software\\Work\\GNU Arm Embedded Toolchain\\10 2021.10\\bin\\arm-none-eabi-gcc.exe",
