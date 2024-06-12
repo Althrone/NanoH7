@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2018, RT-Thread Development Team
+ * Copyright (c) 2006-2021, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,6 +24,7 @@
 #define USB_ETH_MTU     1514
 #endif
 #define MAX_ADDR_LEN    6
+#define ECM_INTF_STR_INDEX 10
 
 struct rt_ecm_eth
 {
@@ -96,7 +97,11 @@ const static struct ucdc_eth_descriptor _comm_desc =
         USB_CDC_CLASS_COMM,
         USB_CDC_SUBCLASS_ETH,
         USB_CDC_PROTOCOL_NONE,
+#ifdef RT_USB_DEVICE_COMPOSITE
+        ECM_INTF_STR_INDEX,
+#else
         0x00,
+#endif
     },
     /* Header Functional Descriptor */
     {
@@ -560,8 +565,11 @@ ufunction_t rt_usbd_function_ecm_create(udevice_t device)
     RT_ASSERT(device != RT_NULL);
 
     /* set usb device string description */
+#ifdef RT_USB_DEVICE_COMPOSITE
+    rt_usbd_device_set_interface_string(device, ECM_INTF_STR_INDEX, _ustring[2]);
+#else
     rt_usbd_device_set_string(device, _ustring);
-
+#endif
     /* create a cdc class */
     cdc = rt_usbd_function_new(device, &_dev_desc, &ops);
     rt_usbd_device_set_qualifier(device, &dev_qualifier);
@@ -636,12 +644,16 @@ ufunction_t rt_usbd_function_ecm_create(udevice_t device)
     _ecm_eth->host_addr[4] = 0xEC;//*(const rt_uint8_t *)(0x1fff7a14);
     _ecm_eth->host_addr[5] = 0xAB;//*(const rt_uint8_t *)(0x1fff7a18);
 
+#ifdef RT_USING_DEVICE_OPS
+    _ecm_eth->parent.parent.ops = &ecm_device_ops;
+#else
     _ecm_eth->parent.parent.init       = rt_ecm_eth_init;
     _ecm_eth->parent.parent.open       = rt_ecm_eth_open;
     _ecm_eth->parent.parent.close      = rt_ecm_eth_close;
     _ecm_eth->parent.parent.read       = rt_ecm_eth_read;
     _ecm_eth->parent.parent.write      = rt_ecm_eth_write;
     _ecm_eth->parent.parent.control    = rt_ecm_eth_control;
+#endif
     _ecm_eth->parent.parent.user_data  = device;
 
     _ecm_eth->parent.eth_rx     = rt_ecm_eth_rx;

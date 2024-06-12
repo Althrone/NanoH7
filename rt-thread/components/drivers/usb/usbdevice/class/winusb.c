@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2018, RT-Thread Development Team
+ * Copyright (c) 2006-2021, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -8,8 +8,6 @@
  * 2017-11-16     ZYH          first version
  */
 #include <rthw.h>
-#include <rtthread.h>
-#include <rtservice.h>
 #include <rtdevice.h>
 #include <drivers/usb_device.h>
 #include "winusb.h"
@@ -21,7 +19,7 @@ struct winusb_device
     uep_t ep_out;
     uep_t ep_in;
 };
-
+#define WINUSB_INTF_STR_INDEX 13
 typedef struct winusb_device * winusb_device_t;
 
 ALIGN(4)
@@ -84,7 +82,11 @@ struct winusb_descriptor _winusb_desc =
         0xFF,                       //bInterfaceClass;
         0x00,                       //bInterfaceSubClass;
         0x00,                       //bInterfaceProtocol;
+#ifdef RT_USB_DEVICE_COMPOSITE
+        WINUSB_INTF_STR_INDEX,
+#else
         0x00,                       //iInterface;
+#endif
     },
     /*endpoint descriptor*/
     {
@@ -121,7 +123,7 @@ const static char* _ustring[] =
 ALIGN(4)
 struct usb_os_proerty winusb_proerty[] = 
 {
-    USB_OS_PROERTY_DESC(USB_OS_PROERTY_TYPE_REG_SZ,"DeviceInterfaceGUID",RT_WINUSB_GUID),
+    USB_OS_PROPERTY_DESC(USB_OS_PROPERTY_TYPE_REG_SZ,"DeviceInterfaceGUID",RT_WINUSB_GUID),
 };
 
 ALIGN(4)
@@ -310,7 +312,11 @@ ufunction_t rt_usbd_function_winusb_create(udevice_t device)
     RT_ASSERT(device != RT_NULL);
 
     /* set usb device string description */
+#ifdef RT_USB_DEVICE_COMPOSITE
+    rt_usbd_device_set_interface_string(device, WINUSB_INTF_STR_INDEX, _ustring[2]);
+#else
     rt_usbd_device_set_string(device, _ustring);
+#endif
 
     /* create a cdc function */
     func = rt_usbd_function_new(device, &dev_desc, &ops);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2018, RT-Thread Development Team
+ * Copyright (c) 2006-2021, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -28,7 +28,7 @@
 #define DBG_SECTION_NAME    "RNDIS"
 #include <rtdbg.h>
 
-
+#define RNDIS_INTF_STR_INDEX 12
 /* RT-Thread LWIP ethernet interface */
 #include <netif/ethernetif.h>
 
@@ -123,7 +123,11 @@ const static struct ucdc_comm_descriptor _comm_desc =
         USB_CDC_CLASS_COMM,
         USB_CDC_SUBCLASS_ACM,
         USB_CDC_PROTOCOL_VENDOR,
+#ifdef RT_USB_DEVICE_COMPOSITE
+        RNDIS_INTF_STR_INDEX,
+#else
         0x00,
+#endif
     },
     /* Header Functional Descriptor */
     {
@@ -372,7 +376,7 @@ static rndis_query_cmplt_t _create_resp(rt_size_t size)
 static void _copy_resp(rndis_query_cmplt_t resp, const void * buffer)
 {
     char * resp_buffer = (char *)resp + sizeof(struct rndis_query_cmplt);
-    memcpy(resp_buffer, buffer, resp->InformationBufferLength);
+    rt_memcpy(resp_buffer, buffer, resp->InformationBufferLength);
 }
 
 static void _set_resp(rndis_query_cmplt_t resp, rt_uint32_t value)
@@ -893,13 +897,13 @@ static rt_err_t _ep_out_handler(ufunction_t func, rt_size_t size)
             data += sizeof(struct rndis_packet_msg);
             size -= sizeof(struct rndis_packet_msg);
             ((rt_rndis_eth_t)func->user_data)->rx_frist = RT_FALSE;
-            memcpy(&((rt_rndis_eth_t)func->user_data)->rx_buffer[((rt_rndis_eth_t)func->user_data)->rx_offset], data, size);
+            rt_memcpy(&((rt_rndis_eth_t)func->user_data)->rx_buffer[((rt_rndis_eth_t)func->user_data)->rx_offset], data, size);
             ((rt_rndis_eth_t)func->user_data)->rx_offset += size;
         }
     }
     else
     {
-        memcpy(&((rt_rndis_eth_t)func->user_data)->rx_buffer[((rt_rndis_eth_t)func->user_data)->rx_offset], data, size);
+        rt_memcpy(&((rt_rndis_eth_t)func->user_data)->rx_buffer[((rt_rndis_eth_t)func->user_data)->rx_offset], data, size);
         ((rt_rndis_eth_t)func->user_data)->rx_offset += size;
     }
 
@@ -1133,7 +1137,7 @@ struct pbuf *rt_rndis_eth_rx(rt_device_t dev)
             for (q = p; q != RT_NULL; q= q->next)
             {
                 /* Copy the received frame into buffer from memory pointed by the current ETHERNET DMA Rx descriptor */
-                memcpy(q->payload,
+                rt_memcpy(q->payload,
                        (rt_uint8_t *)((device->rx_buffer) + offset),
                        q->len);
                 offset += q->len;
@@ -1187,7 +1191,7 @@ rt_err_t rt_rndis_eth_tx(rt_device_t dev, struct pbuf* p)
     buffer = (char *)&device->tx_buffer + sizeof(struct rndis_packet_msg);
     for (q = p; q != NULL; q = q->next)
     {
-        memcpy(buffer, q->payload, q->len);
+        rt_memcpy(buffer, q->payload, q->len);
         buffer += q->len;
     }
 
@@ -1318,8 +1322,11 @@ ufunction_t rt_usbd_function_rndis_create(udevice_t device)
     RT_ASSERT(device != RT_NULL);
 
     /* set usb device string description */
+#ifdef RT_USB_DEVICE_COMPOSITE
+    rt_usbd_device_set_interface_string(device, RNDIS_INTF_STR_INDEX, _ustring[2]);
+#else
     rt_usbd_device_set_string(device, _ustring);
-
+#endif
     /* create a cdc class */
     cdc = rt_usbd_function_new(device, &_dev_desc, &ops);
     rt_usbd_device_set_qualifier(device, &dev_qualifier);

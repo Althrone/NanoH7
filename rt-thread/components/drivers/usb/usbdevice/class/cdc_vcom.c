@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2018, RT-Thread Development Team
+ * Copyright (c) 2006-2021, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -10,18 +10,17 @@
  * 2013-06-25     heyuanjie87  remove SOF mechinism
  * 2013-07-20     Yi Qiu       do more test
  * 2016-02-01     Urey         Fix some error
+ * 2021-10-14     mazhiyuan    Fix some error
  */
 
 #include <rthw.h>
-#include <rtthread.h>
-#include <rtservice.h>
 #include <rtdevice.h>
-#include <drivers/serial.h>
 #include "drivers/usb_device.h"
 #include "cdc.h"
 
 #ifdef RT_USB_DEVICE_CDC
 
+#define VCOM_INTF_STR_INDEX 5
 #ifdef RT_VCOM_TX_TIMEOUT
 #define VCOM_TX_TIMEOUT      RT_VCOM_TX_TIMEOUT
 #else /*!RT_VCOM_TX_TIMEOUT*/
@@ -153,7 +152,11 @@ const static struct ucdc_comm_descriptor _comm_desc =
         USB_CDC_CLASS_COMM,
         USB_CDC_SUBCLASS_ACM,
         USB_CDC_PROTOCOL_V25TER,
-        0x00,
+#ifdef RT_USB_DEVICE_COMPOSITE
+        VCOM_INTF_STR_INDEX,
+#else
+        0,
+#endif
     },
     /* Header Functional Descriptor */   
     {
@@ -584,13 +587,17 @@ ufunction_t rt_usbd_function_cdc_create(udevice_t device)
         rt_memset(serno, 0, _SER_NO_LEN + 1);
         rt_memcpy(serno, _SER_NO, rt_strlen(_SER_NO));
     }
+#ifdef RT_USB_DEVICE_COMPOSITE
+    rt_usbd_device_set_interface_string(device, VCOM_INTF_STR_INDEX, _ustring[2]);
+#else
     /* set usb device string description */
     rt_usbd_device_set_string(device, _ustring);
-    
+#endif
     /* create a cdc function */
     func = rt_usbd_function_new(device, &dev_desc, &ops);
-    //not support HS
-    //rt_usbd_device_set_qualifier(device, &dev_qualifier);
+
+    /* support HS */
+    rt_usbd_device_set_qualifier(device, &dev_qualifier);
     
     /* allocate memory for cdc vcom data */
     data = (struct vcom*)rt_malloc(sizeof(struct vcom));
@@ -932,8 +939,12 @@ static void rt_usb_vcom_init(struct ufunction *func)
     config.parity       = PARITY_NONE;
     config.bit_order    = BIT_ORDER_LSB;
     config.invert       = NRZ_NORMAL;
+#if defined(RT_USING_SERIAL_V1)
     config.bufsz        = CDC_RX_BUFSIZE;
-
+#elif defined(RT_USING_SERIAL_V2)
+    config.rx_bufsz     = CDC_RX_BUFSIZE;
+    config.tx_bufsz     = CDC_TX_BUFSIZE;
+#endif
     data->serial.ops        = &usb_vcom_ops;
     data->serial.serial_rx  = RT_NULL;
     data->serial.config     = config;
