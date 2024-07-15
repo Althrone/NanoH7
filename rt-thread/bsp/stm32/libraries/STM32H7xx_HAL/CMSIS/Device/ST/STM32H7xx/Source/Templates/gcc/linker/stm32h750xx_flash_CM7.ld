@@ -183,6 +183,12 @@ SECTIONS
     . = ALIGN(4);
   } >DTCMRAM
 
+  .test_data :
+  {
+    . = ALIGN(4);
+    . = ALIGN(4);
+  } >DTCMRAM
+
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {

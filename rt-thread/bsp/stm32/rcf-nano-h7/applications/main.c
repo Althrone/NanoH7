@@ -15,7 +15,6 @@
 void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
 void gps_rx_thread_entry(void *parameter);
-void ins_rx_thread_entry(void *parameter);
 
 // #define CAN_
 // #define CAN_Pin GET_PIN(B, 14)
@@ -58,15 +57,15 @@ int main(void)
     rt_pwm_enable(pwm_dev, 2);
 
     //挂载文件系统
-    // dfs_mount("sd0","/","elm",0,0);
+    dfs_mount("sd0","/","elm",0,0);
 
     // rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
     //                               RT_NULL,1024,5,5);
     // if(t != RT_NULL) rt_thread_startup(t);
 
-    // rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
-    //                                 RT_NULL,1024,0,10);
-    // rt_thread_startup(t1);
+    rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
+                                    RT_NULL,1024,0,10);
+    rt_thread_startup(t1);
 
     //串口dma测试
     // rt_thread_t t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
@@ -76,10 +75,6 @@ int main(void)
     //gps接收线程
     // rt_thread_t t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
     //                                 RT_NULL,1024,0,5);
-    // rt_thread_startup(t);
-
-    // rt_thread_t t=rt_thread_create("ins_rx_data",ins_rx_thread_entry,
-    //                                 RT_NULL,1024,0,10);
     // rt_thread_startup(t);
 
     return 0;
@@ -112,10 +107,10 @@ static rt_err_t tim_cbk(rt_device_t dev, rt_size_t size)
     return 0;
 }
 
-struct rt_sensor_data g_bmi08x_acce;
-struct rt_sensor_data g_bmi08x_gyro;
-struct rt_sensor_data g_mmc5983ma_mag;
-struct rt_sensor_data g_spl06_baro;
+struct rt_sensor_data g_bmi08x_acce __attribute__((section(".test_data")));
+struct rt_sensor_data g_bmi08x_gyro __attribute__((section(".test_data")));
+struct rt_sensor_data g_mmc5983ma_mag __attribute__((section(".test_data")));
+struct rt_sensor_data g_spl06_baro __attribute__((section(".test_data")));
 
 void imu_data_thrd(void *parameter)
 {
@@ -178,18 +173,17 @@ void imu_data_thrd(void *parameter)
         // rt_pin_write(GET_PIN(D,9),PIN_LOW);
         // rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
-        // static rt_uint8_t spl06_250ms_cnt=0;
-
-        // if(spl06_250ms_cnt==100)
-        // {
+        static rt_uint8_t spl06_250ms_cnt=0;
+        
+        if(spl06_250ms_cnt==100)
+        {
             //读取spl06的温度和气压
-            // rt_device_read(baro_dev, 0, &g_spl06_baro, 1);
+            rt_device_read(baro_dev, 0, &g_spl06_baro, 1);
 
-        //     spl06_250ms_cnt=0;
-        // }
+            spl06_250ms_cnt=0;
+        }
 
-        // spl06_250ms_cnt++;
-        // rt_kprintf("%d,%d,%d\n",g_bmi08x_acce.data.acce.x,g_bmi08x_acce.data.acce.y,g_bmi08x_acce.data.acce.z);
+        spl06_250ms_cnt++;
 
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);
     }

@@ -65,6 +65,7 @@
         "system_stm32h7xx.h": "c",
         "drv_log.h": "c",
         "sensor.h": "c",
-        "serial.h": "c"
+        "serial.h": "c",
+        "sensor_intf_m8030.h": "c"
     }
 }
