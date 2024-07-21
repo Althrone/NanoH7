@@ -10,7 +10,9 @@
 #include "dfs_fs.h"
 
 #include "bmi088.h"
-#include "mmc5983ma.h"
+// #include "mmc5983ma.h"
+
+#include "arm_math.h"
 
 void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
@@ -21,6 +23,9 @@ void gps_rx_thread_entry(void *parameter);
 
 int main(void)
 {
+
+    float32_t a=arm_sin_f32(PI/2);
+
     // volatile rt_uint32_t sysclk=HAL_RCC_GetSysClockFreq();
     // volatile rt_uint32_t coreid=DBGMCU->IDCODE;
     
@@ -137,6 +142,12 @@ void imu_data_thrd(void *parameter)
     rt_device_t baro_dev=rt_device_find("baro_spl06");//气压计
     rt_device_open(baro_dev, RT_DEVICE_FLAG_RDONLY);
 
+    // O_WRONLY指明这是一个写入方式的打开模式；
+    // O_CREAT指明如果文件不存在则创建文件
+    // O_TRUNC指明如果文件存在，则把文件的长度归零，然后打开
+    // int fd = open("001.csv", O_WRONLY | O_CREAT | O_TRUNC, 0);
+    // close(fd);
+
     while(1)
     {
         Bmi08xGyroIntStat1RegUnion stat={0};
@@ -181,9 +192,14 @@ void imu_data_thrd(void *parameter)
             rt_device_read(baro_dev, 0, &g_spl06_baro, 1);
 
             spl06_250ms_cnt=0;
+
+            // write(fd, g_spl06_baro.data.baro, sizeof(g_spl06_baro.data.baro));
+            // write(fd, "\r\n", sizeof("\r\n"));
         }
 
         spl06_250ms_cnt++;
+
+        //解算
 
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);
     }

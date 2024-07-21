@@ -66,6 +66,9 @@
         "drv_log.h": "c",
         "sensor.h": "c",
         "serial.h": "c",
-        "sensor_intf_m8030.h": "c"
+        "sensor_intf_m8030.h": "c",
+        "limits": "c",
+        "stdlib.h": "c",
+        "arm_math.h": "c"
     }
 }

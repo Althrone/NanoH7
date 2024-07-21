@@ -20,7 +20,7 @@
 
 # Libraries
 *.lib
-*.a
+# *.a
 *.la
 *.lo
 

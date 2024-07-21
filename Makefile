@@ -158,7 +158,8 @@ OBJECTS=$(OBJS_C)
 vpath %.c $(sort $(dir $(SRCS_C)))
 
 $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
-	$(CC) -c $(CFLAGS) -g -Wall $< -o $@
+	$(CC) -c $(CFLAGS) -g -Wall -ffunction-sections -fdata-sections $< -o $@
+# $(CC) -c $(CFLAGS) -g -Wall $< -o $@
 # $(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
 OBJECTS+=$(OBJS_s)
@@ -186,10 +187,12 @@ $(OBJS_S):$(SRCS_S)
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
 	$(CC) $(OBJECTS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map \
--Wl,--start-group -lc -lm -Wl,--end-group \
+-Wl,--start-group -lc -lm -Wl,--end-group -Wl,-gc-sections \
 -lnosys \
+-L ./rt-thread/bsp/stm32/libraries/STM32H7xx_HAL/CMSIS/DSP/Lib/GCC -larm_cortexM7lfdp_math \
 -o $@
 	$(SZ) $@
+
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	@echo creat hex file
