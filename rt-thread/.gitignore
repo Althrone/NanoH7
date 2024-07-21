@@ -19,7 +19,7 @@ documentation/html
 *.bak
 *.dep
 *.lib
-*.a
+# *.a
 *.i
 *.d
 tools/kconfig-frontends/kconfig-mconf
