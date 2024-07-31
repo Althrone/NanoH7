@@ -44,6 +44,8 @@ float32_t p_delta_q_data[4][4]={1,0,0,0,
  * private functions declaration
  *****************************************************************************/
 
+float Q_rsqrt( float number );
+
 /******************************************************************************
  * pubilc functions definition
  *****************************************************************************/
@@ -69,6 +71,7 @@ void q_init(void)
 /**
  * @param   omega_x: 单位md/s，角度制
  * @param   delta_usec: 单位us
+ * @note    保证传入的角速度已经减去零飘
  **/
 void q_update(int32_t omega_x,int32_t omega_y,
               int32_t omega_z,uint32_t delta_usec)
@@ -101,9 +104,31 @@ void q_update(int32_t omega_x,int32_t omega_y,
     // 格拉斯曼积≈数学多项式乘法≈乘积
     // 点积：元素一对一乘积的和，返回一个标量
     // q/√(q·q)
+    arm_mat_scale_f32(&q_new,
+                      Q_rsqrt(p_q_new_data[0][0]*p_q_new_data[0][0]+
+                              p_q_new_data[1][0]*p_q_new_data[1][0]+
+                              p_q_new_data[2][0]*p_q_new_data[2][0]+
+                              p_q_new_data[3][0]*p_q_new_data[3][0]),
+                      &q);
     
 }
 
+/*
+┌  ┐   ┌  ┐        ┌  ┐      ┌ ┐
+│VN│   │VN│   ┌ ┐N │ax│      │0│
+│VE│ = │VE│ + │T│ *│ay│*∆t + │0│*∆t
+│VD│   │VD│   └ ┘B │az│      │g│
+└  ┘k+1└  ┘k       └  ┘      └ ┘
+并减去重力，但是不知道为啥公式是加重力
+*/
+
+/**
+ * @note    保证传入的加速度已经减去零飘
+ **/
+void v_update(int32_t a_x,int32_t a_y,int32_t a_z,uint32_t delta_usec)
+{
+
+}
 /******************************************************************************
  * private functions definition
  *****************************************************************************/
