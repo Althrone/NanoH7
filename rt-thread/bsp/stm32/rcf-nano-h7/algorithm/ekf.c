@@ -27,10 +27,19 @@ arm_matrix_instance_f32 q_new;//姿态四元数
 float32_t p_q_new_data[4][1]={0};
 
 arm_matrix_instance_f32 delta_q;//姿态四元数
-float32_t p_delta_q_data[4][4]={1,0,0,0,
-                                0,1,0,0,
-                                0,0,1,0,
-                                0,0,0,1};
+float32_t p_delta_q_data[4][4]={
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    0,0,0,1
+};
+
+arm_matrix_instance_f32 q_type_body2nav_rotation_matrix;
+float32_t p_q_type_body2nav_rotation_matrix_data[3][3]={
+    1,0,0,
+    0,1,0,
+    0,0,1
+};//默认w=1 三个虚部为0
 
 /******************************************************************************
  * private types
@@ -127,8 +136,28 @@ void q_update(int32_t omega_x,int32_t omega_y,
  **/
 void v_update(int32_t a_x,int32_t a_y,int32_t a_z,uint32_t delta_usec)
 {
-
+    
 }
+
+/**
+ * @brief   四元数形式的旋转矩阵
+ * @note    zyx旋转次序，北东地，前右下坐标系，从集体坐标系到导航坐标系的旋转
+ **/
+void rotation_matrix_body2nav(float32_t q0,float32_t q1,
+                              float32_t q2,float32_t q3)
+{
+    float32_t q0q0=q0*q0;
+    float32_t q0q1=q0*q1;
+    float32_t q0q2=q0*q2;
+    float32_t q0q3=q0*q3;
+    float32_t q1q1=q1*q1;
+    float32_t q1q2=q1*q2;
+    float32_t q1q3=q1*q3;
+    float32_t q2q2=q2*q2;
+    float32_t q2q3=q2*q3;
+    float32_t q3q3=q3*q3;
+}
+
 /******************************************************************************
  * private functions definition
  *****************************************************************************/
