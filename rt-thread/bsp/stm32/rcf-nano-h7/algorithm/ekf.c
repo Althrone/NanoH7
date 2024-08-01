@@ -64,6 +64,8 @@ void q_init(void)
     arm_mat_init_f32(&q,4,1,p_q_data);
     arm_mat_init_f32(&q_new,4,1,p_q_new_data);
     arm_mat_init_f32(&delta_q,4,4,p_delta_q_data);
+    arm_mat_init_f32(&q_type_body2nav_rotation_matrix,3,3,p_q_type_body2nav_rotation_matrix_data);
+
 }
 
 /*
@@ -142,9 +144,12 @@ void v_update(int32_t a_x,int32_t a_y,int32_t a_z,uint32_t delta_usec)
 /**
  * @brief   四元数形式的旋转矩阵
  * @note    zyx旋转次序，北东地，前右下坐标系，从集体坐标系到导航坐标系的旋转
+ * @note    传入的是姿态的四元数
  **/
 void rotation_matrix_body2nav(float32_t q0,float32_t q1,
-                              float32_t q2,float32_t q3)
+                              float32_t q2,float32_t q3,
+                              float32_t bx,float32_t by,float32_t bz,
+                              float32_t nx,float32_t ny,float32_t nz)
 {
     float32_t q0q0=q0*q0;
     float32_t q0q1=q0*q1;
@@ -156,6 +161,36 @@ void rotation_matrix_body2nav(float32_t q0,float32_t q1,
     float32_t q2q2=q2*q2;
     float32_t q2q3=q2*q3;
     float32_t q3q3=q3*q3;
+
+    p_q_type_body2nav_rotation_matrix_data[0][0]=2*(q0q0+q1q1)-1;
+    p_q_type_body2nav_rotation_matrix_data[0][1]=2*(q1q2+q0q3);
+    p_q_type_body2nav_rotation_matrix_data[0][2]=2*(q1q3-q0q2);
+    p_q_type_body2nav_rotation_matrix_data[1][0]=2*(q1q2-q0q3);
+    p_q_type_body2nav_rotation_matrix_data[1][1]=2*(q0q0+q2q2)-1;
+    p_q_type_body2nav_rotation_matrix_data[1][2]=2*(q2q3+q0q1);
+    p_q_type_body2nav_rotation_matrix_data[2][0]=2*(q1q3+q0q2);
+    p_q_type_body2nav_rotation_matrix_data[2][1]=2*(q2q3-q0q1);
+    p_q_type_body2nav_rotation_matrix_data[2][2]=2*(q0q0+q3q3)-1;
+
+    //需要构造输入输出的3x1矩阵，可能是加速度，速度，距离或者别的需要旋转的东西
+
+    arm_matrix_instance_f32 body;
+    float32_t p_body_data[3][1]={bx,by,bz};
+    arm_mat_init_f32(&body,3,1,p_body_data);
+
+    arm_matrix_instance_f32 nav;
+    float32_t p_nav_data[3][1]={nx,ny,nz};
+    arm_mat_init_f32(&nav,3,1,p_nav_data);
+
+    /*
+    ┌  ┐         ┌  ┐
+    │Nx│   ┌ ┐N  │Bx│
+    │Ny│ = │T│ * │By│
+    │Nz│   └ ┘B  │Bz│
+    └  ┘N        └  ┘B
+    */
+    arm_mat_mult_f32(&q_type_body2nav_rotation_matrix,&body,&nav);
+
 }
 
 /******************************************************************************
