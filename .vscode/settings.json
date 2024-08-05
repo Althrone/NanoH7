@@ -69,6 +69,7 @@
         "sensor_intf_m8030.h": "c",
         "limits": "c",
         "stdlib.h": "c",
-        "arm_math.h": "c"
+        "arm_math.h": "c",
+        "drv_usart_v2.h": "c"
     }
 }
