@@ -11,6 +11,8 @@
  * includes
  *****************************************************************************/
 
+#include "m8030.h"
+
 /******************************************************************************
  * private macros
  *****************************************************************************/
@@ -38,3 +40,17 @@
 /******************************************************************************
  * private functions definition
  *****************************************************************************/
+
+rt_err_t m8030_init(rt_sensor_t sensor)
+{
+    rt_err_t result=RT_EOK;
+
+    rt_device_t serial=rt_device_find(sensor->config.intf.dev_name);
+
+    //先通过多次复位的方式探测波特率
+    // UBX-CFG-RST
+    rt_uint8_t ubx_cfg_rst_tx_buf[8+4];
+    rt_device_write(serial,0,ubx_cfg_rst_tx_buf,sizeof(ubx_cfg_rst_tx_buf));
+
+    // UBX-MON-VER
+}

@@ -101,7 +101,7 @@ int rt_hw_m8030_init(const char *name, struct rt_sensor_config *cfg)
 
     rt_device_control(uart_dev,RT_DEVICE_CTRL_CONFIG,&uart_cfg);
 
-    // m8030_init(sensor_t);
+    m8030_init(sensor_t);
     
     //读取设备id
 

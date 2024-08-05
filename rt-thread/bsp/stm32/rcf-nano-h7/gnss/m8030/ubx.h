@@ -2,14 +2,14 @@
  * NanoH7 - UAV firmware base on RT-Thread
  * Copyright (C) 2023 - 2024 Althrone <mail>
  * 
- * @file    rt-thread\bsp\stm32\rcf-nano-h7\gnss\m8030\m8030.h
+ * @file    rt-thread\bsp\stm32\rcf-nano-h7\gnss\m8030\ubx.h
  * 
  * ref: Specification of <some UM RM or Datasheet>
  *****************************************************************************/
 
 //不知道正则表达式怎么支持嵌套，暂时没法按google style风格命名define保护,请手动大写
-#ifndef NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_GNSS_M8030_M8030_H_
-#define NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_GNSS_M8030_M8030_H_
+#ifndef NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_GNSS_M8030_UBX_H_
+#define NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_GNSS_M8030_UBX_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,9 +18,6 @@ extern "C" {
 /******************************************************************************
  * includes
  *****************************************************************************/
-
-#include "ubx.h"
-#include "sensor.h"
 
 /******************************************************************************
  * macros
@@ -42,4 +39,4 @@ extern "C" {
 }
 #endif
 
-#endif /* NANOH7_rt_thread_bsp_stm32_rcf_nano_h7_gnss_m8030_m8030_h_ */
+#endif /* NANOH7_rt_thread_bsp_stm32_rcf_nano_h7_gnss_m8030_ubx_h_ */
