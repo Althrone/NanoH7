@@ -37,11 +37,22 @@
  * pubilc functions definition
  *****************************************************************************/
 
+/**
+ * @brief   关闭/开启报文函数
+ * @note    UBX-CFG-RATE控制总速率，这个控制单个报文速率
+ * @note    port_rate输入长度为6的数组，对应每个端口
+ */
+void ubx_msg_ctrl(UbxMsgCtrlEnum ctrl,rt_bool_t* port_rate,
+                  UbxMsgClassEnum msg_class,rt_uint8_t msg_id)
+{
+
+}
+
 /******************************************************************************
  * private functions definition
  *****************************************************************************/
 
-void ubx_encode(void)
+void ubx_encode(rt_uint8_t msg_class,rt_uint8_t msg_id,rt_size_t size,rt_uint8_t* p_payload)
 {
-    
+
 }
