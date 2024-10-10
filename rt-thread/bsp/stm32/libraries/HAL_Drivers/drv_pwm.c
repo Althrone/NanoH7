@@ -15,7 +15,7 @@
 #include "drv_config.h"
 #include <drivers/rt_drv_pwm.h>
 
-//#define DRV_DEBUG
+#define DRV_DEBUG
 #define LOG_TAG             "drv.pwm"
 #include <drv_log.h>
 
@@ -361,7 +361,7 @@ static rt_err_t drv_pwm_control(struct rt_device_pwm *device, int cmd, void *arg
         return RT_EINVAL;
     }
 }
-
+TIM_HandleTypeDef* extern_tim_handle;
 static rt_err_t stm32_hw_pwm_init(struct stm32_pwm *device)
 {
     rt_err_t result = RT_EOK;
@@ -373,22 +373,25 @@ static rt_err_t stm32_hw_pwm_init(struct stm32_pwm *device)
     RT_ASSERT(device != RT_NULL);
 
     tim = (TIM_HandleTypeDef *)&device->tim_handle;
-
+    if(tim->Instance==0x40010000)
+    {
+        extern_tim_handle=&device->tim_handle;
+    }
     /* configure the timer to pwm mode */
     tim->Init.Prescaler = 0;
     tim->Init.CounterMode = TIM_COUNTERMODE_UP;
     tim->Init.Period = 0;
     tim->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-#if defined(SOC_SERIES_STM32F1) || defined(SOC_SERIES_STM32L4)
+#if defined(SOC_SERIES_STM32F1) || defined(SOC_SERIES_STM32L4) || defined(SOC_SERIES_STM32H7)
     tim->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 #endif
 
-    if (HAL_TIM_Base_Init(tim) != HAL_OK)
-    {
-        LOG_E("%s pwm init failed", device->name);
-        result = -RT_ERROR;
-        goto __exit;
-    }
+    // if (HAL_TIM_Base_Init(tim) != HAL_OK)
+    // {
+    //     LOG_E("%s pwm init failed", device->name);
+    //     result = -RT_ERROR;
+    //     goto __exit;
+    // }//加入这个会导致HAL_TIM_PWM_Init无法执行
     if (HAL_TIM_PWM_Init(tim) != HAL_OK)
     {
         LOG_E("%s pwm init failed", device->name);
@@ -417,8 +420,8 @@ static rt_err_t stm32_hw_pwm_init(struct stm32_pwm *device)
     oc_config.Pulse = 0;
     oc_config.OCPolarity = TIM_OCPOLARITY_HIGH;
     oc_config.OCFastMode = TIM_OCFAST_DISABLE;
-    oc_config.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-    oc_config.OCIdleState  = TIM_OCIDLESTATE_RESET;
+    // oc_config.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+    // oc_config.OCIdleState  = TIM_OCIDLESTATE_RESET;
 
     /* config pwm channel */
     if (device->channel & 0x01)
@@ -592,6 +595,12 @@ static void pwm_get_channel(void)
 #endif
 #ifdef BSP_USING_PWM12_CH2
     stm32_pwm_obj[PWM12_INDEX].channel |= 1 << 1;
+#endif
+#ifdef BSP_USING_PWM15_CH1
+    stm32_pwm_obj[PWM15_INDEX].channel |= 1 << 0;
+#endif
+#ifdef BSP_USING_PWM15_CH2
+    stm32_pwm_obj[PWM15_INDEX].channel |= 1 << 1;
 #endif
 #ifdef BSP_USING_PWM16_CH1
     stm32_pwm_obj[PWM16_INDEX].channel |= 1 << 0;

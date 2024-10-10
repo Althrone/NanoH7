@@ -19,6 +19,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
+/* USER CODE END Includes */
+ DMA_HandleTypeDef hdma_tim1_ch1;
+
+ DMA_HandleTypeDef hdma_tim1_ch2;
+
+ DMA_HandleTypeDef hdma_tim1_ch3;
+
+ DMA_HandleTypeDef hdma_tim1_ch4;
+
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
   */
@@ -502,6 +511,84 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
   }
 }
 
+#include <drv_config.h>
+
+/**
+* @brief TIM_PWM MSP Initialization
+* This function configures the hardware resources used in this example
+* @param htim_pwm: TIM_PWM handle pointer
+* @retval None
+*/
+void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
+{
+  if(htim_pwm->Instance==TIM1)
+  {
+  /* USER CODE BEGIN TIM1_MspInit 0 */
+
+  /* USER CODE END TIM1_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_TIM1_CLK_ENABLE();
+  /* USER CODE BEGIN TIM1_MspInit 1 */
+
+      /* TIM1_CH2 Init */
+    hdma_tim1_ch2.Instance = PWM1_CH2_DMA_INSTANCE;
+    hdma_tim1_ch2.Init.Request = PWM1_CH2_DMA_REQUEST;
+    hdma_tim1_ch2.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_tim1_ch2.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim1_ch2.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_tim1_ch2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    hdma_tim1_ch2.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_tim1_ch2.Init.Mode = DMA_NORMAL;
+    hdma_tim1_ch2.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_tim1_ch2.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_tim1_ch2) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_CC2],hdma_tim1_ch2);
+
+  /* USER CODE END TIM1_MspInit 1 */
+  }
+
+  if(htim_pwm->Instance==TIM4)
+  {
+  /* USER CODE BEGIN TIM1_MspInit 0 */
+
+  /* USER CODE END TIM1_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_TIM4_CLK_ENABLE();
+  /* USER CODE BEGIN TIM1_MspInit 1 */
+
+  /* USER CODE END TIM1_MspInit 1 */
+  }
+
+  if(htim_pwm->Instance==TIM12)
+  {
+  /* USER CODE BEGIN TIM1_MspInit 0 */
+
+  /* USER CODE END TIM1_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_TIM12_CLK_ENABLE();
+  /* USER CODE BEGIN TIM1_MspInit 1 */
+
+  /* USER CODE END TIM1_MspInit 1 */
+  }
+
+  if(htim_pwm->Instance==TIM15)
+  {
+  /* USER CODE BEGIN TIM1_MspInit 0 */
+
+  /* USER CODE END TIM1_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_TIM15_CLK_ENABLE();
+  /* USER CODE BEGIN TIM1_MspInit 1 */
+
+  /* USER CODE END TIM1_MspInit 1 */
+  }
+
+}
+
 /**
  * @brief TIM MSP Initialization
  *        This function configures the hardware resources used in this example
@@ -519,8 +606,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
 
   /* USER CODE END TIM1_MspInit 0 */
     /* Peripheral clock enable */
-    __HAL_RCC_TIM1_CLK_ENABLE();
-
+    // __HAL_RCC_TIM1_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
     /**TIM1 GPIO Configuration
     PE9      ------> TIM1_CH1
@@ -534,9 +620,12 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+  }
 
+  if(htim->Instance==TIM4)
+  {
     /* rgb led */
-    __HAL_RCC_TIM4_CLK_ENABLE();
+    // __HAL_RCC_TIM4_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
     /**TIM4 GPIO Configuration
     PD13     ------> TIM4_CH2
@@ -554,9 +643,12 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+  }
 
+  if(htim->Instance==TIM12)
+  {
     /* pwm12 */
-    __HAL_RCC_TIM12_CLK_ENABLE();
+    // __HAL_RCC_TIM12_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     /**TIM12 GPIO Configuration
     PB14     ------> TIM12_CH1
@@ -568,28 +660,31 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF2_TIM12;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  }
 
+  if(htim->Instance==TIM15)
+  {
     /* pwm15 */
-    __HAL_RCC_TIM15_CLK_ENABLE();
+    // __HAL_RCC_TIM15_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
     /**TIM15 GPIO Configuration
     PE5     ------> TIM15_CH1
     PE6     ------> TIM15_CH2
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_14|GPIO_PIN_15;
+    GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF4_TIM15;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
+  }
   /* USER CODE BEGIN TIM1_MspInit 1 */
 
     __HAL_RCC_TIM2_CLK_ENABLE();
 
 
   /* USER CODE END TIM1_MspInit 1 */
-  }
+  
 }
 
 /**

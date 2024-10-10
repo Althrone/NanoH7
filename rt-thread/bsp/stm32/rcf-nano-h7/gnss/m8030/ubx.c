@@ -33,6 +33,9 @@
  * private functions declaration
  *****************************************************************************/
 
+static rt_err_t ubx_encode(rt_uint8_t msg_class,rt_uint8_t msg_id,rt_uint16_t size,const rt_uint8_t* p_payload,rt_uint8_t* pbuf);
+static rt_err_t Fletcher8(rt_size_t size,const rt_uint8_t* pbuf,rt_uint8_t* ck_a,rt_uint8_t* ck_b);
+
 /******************************************************************************
  * pubilc functions definition
  *****************************************************************************/
@@ -46,6 +49,44 @@ typedef enum
     UBX_USE_GALILEO_TIME,//>=18
     UBX_USE_NACIV_TIME,//>=29
 }UbxTimeSysEnum;
+
+/**
+ * @brief   获取协议版本号
+ * @note    单纯发送请求，接收版本号在另一个函数内
+ */
+void ubx_request_version(void)
+{
+    //0xB5 0x62 0x0A 0x04 0 see below CK_A CK_B
+
+    rt_uint8_t send_buf[8];
+    ubx_encode(UBX_MON_MSG,UBX_MON_VER_ID,0,RT_NULL,send_buf);
+
+
+}
+
+void ubx_decode_version(rt_uint8_t* pbuf,rt_size_t buf_len)
+{
+    // #include<stdio.h>
+    // #include <strings.h>
+    // strnicmp("aaa","aaa",3);
+    // #include<stdlib.h>
+    // rt_uint8_t a= strncasecmp("aaa","aaa",3);
+
+    char protver_str[5]={0};//格式为xx.yy->xxyy+结束符
+    rt_uint16_t protver;//xx.yy->xxyy
+
+    //查找协议版本号
+    rt_size_t list_num=(buf_len-40)/30;//算出extern的行数
+    for (rt_size_t i = 0; i < list_num; i++)
+    {
+        if(strncasecmp(pbuf+40+i*30,"PROTVER",7)==0)//匹配
+        {
+            strncpy(protver_str,pbuf+40+i*30+7+1,2);//xx
+            strncpy(protver_str+2,pbuf+40+i*30+7+1+2+1,2);//yy
+            protver=atoi(protver_str);
+        }
+    }
+}
 
 /**
  * @brief   设置测量和导航频率，以及系统使用的时间系统
@@ -76,7 +117,43 @@ void ubx_cfg_msg(UbxMsgCtrlEnum ctrl,rt_bool_t* port_rate,
  * private functions definition
  *****************************************************************************/
 
-void ubx_encode(rt_uint8_t msg_class,rt_uint8_t msg_id,rt_size_t size,rt_uint8_t* p_payload)
+static rt_err_t ubx_encode(rt_uint8_t msg_class,rt_uint8_t msg_id,rt_uint16_t size,const rt_uint8_t* p_payload,rt_uint8_t* pbuf)
 {
+    pbuf[0]=0xB5;
+    pbuf[1]=0x62;
+    pbuf[2]=msg_class;
+    pbuf[3]=msg_id;
+    memcpy(pbuf+4,&size,2);
+    memcpy(pbuf+4+2,p_payload,size);
+    rt_uint8_t ck_a=0;
+    rt_uint8_t ck_b=0;
+    Fletcher8(2+2+size,p_payload+2,&ck_a,&ck_b);
+    pbuf[4+2+size]=ck_a;
+    pbuf[4+2+size+1]=ck_b;
+}
 
+
+static rt_err_t Fletcher8(rt_size_t size,const rt_uint8_t* pbuf,rt_uint8_t* ck_a,rt_uint8_t* ck_b)
+{
+    rt_uint8_t CK_A = 0;
+    rt_uint8_t CK_B = 0;
+
+    for(rt_uint16_t i=0;i<size;++i)
+    {
+        CK_A = CK_A + pbuf[i];
+        CK_B = CK_B + CK_A;
+    }
+
+    *ck_a=CK_A;
+    *ck_b=CK_B;
+
+    return RT_EOK;
+    
+
+
+    // //CK_A和CK_B等于串口数据的最后两项的情况下就正确
+    // if((CK_A==p_payload[size-2])&&((CK_B==p_payload[size-1])))
+    //     return RT_EOK;
+    // else
+    //     return RT_ERROR;
 }

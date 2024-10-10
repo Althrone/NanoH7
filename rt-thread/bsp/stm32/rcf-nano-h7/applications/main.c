@@ -18,13 +18,110 @@ void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
 void gps_rx_thread_entry(void *parameter);
 
-// #define CAN_
-// #define CAN_Pin GET_PIN(B, 14)
+#include <drv_config.h>
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+//   /* DMA1_Stream0_IRQn interrupt configuration */
+//   HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
+//   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+  /* DMA1_Stream1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(PWM1_CH2_DMA_IRQ, 0, 0);
+  HAL_NVIC_EnableIRQ(PWM1_CH2_DMA_IRQ);
+//   /* DMA1_Stream2_IRQn interrupt configuration */
+//   HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 0, 0);
+//   HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
+//   /* DMA1_Stream3_IRQn interrupt configuration */
+//   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
+//   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
+
+}
+
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
+{
+	HAL_TIM_PWM_Stop_DMA(htim, TIM_CHANNEL_2);
+}
+
+extern TIM_HandleTypeDef* extern_tim_handle;
+
+extern DMA_HandleTypeDef hdma_tim1_ch2;
+
+void PWM1_CH2_DMA_IRQHandler(void)
+{
+    /* enter interrupt */
+    rt_interrupt_enter();
+    HAL_DMA_IRQHandler(&hdma_tim1_ch2);
+
+    // HAL_DMA_IRQHandler(&uart_obj[UART2_INDEX].dma_rx.handle);
+
+    /* leave interrupt */
+    rt_interrupt_leave();
+}
+
+rt_uint16_t data1[16]={30000,30000,30000,30000,30000,50000,30000,30000,30000,30000,30000,30000,30000,30000,30000};
 
 int main(void)
 {
 
     float32_t a=arm_sin_f32(PI/2);
+
+    // rt_device_t serial = rt_device_find("uart6");
+
+    // rt_device_open(serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
+
+    // UART_HandleTypeDef huart={
+    //     .Instance=USART6,
+    //     .Init={
+    //         .BaudRate=19200,
+    //         .WordLength=UART_WORDLENGTH_8B,
+    //         .StopBits=UART_STOPBITS_1,
+    //         .Parity=UART_PARITY_NONE,
+    //         .Mode=UART_MODE_TX_RX,
+    //         .HwFlowCtl=UART_HWCONTROL_NONE,
+    //         .OverSampling=UART_OVERSAMPLING_16,
+    //     }
+    // };
+
+    // HAL_LIN_Init(&huart,UART_LINBREAKDETECTLENGTH_11B);
+    // HAL_LIN_SendBreak(&huart);
+
+    
+
+    // #include "dma_config.h"
+    // DMA_HandleTypeDef pwmdma={0};
+    // pwmdma.Instance=PWM1_CH1_DMA_INSTANCE;
+    // pwmdma.Init.Request=PWM1_CH1_DMA_REQUEST;
+    // pwmdma.Init.PeriphInc           = DMA_PINC_DISABLE;
+    // pwmdma.Init.MemInc              = DMA_MINC_ENABLE;
+    // pwmdma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    // pwmdma.Init.MemDataAlignment    = DMA_MDATAALIGN_HALFWORD;
+    // pwmdma.Init.Direction           = DMA_MEMORY_TO_PERIPH;
+    // pwmdma.Init.Mode                = DMA_NORMAL;
+    // pwmdma.Init.Priority            = DMA_PRIORITY_VERY_HIGH;
+    // pwmdma.Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
+    // HAL_DMA_DeInit(&pwmdma);
+    // HAL_DMA_Init(&pwmdma);
+    // HAL_NVIC_SetPriority(PWM1_CH1_DMA_IRQ, 0, 0);
+    // HAL_NVIC_EnableIRQ(PWM1_CH1_DMA_IRQ);
+    // TIM_HandleTypeDef pwmtim={0};
+    // pwmtim.Instance=TIM1;
+    // pwmtim.Init.Prescaler=
+    // pwmtim.Init.CounterMode=TIM_COUNTERMODE_UP;
+    // rt_pin_mode(GET_PIN(E,9),PIN_MODE_OUTPUT);
+    // rt_pin_write(GET_PIN(E,9),PIN_HIGH);
+
+
+    // rt_uint8_t aaa[]={0x55,0x3c};
+    // rt_device_write(serial, 0, &aaa, sizeof(aaa));
+
 
     // volatile rt_uint32_t sysclk=HAL_RCC_GetSysClockFreq();
     // volatile rt_uint32_t coreid=DBGMCU->IDCODE;
@@ -53,16 +150,48 @@ int main(void)
     //     }
     // }
 
-    struct rt_device_pwm *pwm_dev=(struct rt_device_pwm *)rt_device_find("pwm12");
-    rt_pwm_set(pwm_dev, 1, 500000, 150000);
-    // rt_pwm_set(pwm_dev, 3, 500000, 490000);
-    rt_pwm_set(pwm_dev, 2, 500000, 250000);
-    rt_pwm_enable(pwm_dev, 1);
-    // rt_pwm_enable(pwm_dev, 3);
-    rt_pwm_enable(pwm_dev, 2);
+    // rt_pin_mode(GET_PIN(E,9),PIN_MODE_OUTPUT);
+    // rt_pin_write(GET_PIN(E,9),PIN_HIGH);
+
+    // struct rt_device_pwm *pwm_dev0=(struct rt_device_pwm *)rt_device_find("pwm4");
+    // rt_pwm_set(pwm_dev0, 2, 500000, 1000);
+    // rt_pwm_enable(pwm_dev0, 2);
+    // rt_pwm_set(pwm_dev0, 3, 1000000, 1000000);
+    // rt_pwm_enable(pwm_dev0, 3);
+    // rt_pwm_set(pwm_dev0, 4, 500000, 150000);
+    // rt_pwm_enable(pwm_dev0, 4);
+
+    //pwm的dma
+    MX_DMA_Init();
+
+    struct rt_device_pwm *pwm_dev1=(struct rt_device_pwm *)rt_device_find("pwm1");
+    // rt_pwm_set(pwm_dev1, 1, 1000000, 500000);
+    // rt_pwm_enable(pwm_dev1, 1);
+    rt_pwm_set(pwm_dev1, 2, 1000000, 500000);
+    // rt_pwm_enable(pwm_dev1, 2);
+    // rt_pwm_set(pwm_dev1, 3, 1000000, 150000);
+    // rt_pwm_enable(pwm_dev1, 3);
+    // rt_pwm_set(pwm_dev1, 4, 1000000, 150000);
+    // rt_pwm_enable(pwm_dev1, 4);
+
+    HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_2,data1,16);
+
+    // //能输出
+    // struct rt_device_pwm *pwm_dev2=(struct rt_device_pwm *)rt_device_find("pwm15");
+    // rt_pwm_set(pwm_dev2, 1, 500000, 150000);
+    // rt_pwm_enable(pwm_dev2, 1);
+    // rt_pwm_set(pwm_dev2, 2, 500000, 250000);
+    // rt_pwm_enable(pwm_dev2, 2);
+
+    //能输出
+    // struct rt_device_pwm *pwm_dev=(struct rt_device_pwm *)rt_device_find("pwm12");
+    // rt_pwm_set(pwm_dev, 1, 500000, 150000);
+    // rt_pwm_set(pwm_dev, 2, 500000, 250000);
+    // rt_pwm_enable(pwm_dev, 1);
+    // rt_pwm_enable(pwm_dev, 2);
 
     //挂载文件系统
-    dfs_mount("sd0","/","elm",0,0);
+    // dfs_mount("sd0","/","elm",0,0);
 
     // rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
     //                               RT_NULL,1024,5,5);

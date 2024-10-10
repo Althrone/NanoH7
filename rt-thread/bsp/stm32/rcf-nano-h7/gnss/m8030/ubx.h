@@ -370,14 +370,7 @@ typedef struct
 {
     char swVersion[30];
     char hwVersion[10];
-    char extension[30][];
-}UbxMonVerStruct;
-
-typedef struct
-{
-    char swVersion[30];
-    char hwVersion[10];
-    char extension[30][];
+    char extension[][30];
 }UbxMonVerStruct;
 
 typedef struct
@@ -446,6 +439,42 @@ typedef struct
     }flags;
     rt_uint8_t reserved2[2];
 }UbxCfgUartPrtStruct;
+
+typedef struct
+{
+    rt_uint32_t iTOW;
+    rt_uint16_t year;
+    rt_uint8_t month;
+    rt_uint8_t day;
+    rt_uint8_t hour;
+    rt_uint8_t min;
+    rt_uint8_t sec;
+    rt_uint8_t valid;
+    rt_uint32_t tAcc;
+    rt_int32_t nano;
+    rt_uint8_t fixType;
+    rt_uint8_t flags;
+    rt_uint8_t reserved1;
+    rt_uint8_t numSV;
+    rt_int32_t lon;
+    rt_int32_t lat;
+    rt_int32_t height;
+    rt_int32_t hMSL;
+    rt_uint32_t hAcc;
+    rt_uint32_t vAcc;
+    rt_int32_t velN;
+    rt_int32_t velE;
+    rt_int32_t velD;
+    rt_int32_t gSpeed;
+    rt_int32_t headMot;
+    rt_uint32_t sAcc;
+    rt_uint32_t headAcc;
+    rt_uint16_t pDOP;
+    rt_uint8_t reserved2[6];
+    rt_int32_t headVeh;
+    rt_uint8_t reserved3[4];
+}UbxNavPvtStruct;
+
 
 /******************************************************************************
  * pubilc variables declaration

@@ -29,6 +29,18 @@ extern "C" {
 #endif /* PWM1_CONFIG */
 #endif /* BSP_USING_PWM1 */
 
+#if defined(BSP_PWM1_CH2_USING_DMA)
+#ifndef PWM1_CH2_DMA_CONFIG
+#define PWM1_CH2_DMA_CONFIG                                         \
+    {                                                               \
+        .Instance = PWM1_CH2_DMA_INSTANCE,                          \
+        .request = PWM1_CH2_DMA_REQUEST,                            \
+        .dma_rcc = PWM1_CH2_DMA_RCC,                                \
+        .dma_irq = PWM1_CH2_DMA_IRQ,                                \
+    }
+#endif /* PWM1_CH2_DMA_CONFIG */
+#endif /* BSP_PWM1_CH2_USING_DMA */
+
 #ifdef BSP_USING_PWM2
 #ifndef PWM2_CONFIG
 #define PWM2_CONFIG                             \
