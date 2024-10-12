@@ -20,59 +20,66 @@ extern "C" {
 #endif
 
 /* DMA1 stream0 */
-#if defined(BSP_UART2_RX_USING_DMA) && !defined(UART2_RX_DMA_INSTANCE)
-#define UART2_DMA_RX_IRQHandler          DMA1_Stream0_IRQHandler
-#define UART2_RX_DMA_RCC                 RCC_AHB1ENR_DMA1EN
-#define UART2_RX_DMA_INSTANCE            DMA1_Stream0
-#define UART2_RX_DMA_REQUEST             DMA_REQUEST_USART2_RX
-#define UART2_RX_DMA_IRQ                 DMA1_Stream0_IRQn
+#if defined(BSP_PWM1_CH1_USING_DMA) && !defined(PWM1_CH1_DMA_INSTANCE)
+#define PWM1_CH1_DMA_IRQHandler          DMA1_Stream0_IRQHandler
+#define PWM1_CH1_DMA_RCC                 RCC_AHB1ENR_DMA1EN
+#define PWM1_CH1_DMA_INSTANCE            DMA1_Stream0
+#define PWM1_CH1_DMA_REQUEST             DMA_REQUEST_TIM1_CH1
+#define PWM1_CH1_DMA_IRQ                 DMA1_Stream0_IRQn
 #endif
 
 /* DMA1 stream1 */
-#if defined(BSP_UART4_RX_USING_DMA) && !defined(UART4_RX_DMA_INSTANCE)
-#define UART4_DMA_RX_IRQHandler          DMA1_Stream1_IRQHandler
-#define UART4_RX_DMA_RCC                 RCC_AHB1ENR_DMA1EN
-#define UART4_RX_DMA_INSTANCE            DMA1_Stream1
-#define UART4_RX_DMA_REQUEST             DMA_REQUEST_UART4_RX
-#define UART4_RX_DMA_IRQ                 DMA1_Stream1_IRQn
+#if defined(BSP_PWM1_CH2_USING_DMA) && !defined(PWM1_CH2_DMA_INSTANCE)
+#define PWM1_CH2_DMA_IRQHandler          DMA1_Stream1_IRQHandler
+#define PWM1_CH2_DMA_RCC                 RCC_AHB1ENR_DMA1EN
+#define PWM1_CH2_DMA_INSTANCE            DMA1_Stream1
+#define PWM1_CH2_DMA_REQUEST             DMA_REQUEST_TIM1_CH2
+#define PWM1_CH2_DMA_IRQ                 DMA1_Stream1_IRQn
 #endif
 
 /* DMA1 stream2 */
-#if defined(BSP_PWM1_CH1_USING_DMA) && !defined(PWM1_CH1_DMA_INSTANCE)
-#define PWM1_CH1_DMA_IRQHandler          DMA1_Stream2_IRQHandler
-#define PWM1_CH1_DMA_RCC                 RCC_AHB1ENR_DMA1EN
-#define PWM1_CH1_DMA_INSTANCE            DMA1_Stream2
-#define PWM1_CH1_DMA_REQUEST             DMA_REQUEST_TIM1_CH1
-#define PWM1_CH1_DMA_IRQ                 DMA1_Stream2_IRQn
+#if defined(BSP_PWM1_CH3_USING_DMA) && !defined(PWM1_CH3_DMA_INSTANCE)
+#define PWM1_CH3_DMA_IRQHandler          DMA1_Stream2_IRQHandler
+#define PWM1_CH3_DMA_RCC                 RCC_AHB1ENR_DMA1EN
+#define PWM1_CH3_DMA_INSTANCE            DMA1_Stream2
+#define PWM1_CH3_DMA_REQUEST             DMA_REQUEST_TIM1_CH3
+#define PWM1_CH3_DMA_IRQ                 DMA1_Stream2_IRQn
 #endif
 
 /* DMA1 stream3 */
-#if defined(BSP_PWM1_CH2_USING_DMA) && !defined(PWM1_CH2_DMA_INSTANCE)
-#define PWM1_CH2_DMA_IRQHandler          DMA1_Stream3_IRQHandler
-#define PWM1_CH2_DMA_RCC                 RCC_AHB1ENR_DMA1EN
-#define PWM1_CH2_DMA_INSTANCE            DMA1_Stream3
-#define PWM1_CH2_DMA_REQUEST             DMA_REQUEST_TIM1_CH2
-#define PWM1_CH2_DMA_IRQ                 DMA1_Stream3_IRQn
+#if defined(BSP_PWM1_CH4_USING_DMA) && !defined(PWM1_CH4_DMA_INSTANCE)
+#define PWM1_CH4_DMA_IRQHandler          DMA1_Stream3_IRQHandler
+#define PWM1_CH4_DMA_RCC                 RCC_AHB1ENR_DMA1EN
+#define PWM1_CH4_DMA_INSTANCE            DMA1_Stream3
+#define PWM1_CH4_DMA_REQUEST             DMA_REQUEST_TIM1_CH4
+#define PWM1_CH4_DMA_IRQ                 DMA1_Stream3_IRQn
 #endif
 
 /* DMA1 stream4 */
-#if defined(BSP_SPI2_TX_USING_DMA) && !defined(SPI2_TX_DMA_INSTANCE)
-#define SPI2_DMA_TX_IRQHandler           DMA1_Stream4_IRQHandler
-#define SPI2_TX_DMA_RCC                  RCC_AHB1ENR_DMA1EN
-#define SPI2_TX_DMA_INSTANCE             DMA1_Stream4
-#define SPI2_TX_DMA_IRQ                  DMA1_Stream4_IRQn
+#if defined(BSP_UART2_RX_USING_DMA) && !defined(UART2_RX_DMA_INSTANCE)
+#define UART2_DMA_RX_IRQHandler          DMA1_Stream4_IRQHandler
+#define UART2_RX_DMA_RCC                 RCC_AHB1ENR_DMA1EN
+#define UART2_RX_DMA_INSTANCE            DMA1_Stream4
+#define UART2_RX_DMA_REQUEST             DMA_REQUEST_USART2_RX
+#define UART2_RX_DMA_IRQ                 DMA1_Stream4_IRQn
 #endif
 
-
 /* DMA1 stream5 */
-#if defined(BSP_SPI3_TX_USING_DMA) && !defined(SPI3_TX_DMA_INSTANCE)
-#define SPI3_DMA_TX_IRQHandler           DMA1_Stream5_IRQHandler
-#define SPI3_TX_DMA_RCC                  RCC_AHB1ENR_DMA1EN
-#define SPI3_TX_DMA_INSTANCE             DMA1_Stream5
-#define SPI3_TX_DMA_IRQ                  DMA1_Stream5_IRQn
+#if defined(BSP_UART4_RX_USING_DMA) && !defined(UART4_RX_DMA_INSTANCE)
+#define UART4_DMA_RX_IRQHandler          DMA1_Stream5_IRQHandler
+#define UART4_RX_DMA_RCC                 RCC_AHB1ENR_DMA1EN
+#define UART4_RX_DMA_INSTANCE            DMA1_Stream5
+#define UART4_RX_DMA_REQUEST             DMA_REQUEST_UART4_RX
+#define UART4_RX_DMA_IRQ                 DMA1_Stream5_IRQn
 #endif
 
 /* DMA1 stream6 */
+#if defined(BSP_SPI5_TX_USING_DMA) && !defined(SPI5_TX_DMA_INSTANCE)
+#define SPI5_DMA_TX_IRQHandler           DMA1_Stream6_IRQHandler
+#define SPI5_TX_DMA_RCC                  RCC_AHB1ENR_DMA1EN
+#define SPI5_TX_DMA_INSTANCE             DMA1_Stream6
+#define SPI5_TX_DMA_IRQ                  DMA1_Stream6_IRQn
+#endif
 
 /* DMA1 stream7 */
 #if defined(BSP_SPI3_TX_USING_DMA) && !defined(SPI3_TX_DMA_INSTANCE)

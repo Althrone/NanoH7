@@ -20,53 +20,59 @@ void gps_rx_thread_entry(void *parameter);
 
 #include <drv_config.h>
 
-/**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
-
-  /* DMA interrupt init */
-//   /* DMA1_Stream0_IRQn interrupt configuration */
-//   HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
-//   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
-  /* DMA1_Stream1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(PWM1_CH2_DMA_IRQ, 0, 0);
-  HAL_NVIC_EnableIRQ(PWM1_CH2_DMA_IRQ);
-//   /* DMA1_Stream2_IRQn interrupt configuration */
-//   HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 0, 0);
-//   HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
-//   /* DMA1_Stream3_IRQn interrupt configuration */
-//   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
-//   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
-
-}
-
-void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
-{
-	HAL_TIM_PWM_Stop_DMA(htim, TIM_CHANNEL_2);
-}
-
 extern TIM_HandleTypeDef* extern_tim_handle;
+
+extern DMA_HandleTypeDef hdma_tim1_ch1;
 
 extern DMA_HandleTypeDef hdma_tim1_ch2;
 
-void PWM1_CH2_DMA_IRQHandler(void)
+extern DMA_HandleTypeDef hdma_tim1_ch3;
+
+extern DMA_HandleTypeDef hdma_tim1_ch4;
+
+void PWM1_CH1_DMA_IRQHandler(void)
 {
     /* enter interrupt */
     rt_interrupt_enter();
-    HAL_DMA_IRQHandler(&hdma_tim1_ch2);
 
-    // HAL_DMA_IRQHandler(&uart_obj[UART2_INDEX].dma_rx.handle);
+    HAL_DMA_IRQHandler(&hdma_tim1_ch1);
 
     /* leave interrupt */
     rt_interrupt_leave();
 }
 
-rt_uint16_t data1[16]={30000,30000,30000,30000,30000,50000,30000,30000,30000,30000,30000,30000,30000,30000,30000};
+void PWM1_CH2_DMA_IRQHandler(void)
+{
+    /* enter interrupt */
+    rt_interrupt_enter();
+
+    HAL_DMA_IRQHandler(&hdma_tim1_ch2);
+
+    /* leave interrupt */
+    rt_interrupt_leave();
+}
+
+void PWM1_CH3_DMA_IRQHandler(void)
+{
+    /* enter interrupt */
+    rt_interrupt_enter();
+
+    HAL_DMA_IRQHandler(&hdma_tim1_ch3);
+
+    /* leave interrupt */
+    rt_interrupt_leave();
+}
+
+void PWM1_CH4_DMA_IRQHandler(void)
+{
+    /* enter interrupt */
+    rt_interrupt_enter();
+
+    HAL_DMA_IRQHandler(&hdma_tim1_ch4);
+
+    /* leave interrupt */
+    rt_interrupt_leave();
+}
 
 int main(void)
 {
@@ -162,7 +168,7 @@ int main(void)
     // rt_pwm_enable(pwm_dev0, 4);
 
     //pwm的dma
-    MX_DMA_Init();
+    // MX_DMA_Init();
 
     struct rt_device_pwm *pwm_dev1=(struct rt_device_pwm *)rt_device_find("pwm1");
     // rt_pwm_set(pwm_dev1, 1, 1000000, 500000);
@@ -174,6 +180,7 @@ int main(void)
     // rt_pwm_set(pwm_dev1, 4, 1000000, 150000);
     // rt_pwm_enable(pwm_dev1, 4);
 
+    rt_uint32_t data1[16]={30000,10000,20000,30000,30000,0,30000,30000,30000,30000,30000,30000,30000,30000,30000};
     HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_2,data1,16);
 
     // //能输出

@@ -20,13 +20,13 @@
 #include "main.h"
 
 /* USER CODE END Includes */
- DMA_HandleTypeDef hdma_tim1_ch1;
+DMA_HandleTypeDef hdma_tim1_ch1;
 
- DMA_HandleTypeDef hdma_tim1_ch2;
+DMA_HandleTypeDef hdma_tim1_ch2;
 
- DMA_HandleTypeDef hdma_tim1_ch3;
+DMA_HandleTypeDef hdma_tim1_ch3;
 
- DMA_HandleTypeDef hdma_tim1_ch4;
+DMA_HandleTypeDef hdma_tim1_ch4;
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -528,16 +528,32 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
   /* USER CODE END TIM1_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_TIM1_CLK_ENABLE();
-  /* USER CODE BEGIN TIM1_MspInit 1 */
 
-      /* TIM1_CH2 Init */
+    /* DMA controller clock enable */
+    __HAL_RCC_DMA1_CLK_ENABLE();
+
+    /* DMA interrupt init */
+    /* DMA1_Stream0_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(PWM1_CH1_DMA_IRQ, 0, 0);
+    HAL_NVIC_EnableIRQ(PWM1_CH1_DMA_IRQ);
+    /* DMA1_Stream1_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(PWM1_CH2_DMA_IRQ, 0, 0);
+    HAL_NVIC_EnableIRQ(PWM1_CH2_DMA_IRQ);
+    /* DMA1_Stream2_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(PWM1_CH3_DMA_IRQ, 0, 0);
+    HAL_NVIC_EnableIRQ(PWM1_CH3_DMA_IRQ);
+    /* DMA1_Stream3_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(PWM1_CH4_DMA_IRQ, 0, 0);
+    HAL_NVIC_EnableIRQ(PWM1_CH4_DMA_IRQ);
+
+    /* TIM1_CH2 Init */
     hdma_tim1_ch2.Instance = PWM1_CH2_DMA_INSTANCE;
     hdma_tim1_ch2.Init.Request = PWM1_CH2_DMA_REQUEST;
     hdma_tim1_ch2.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_tim1_ch2.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_tim1_ch2.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_tim1_ch2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_tim1_ch2.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    hdma_tim1_ch2.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_tim1_ch2.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
     hdma_tim1_ch2.Init.Mode = DMA_NORMAL;
     hdma_tim1_ch2.Init.Priority = DMA_PRIORITY_LOW;
     hdma_tim1_ch2.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
@@ -547,6 +563,8 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
     }
 
     __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_CC2],hdma_tim1_ch2);
+
+  /* USER CODE BEGIN TIM1_MspInit 1 */
 
   /* USER CODE END TIM1_MspInit 1 */
   }

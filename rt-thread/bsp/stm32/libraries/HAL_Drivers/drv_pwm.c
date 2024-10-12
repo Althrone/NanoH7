@@ -373,7 +373,7 @@ static rt_err_t stm32_hw_pwm_init(struct stm32_pwm *device)
     RT_ASSERT(device != RT_NULL);
 
     tim = (TIM_HandleTypeDef *)&device->tim_handle;
-    if(tim->Instance==0x40010000)
+    if((tim->Instance)==TIM1)
     {
         extern_tim_handle=&device->tim_handle;
     }
