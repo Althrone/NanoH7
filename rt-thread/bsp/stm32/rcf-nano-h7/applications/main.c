@@ -30,6 +30,8 @@ extern DMA_HandleTypeDef hdma_tim1_ch3;
 
 extern DMA_HandleTypeDef hdma_tim1_ch4;
 
+int fd;
+
 void PWM1_CH1_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -74,64 +76,40 @@ void PWM1_CH4_DMA_IRQHandler(void)
     rt_interrupt_leave();
 }
 
+void lin_test(void)
+{
+    rt_device_t serial = rt_device_find("uart6");
+
+    rt_device_open(serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
+
+    UART_HandleTypeDef huart={
+        .Instance=USART6,
+        .Init={
+            .BaudRate=19200,
+            .WordLength=UART_WORDLENGTH_8B,
+            .StopBits=UART_STOPBITS_1,
+            .Parity=UART_PARITY_NONE,
+            .Mode=UART_MODE_TX_RX,
+            .HwFlowCtl=UART_HWCONTROL_NONE,
+            .OverSampling=UART_OVERSAMPLING_16,
+        }
+    };
+
+    HAL_LIN_Init(&huart,UART_LINBREAKDETECTLENGTH_11B);
+    HAL_LIN_SendBreak(&huart);
+
+    rt_uint8_t aaa[]={0x55,0x3c};
+    rt_device_write(serial, 0, &aaa, sizeof(aaa));
+}
+
+//1 625ns 0 312.5
+//250 3/4 3/8
+rt_uint32_t data1[16]={188,94,250,188,94,94,94,94,188,188,188,188,188,188,188};
 int main(void)
 {
-
+    //dsplib测试
     float32_t a=arm_sin_f32(PI/2);
 
-    // rt_device_t serial = rt_device_find("uart6");
-
-    // rt_device_open(serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
-
-    // UART_HandleTypeDef huart={
-    //     .Instance=USART6,
-    //     .Init={
-    //         .BaudRate=19200,
-    //         .WordLength=UART_WORDLENGTH_8B,
-    //         .StopBits=UART_STOPBITS_1,
-    //         .Parity=UART_PARITY_NONE,
-    //         .Mode=UART_MODE_TX_RX,
-    //         .HwFlowCtl=UART_HWCONTROL_NONE,
-    //         .OverSampling=UART_OVERSAMPLING_16,
-    //     }
-    // };
-
-    // HAL_LIN_Init(&huart,UART_LINBREAKDETECTLENGTH_11B);
-    // HAL_LIN_SendBreak(&huart);
-
-    
-
-    // #include "dma_config.h"
-    // DMA_HandleTypeDef pwmdma={0};
-    // pwmdma.Instance=PWM1_CH1_DMA_INSTANCE;
-    // pwmdma.Init.Request=PWM1_CH1_DMA_REQUEST;
-    // pwmdma.Init.PeriphInc           = DMA_PINC_DISABLE;
-    // pwmdma.Init.MemInc              = DMA_MINC_ENABLE;
-    // pwmdma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    // pwmdma.Init.MemDataAlignment    = DMA_MDATAALIGN_HALFWORD;
-    // pwmdma.Init.Direction           = DMA_MEMORY_TO_PERIPH;
-    // pwmdma.Init.Mode                = DMA_NORMAL;
-    // pwmdma.Init.Priority            = DMA_PRIORITY_VERY_HIGH;
-    // pwmdma.Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
-    // HAL_DMA_DeInit(&pwmdma);
-    // HAL_DMA_Init(&pwmdma);
-    // HAL_NVIC_SetPriority(PWM1_CH1_DMA_IRQ, 0, 0);
-    // HAL_NVIC_EnableIRQ(PWM1_CH1_DMA_IRQ);
-    // TIM_HandleTypeDef pwmtim={0};
-    // pwmtim.Instance=TIM1;
-    // pwmtim.Init.Prescaler=
-    // pwmtim.Init.CounterMode=TIM_COUNTERMODE_UP;
-    // rt_pin_mode(GET_PIN(E,9),PIN_MODE_OUTPUT);
-    // rt_pin_write(GET_PIN(E,9),PIN_HIGH);
-
-
-    // rt_uint8_t aaa[]={0x55,0x3c};
-    // rt_device_write(serial, 0, &aaa, sizeof(aaa));
-
-
-    // volatile rt_uint32_t sysclk=HAL_RCC_GetSysClockFreq();
-    // volatile rt_uint32_t coreid=DBGMCU->IDCODE;
-    
     rt_pin_mode(GET_PIN(D,9),PIN_MODE_OUTPUT);
     rt_pin_mode(GET_PIN(D,8),PIN_MODE_OUTPUT);
     rt_pin_write(GET_PIN(D,9),PIN_LOW);
@@ -159,46 +137,22 @@ int main(void)
     // rt_pin_mode(GET_PIN(E,9),PIN_MODE_OUTPUT);
     // rt_pin_write(GET_PIN(E,9),PIN_HIGH);
 
-    // struct rt_device_pwm *pwm_dev0=(struct rt_device_pwm *)rt_device_find("pwm4");
-    // rt_pwm_set(pwm_dev0, 2, 500000, 1000);
-    // rt_pwm_enable(pwm_dev0, 2);
-    // rt_pwm_set(pwm_dev0, 3, 1000000, 1000000);
-    // rt_pwm_enable(pwm_dev0, 3);
-    // rt_pwm_set(pwm_dev0, 4, 500000, 150000);
-    // rt_pwm_enable(pwm_dev0, 4);
-
-    //pwm的dma
-    // MX_DMA_Init();
-
     struct rt_device_pwm *pwm_dev1=(struct rt_device_pwm *)rt_device_find("pwm1");
-    // rt_pwm_set(pwm_dev1, 1, 1000000, 500000);
-    // rt_pwm_enable(pwm_dev1, 1);
-    rt_pwm_set(pwm_dev1, 2, 1000000, 500000);
-    // rt_pwm_enable(pwm_dev1, 2);
-    // rt_pwm_set(pwm_dev1, 3, 1000000, 150000);
-    // rt_pwm_enable(pwm_dev1, 3);
-    // rt_pwm_set(pwm_dev1, 4, 1000000, 150000);
-    // rt_pwm_enable(pwm_dev1, 4);
+    rt_pwm_set(pwm_dev1, 1, 834, 0);
+    rt_pwm_set(pwm_dev1, 2, 834, 0);//单位ns实际上是833.333333
+    rt_pwm_set(pwm_dev1, 3, 834, 0);
+    rt_pwm_set(pwm_dev1, 4, 834, 0);
 
-    rt_uint32_t data1[16]={30000,10000,20000,30000,30000,0,30000,30000,30000,30000,30000,30000,30000,30000,30000};
+    // 3/4为1 3/8为0
+    HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_1,data1,16);
     HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_2,data1,16);
+    HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_3,data1,16);
+    HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_4,data1,16);
 
-    // //能输出
-    // struct rt_device_pwm *pwm_dev2=(struct rt_device_pwm *)rt_device_find("pwm15");
-    // rt_pwm_set(pwm_dev2, 1, 500000, 150000);
-    // rt_pwm_enable(pwm_dev2, 1);
-    // rt_pwm_set(pwm_dev2, 2, 500000, 250000);
-    // rt_pwm_enable(pwm_dev2, 2);
+    // 挂载文件系统
+    dfs_mount("sd0","/","elm",0,0);
 
-    //能输出
-    // struct rt_device_pwm *pwm_dev=(struct rt_device_pwm *)rt_device_find("pwm12");
-    // rt_pwm_set(pwm_dev, 1, 500000, 150000);
-    // rt_pwm_set(pwm_dev, 2, 500000, 250000);
-    // rt_pwm_enable(pwm_dev, 1);
-    // rt_pwm_enable(pwm_dev, 2);
-
-    //挂载文件系统
-    // dfs_mount("sd0","/","elm",0,0);
+    // open(filea,path,FA_CREATE_ALWAYS|FA_WRITE|FA_OPEN_ALWAYS); 
 
     // rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
     //                               RT_NULL,1024,5,5);
@@ -208,15 +162,15 @@ int main(void)
                                     RT_NULL,1024,0,10);
     rt_thread_startup(t1);
 
-    //串口dma测试
+    //RC接收机线程
     // rt_thread_t t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
     //                                 RT_NULL,1024,0,5);
     // rt_thread_startup(t);
 
     //gps接收线程
-    // rt_thread_t t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
-    //                                 RT_NULL,1024,0,5);
-    // rt_thread_startup(t);
+    rt_thread_t t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
+                                    RT_NULL,1024*10,1,5);
+    rt_thread_startup(t);
 
     return 0;
 }
@@ -328,9 +282,7 @@ void imu_data_thrd(void *parameter)
             rt_device_read(baro_dev, 0, &g_spl06_baro, 1);
 
             spl06_250ms_cnt=0;
-
-            // write(fd, g_spl06_baro.data.baro, sizeof(g_spl06_baro.data.baro));
-            // write(fd, "\r\n", sizeof("\r\n"));
+            
         }
 
         spl06_250ms_cnt++;
@@ -485,6 +437,18 @@ static rt_err_t gps_rx_cbk(rt_device_t dev, rt_size_t size)
  */
 void gps_rx_thread_entry(void *parameter)
 {
+    while(1)
+    {
+        char a[10]={0};
+        __itoa(g_bmi08x_acce.data.acce.z,a,10);
+
+        fd = open("a.txt", O_RDWR | O_APPEND | O_CREAT, 0);
+        // char aaa[]="appppp\r\n";
+        // write(fd, aaa, strlen(aaa));
+        write(fd, a, strlen(a));
+        write(fd, "\r\n", strlen("\r\n"));
+        close(fd);
+    }
     rt_device_t gps_serial = rt_device_find("uart2");
     if (!gps_serial)
     {

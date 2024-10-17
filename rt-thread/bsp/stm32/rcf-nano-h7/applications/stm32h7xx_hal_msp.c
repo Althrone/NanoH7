@@ -503,8 +503,8 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     // /* USB_OTG_FS interrupt Init */
-    HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+    // HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
+    // HAL_NVIC_EnableIRQ(OTG_FS_IRQn);//rtt驱动以接写了这个了
   /* USER CODE BEGIN USB_OTG_FS_MspInit 1 */
 
   /* USER CODE END USB_OTG_FS_MspInit 1 */
@@ -546,6 +546,24 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
     HAL_NVIC_SetPriority(PWM1_CH4_DMA_IRQ, 0, 0);
     HAL_NVIC_EnableIRQ(PWM1_CH4_DMA_IRQ);
 
+    /* TIM1_CH1 Init */
+    hdma_tim1_ch1.Instance = PWM1_CH1_DMA_INSTANCE;
+    hdma_tim1_ch1.Init.Request = PWM1_CH1_DMA_REQUEST;
+    hdma_tim1_ch1.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_tim1_ch1.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim1_ch1.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_tim1_ch1.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_tim1_ch1.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim1_ch1.Init.Mode = DMA_NORMAL;
+    hdma_tim1_ch1.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_tim1_ch1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_tim1_ch1) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_CC1],hdma_tim1_ch1);
+
     /* TIM1_CH2 Init */
     hdma_tim1_ch2.Instance = PWM1_CH2_DMA_INSTANCE;
     hdma_tim1_ch2.Init.Request = PWM1_CH2_DMA_REQUEST;
@@ -563,6 +581,42 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
     }
 
     __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_CC2],hdma_tim1_ch2);
+
+    /* TIM1_CH3 Init */
+    hdma_tim1_ch3.Instance = PWM1_CH3_DMA_INSTANCE;
+    hdma_tim1_ch3.Init.Request = PWM1_CH3_DMA_REQUEST;
+    hdma_tim1_ch3.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_tim1_ch3.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim1_ch3.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_tim1_ch3.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_tim1_ch3.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim1_ch3.Init.Mode = DMA_NORMAL;
+    hdma_tim1_ch3.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_tim1_ch3.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_tim1_ch3) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_CC3],hdma_tim1_ch3);
+
+    /* TIM1_CH4 Init */
+    hdma_tim1_ch4.Instance = PWM1_CH4_DMA_INSTANCE;
+    hdma_tim1_ch4.Init.Request = PWM1_CH4_DMA_REQUEST;
+    hdma_tim1_ch4.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_tim1_ch4.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim1_ch4.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_tim1_ch4.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_tim1_ch4.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim1_ch4.Init.Mode = DMA_NORMAL;
+    hdma_tim1_ch4.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_tim1_ch4.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_tim1_ch4) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(htim_pwm,hdma[TIM_DMA_ID_CC4],hdma_tim1_ch4);
 
   /* USER CODE BEGIN TIM1_MspInit 1 */
 
