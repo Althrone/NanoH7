@@ -13,7 +13,7 @@
 
 #include "sensor_intf_bn880.h"
 #include <rtdbg.h>
-#include "drv_usart_v2.h"
+#include "drv_usart.h"
 
 /******************************************************************************
  * private macros

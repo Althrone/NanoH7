@@ -991,10 +991,13 @@ static rt_err_t _function_enable(ufunction_t func)
     dfs_unmount_device(data->disk);
 #endif
 
+    if(!(data->disk->open_flag & RT_DEVICE_OFLAG_OPEN))
+    {
     if(rt_device_open(data->disk, RT_DEVICE_OFLAG_RDWR) != RT_EOK)
     {
         rt_kprintf("disk open error\n");
         return -RT_ERROR;
+    }
     }
     
     if(rt_device_control(data->disk, RT_DEVICE_CTRL_BLK_GETGEOME, 

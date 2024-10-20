@@ -207,17 +207,17 @@ char rt_hw_console_getchar(void)
 #endif
 #endif
 
-void OTG_FS_IRQHandler(void)
-{
-extern void USBD_IRQHandler(uint8_t busid);
-USBD_IRQHandler(0);
-}
+// void OTG_FS_IRQHandler(void)
+// {
+// extern void USBD_IRQHandler(uint8_t busid);
+// USBD_IRQHandler(0);
+// }
 
-int usbd_init(void)
-{
-// extern void winusbv2_init(uint8_t busid, uintptr_t reg_base);
-extern void cdc_acm_init(uint8_t busid, uintptr_t reg_base);
-cdc_acm_init(0, USB_OTG_FS_PERIPH_BASE);
-return 0;
-}
-INIT_APP_EXPORT(usbd_init);
+// int usbd_init(void)
+// {
+// // extern void winusbv2_init(uint8_t busid, uintptr_t reg_base);
+// extern void cdc_acm_init(uint8_t busid, uintptr_t reg_base);
+// cdc_acm_init(0, USB_OTG_FS_PERIPH_BASE);
+// return 0;
+// }
+// INIT_APP_EXPORT(usbd_init);

@@ -21,7 +21,7 @@ extern "C" {
 
 #include <rtthread.h>
 #include "sensor.h"
-#include "drv_usart_v2.h"
+#include "drv_usart.h"
 
 /******************************************************************************
  * macros

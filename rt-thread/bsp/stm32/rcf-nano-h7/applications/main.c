@@ -80,7 +80,7 @@ void lin_test(void)
 {
     rt_device_t serial = rt_device_find("uart6");
 
-    rt_device_open(serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
+    // rt_device_open(serial, RT_DEVICE_FLAG_ | RT_DEVICE_FLAG_TX_BLOCKING);
 
     UART_HandleTypeDef huart={
         .Instance=USART6,
@@ -162,15 +162,15 @@ int main(void)
                                     RT_NULL,1024,0,10);
     rt_thread_startup(t1);
 
-    //RC接收机线程
-    rt_thread_t rc_t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
-                                    RT_NULL,1024,0,5);
-    rt_thread_startup(rc_t);
+    // //RC接收机线程
+    // rt_thread_t rc_t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
+    //                                 RT_NULL,1024*5,0,5);
+    // rt_thread_startup(rc_t);
 
-    //gps接收线程
-    rt_thread_t gps_t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
-                                    RT_NULL,1024*10,1,5);
-    rt_thread_startup(gps_t);
+    // //gps接收线程
+    // rt_thread_t gps_t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
+    //                                 RT_NULL,1024*5,1,5);
+    // rt_thread_startup(gps_t);
 
     return 0;
 }
@@ -297,10 +297,11 @@ void vcom_test(void)
 {
     rt_device_t dev = RT_NULL;
     dev = rt_device_find("vcom");
-    char test_str[]="vcom success!\n\t";
+    char test_str[]="vcom success!";
     rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
     rt_device_write(dev,0,test_str,sizeof(test_str));
-    rt_device_close(dev);
+    // rt_thread_mdelay(10);
+    rt_device_close(dev);//关闭之前要判断是否发完
 }MSH_CMD_EXPORT(vcom_test, vcom test);
 
 void can_thread_entry(void *parameter)
@@ -377,20 +378,20 @@ static rt_err_t rc_rx_cbk(rt_device_t dev, rt_size_t size)
  */
 void rc_rx_thread_entry(void *parameter)
 {
-    while(1)
-    {
-        char a[10]={0};
-        __itoa(g_bmi08x_acce.data.acce.z,a,10);
+    // while(1)
+    // {
+    //     char a[10]={0};
+    //     __itoa(g_bmi08x_acce.data.acce.z,a,10);
 
-        fd = open("a.txt", O_RDWR | O_APPEND | O_CREAT, 0);
-        // char aaa[]="appppp\r\n";
-        // write(fd, aaa, strlen(aaa));
-        write(fd, a, strlen(a));
-        write(fd, "\r\n", strlen("\r\n"));
-        close(fd);
+    //     fd = open("a.txt", O_RDWR | O_APPEND | O_CREAT, 0);
+    //     // char aaa[]="appppp\r\n";
+    //     // write(fd, aaa, strlen(aaa));
+    //     write(fd, a, strlen(a));
+    //     write(fd, "\r\n", strlen("\r\n"));
+    //     close(fd);
 
-        rt_thread_mdelay(1000);
-    }
+    //     rt_thread_mdelay(1000);
+    // }
 
     rt_device_t rc_serial = rt_device_find("uart4");
     if (!rc_serial)
@@ -402,7 +403,7 @@ void rc_rx_thread_entry(void *parameter)
     config.baud_rate = 420000;        // 修改波特率为 9600
     config.data_bits = DATA_BITS_8;           // 数据位 8
     config.stop_bits = STOP_BITS_1;           // 停止位 1
-    config.rx_bufsz     = 128;                // 修改缓冲区 rx buff size 为 128
+    config.bufsz     = 128;                // 修改缓冲区 rx buff size 为 128
     config.parity    = PARITY_NONE;           // 无奇偶校验位
 
     rt_device_control(rc_serial, RT_DEVICE_CTRL_CONFIG, &config);
@@ -416,7 +417,7 @@ void rc_rx_thread_entry(void *parameter)
                RT_IPC_FLAG_FIFO);        /* 如果有多个线程等待，按照先来先得到的方法分配消息 */
 
     /* 以 DMA 接收及轮询发送方式打开串口设备 */
-    rt_device_open(rc_serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
+    rt_device_open(rc_serial, RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_INT_TX);
     /* 设置接收回调函数 */
     rt_device_set_rx_indicate(rc_serial, rc_rx_cbk);
 
@@ -455,6 +456,7 @@ static rt_err_t gps_rx_cbk(rt_device_t dev, rt_size_t size)
  */
 void gps_rx_thread_entry(void *parameter)
 {
+    #if 0
     while(1)
     {
         // usbd_cdc_acm_set_dtr();
@@ -462,6 +464,7 @@ void gps_rx_thread_entry(void *parameter)
         cdc_acm_data_send_with_dtr_test(0);
         rt_thread_mdelay(5000);
     }
+    #endif
     rt_device_t gps_serial = rt_device_find("uart2");
     if (!gps_serial)
     {
@@ -470,7 +473,7 @@ void gps_rx_thread_entry(void *parameter)
 
     struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;  /* 初始化配置参数 */
     config.baud_rate = BAUD_RATE_460800;//从4800开始尝试
-    config.rx_bufsz     = 128;                // 修改缓冲区 rx buff size 为 128
+    config.bufsz     = 128;                // 修改缓冲区 rx buff size 为 128
     rt_device_control(gps_serial, RT_DEVICE_CTRL_CONFIG, &config);
 
     static char msg_pool[256];
@@ -484,7 +487,7 @@ void gps_rx_thread_entry(void *parameter)
     gps_rx_mb=rt_mb_create("gps_rx_mb", 1, RT_IPC_FLAG_FIFO);
 
     /* 以 DMA 接收及轮询发送方式打开串口设备 */
-    rt_device_open(gps_serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
+    rt_device_open(gps_serial, RT_DEVICE_FLAG_INT_RX|RT_DEVICE_FLAG_INT_TX);
     /* 设置接收回调函数 */
     rt_device_set_rx_indicate(gps_serial, gps_rx_cbk);
 

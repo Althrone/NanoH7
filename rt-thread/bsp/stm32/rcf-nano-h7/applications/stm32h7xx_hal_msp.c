@@ -479,7 +479,7 @@ void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef *hfdcan)
  * @param hfdcan: PCD handle pointer
  * @retval None
  */
-#if(1)
+#if(0)
 void usb_dc_low_level_init(uint8_t busid)
 #else
 void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
