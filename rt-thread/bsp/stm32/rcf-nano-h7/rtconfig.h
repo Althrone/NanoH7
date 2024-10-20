@@ -252,7 +252,7 @@
 #define RT_USING_CAN
 #define RT_USING_ADC
 #define RT_USING_SPI
-#define RT_USING_USB_DEVICE
+// #define RT_USING_USB_DEVICE
 #define RT_USING_SDIO
 #define RT_USING_HWTIMER
 #define RT_USING_PWM
@@ -270,7 +270,7 @@
 /* Using USB */
 
 // #define RT_USB_DEVICE_COMPOSITE
-#define RT_USB_DEVICE_CDC
+// #define RT_USB_DEVICE_CDC
 // #define RT_USB_DEVICE_MSTORAGE
 // #define RT_USB_MSTORAGE_DISK_NAME "sd0"
 #define RT_USBD_THREAD_STACK_SZ (1024*5)
@@ -405,7 +405,7 @@
 #define BSP_USING_FDCAN1
 #define BSP_USING_SDIO
 #define BSP_USING_SDIO1
-#define BSP_USING_USBD
+// #define BSP_USING_USBD
 #define BSP_USING_PWM1
 #define BSP_USING_PWM1_CH1
 #define BSP_PWM1_CH1_USING_DMA

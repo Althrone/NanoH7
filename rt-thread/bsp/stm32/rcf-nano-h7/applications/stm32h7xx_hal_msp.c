@@ -479,11 +479,15 @@ void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef *hfdcan)
  * @param hfdcan: PCD handle pointer
  * @retval None
  */
+#if(1)
+void usb_dc_low_level_init(uint8_t busid)
+#else
 void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
+#endif
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(hpcd->Instance==USB_OTG_FS)
-  {
+  // if(hpcd->Instance==USB_OTG_FS)
+  // {
   /* USER CODE BEGIN USB_OTG_FS_MspInit 0 */
 
   /* USER CODE END USB_OTG_FS_MspInit 0 */
@@ -503,12 +507,12 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     // /* USB_OTG_FS interrupt Init */
-    // HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
-    // HAL_NVIC_EnableIRQ(OTG_FS_IRQn);//rtt驱动以接写了这个了
+    HAL_NVIC_SetPriority(OTG_FS_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);//rtt驱动以接写了这个了
   /* USER CODE BEGIN USB_OTG_FS_MspInit 1 */
 
   /* USER CODE END USB_OTG_FS_MspInit 1 */
-  }
+  // }
 }
 
 #include <drv_config.h>

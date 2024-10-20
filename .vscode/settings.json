@@ -74,6 +74,8 @@
         "ubx.h": "c",
         "string.h": "c",
         "algorithm": "c",
-        "cstdlib": "c"
+        "cstdlib": "c",
+        "usbd_msc.h": "c",
+        "usb_msc.h": "c"
     }
 }

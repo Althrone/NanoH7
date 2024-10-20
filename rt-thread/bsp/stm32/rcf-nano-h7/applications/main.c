@@ -163,14 +163,14 @@ int main(void)
     rt_thread_startup(t1);
 
     //RC接收机线程
-    // rt_thread_t t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
-    //                                 RT_NULL,1024,0,5);
-    // rt_thread_startup(t);
+    rt_thread_t rc_t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
+                                    RT_NULL,1024,0,5);
+    rt_thread_startup(rc_t);
 
     //gps接收线程
-    rt_thread_t t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
+    rt_thread_t gps_t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
                                     RT_NULL,1024*10,1,5);
-    rt_thread_startup(t);
+    rt_thread_startup(gps_t);
 
     return 0;
 }
@@ -377,6 +377,21 @@ static rt_err_t rc_rx_cbk(rt_device_t dev, rt_size_t size)
  */
 void rc_rx_thread_entry(void *parameter)
 {
+    while(1)
+    {
+        char a[10]={0};
+        __itoa(g_bmi08x_acce.data.acce.z,a,10);
+
+        fd = open("a.txt", O_RDWR | O_APPEND | O_CREAT, 0);
+        // char aaa[]="appppp\r\n";
+        // write(fd, aaa, strlen(aaa));
+        write(fd, a, strlen(a));
+        write(fd, "\r\n", strlen("\r\n"));
+        close(fd);
+
+        rt_thread_mdelay(1000);
+    }
+
     rt_device_t rc_serial = rt_device_find("uart4");
     if (!rc_serial)
     {
@@ -421,15 +436,18 @@ void rc_rx_thread_entry(void *parameter)
 }
 
 static struct rt_messagequeue gps_rx_mq;
+rt_mailbox_t gps_rx_mb;
 
 /**
  * @brief   遥控器接收回调函数
  */
 static rt_err_t gps_rx_cbk(rt_device_t dev, rt_size_t size)
 {
-    rt_err_t result = rt_mq_send(&gps_rx_mq, &size, sizeof(size));
+    // rt_err_t result = rt_mq_send(&gps_rx_mq, &size, sizeof(size));
     
-    return result;
+    // return result;
+
+    return rt_mb_send(gps_rx_mb, size);
 }
 
 /**
@@ -439,15 +457,10 @@ void gps_rx_thread_entry(void *parameter)
 {
     while(1)
     {
-        char a[10]={0};
-        __itoa(g_bmi08x_acce.data.acce.z,a,10);
-
-        fd = open("a.txt", O_RDWR | O_APPEND | O_CREAT, 0);
-        // char aaa[]="appppp\r\n";
-        // write(fd, aaa, strlen(aaa));
-        write(fd, a, strlen(a));
-        write(fd, "\r\n", strlen("\r\n"));
-        close(fd);
+        // usbd_cdc_acm_set_dtr();
+        extern void cdc_acm_data_send_with_dtr_test(uint8_t busid);
+        cdc_acm_data_send_with_dtr_test(0);
+        rt_thread_mdelay(5000);
     }
     rt_device_t gps_serial = rt_device_find("uart2");
     if (!gps_serial)
@@ -468,6 +481,8 @@ void gps_rx_thread_entry(void *parameter)
                sizeof(msg_pool),         /* 存放消息的缓冲区大小 */
                RT_IPC_FLAG_FIFO);        /* 如果有多个线程等待，按照先来先得到的方法分配消息 */
 
+    gps_rx_mb=rt_mb_create("gps_rx_mb", 1, RT_IPC_FLAG_FIFO);
+
     /* 以 DMA 接收及轮询发送方式打开串口设备 */
     rt_device_open(gps_serial, RT_DEVICE_FLAG_RX_NON_BLOCKING | RT_DEVICE_FLAG_TX_BLOCKING);
     /* 设置接收回调函数 */
@@ -475,20 +490,26 @@ void gps_rx_thread_entry(void *parameter)
 
     while (1)
     {
-        rt_size_t size;
-        /* 从消息队列中读取消息 */
-        rt_err_t result = rt_mq_recv(&gps_rx_mq, &size, sizeof(size), 400);
-        if (result == RT_EOK)
+        rt_size_t len;
+        if (rt_mb_recv(gps_rx_mb, &len, 400) == RT_EOK)
         {
-            /* 从串口读取数据 */
-            rt_size_t rx_length = rt_device_read(gps_serial, 0, rc_rx_buffer, size);
-            // rc_rx_buffer[rx_length] = '\0';
+            rt_device_read(gps_serial, 0, rc_rx_buffer, len);
         }
-        else if(result == -RT_ETIMEOUT)
-        {
-            //切换波特率
-            struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;  /* 初始化配置参数 */
-            config.baud_rate = BAUD_RATE_4800;        // 修改波特率为 9600
-        }
+
+        // rt_size_t size;
+        // /* 从消息队列中读取消息 */
+        // rt_err_t result = rt_mq_recv(&gps_rx_mq, &size, sizeof(size), 400);
+        // if (result == RT_EOK)
+        // {
+        //     /* 从串口读取数据 */
+        //     rt_size_t rx_length = rt_device_read(gps_serial, 0, rc_rx_buffer, size);
+        //     // rc_rx_buffer[rx_length] = '\0';
+        // }
+        // else if(result == -RT_ETIMEOUT)
+        // {
+        //     //切换波特率
+        //     struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;  /* 初始化配置参数 */
+        //     config.baud_rate = BAUD_RATE_4800;        // 修改波特率为 9600
+        // }
     }
 }
