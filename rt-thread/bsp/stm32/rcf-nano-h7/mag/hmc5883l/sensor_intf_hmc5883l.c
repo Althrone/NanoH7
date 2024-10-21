@@ -16,6 +16,8 @@ static rt_size_t _hmc5883l_mag_polling_get_data(struct rt_sensor_device *sensor,
     // sensor_data->data.mag.y = mag_data.y*1000;
     // sensor_data->data.mag.z = mag_data.z*1000;
     // sensor_data->timestamp = rt_sensor_get_ts();
+
+    return 0;
 }
 
 static rt_size_t hmc5883l_mag_fetch_data(struct rt_sensor_device *sensor, void *buf, rt_size_t len)
@@ -32,10 +34,8 @@ static rt_size_t hmc5883l_mag_fetch_data(struct rt_sensor_device *sensor, void *
     {
         // return _xxx_acc_fifo_get_data(sensor, buf, len);
     }
-    else
-    {
-        return 0;
-    }
+
+    return 0;
 }
 
 static rt_err_t hmc5883l_mag_control(struct rt_sensor_device *sensor, int cmd, void *args)//args是32位(指针都是4个字节)
@@ -109,26 +109,26 @@ int rt_hw_hmc5883l_init(const char *name, struct rt_sensor_config *mag_cfg)
 
         //将初始化命令放到这里
         //获取设备信息
-        struct rt_sensor_info info;
-        if(rt_device_control(sensor_mag,RT_SENSOR_CTRL_GET_INFO,&info))//sensor_mag的父类是rt_device_t 不知道行不行
-        {
-            LOG_E("get device info faile");
-            return -RT_ERROR;
-        }
-        LOG_I("vendor :%d", info.vendor);
-        LOG_I("model  :%s", info.model);
-        LOG_I("unit   :%d", info.unit);
-        LOG_I("intf_type :%d", info.intf_type);
-        LOG_I("period_min:%d", info.period_min);
+        // struct rt_sensor_info info;
+        // if(rt_device_control(sensor_mag,RT_SENSOR_CTRL_GET_INFO,&info))//sensor_mag的父类是rt_device_t 不知道行不行
+        // {
+        //     LOG_E("get device info faile");
+        //     return -RT_ERROR;
+        // }
+        // LOG_I("vendor :%d", info.vendor);
+        // LOG_I("model  :%s", info.model);
+        // LOG_I("unit   :%d", info.unit);
+        // LOG_I("intf_type :%d", info.intf_type);
+        // LOG_I("period_min:%d", info.period_min);
 
-        //读取设备ID，这里开始用到自己写的东西了
-        rt_uint8_t id = 0xFF;
-        if(rt_device_control(sensor_mag, RT_SENSOR_CTRL_GET_ID, &id))
-        {
-            LOG_E("get device id faile");
-            return -RT_ERROR;
-        }
-        LOG_I("device id: 0x%x!", id);
+        // //读取设备ID，这里开始用到自己写的东西了
+        // rt_uint8_t id = 0xFF;
+        // if(rt_device_control(sensor_mag, RT_SENSOR_CTRL_GET_ID, &id))
+        // {
+        //     LOG_E("get device id faile");
+        //     return -RT_ERROR;
+        // }
+        // LOG_I("device id: 0x%x!", id);
 
         return RT_EOK;
     }
@@ -137,32 +137,32 @@ int rt_hw_hmc5883l_init(const char *name, struct rt_sensor_config *mag_cfg)
 //需要创建两个函数，一个是自动初始化用的 一个是进程入口函数
 //命令好像是可以通过传感器通用的cfg命令控制
 
-/**
- * @brief   入口函数
- **/
-static void thread_entry(void *parameter)
-{
-    //查找设备
-    rt_device_t mag_dev = RT_NULL;
-    mag_dev = rt_device_find(parameter);//传入设备名字
+// /**
+//  * @brief   入口函数
+//  **/
+// static void thread_entry(void *parameter)
+// {
+//     //查找设备
+//     rt_device_t mag_dev = RT_NULL;
+//     mag_dev = rt_device_find(parameter);//传入设备名字
 
-    //打开设备
-    rt_device_open(mag_dev,RT_DEVICE_FLAG_RDWR);//传感器注册的时候也用到 RT_DEVICE_FLAG_RDWR 这个参数
-    //初始化
+//     //打开设备
+//     rt_device_open(mag_dev,RT_DEVICE_FLAG_RDWR);//传感器注册的时候也用到 RT_DEVICE_FLAG_RDWR 这个参数
+//     //初始化
 
-    //读取数据
-    while (1)
-    {
-        /* code */
-        if(rt_device_read(mag_dev,0,&mag_data,1))//数据读取到全局变量中
-            break;
-    }
-    //显示读取设备出错
-    LOG_E("faile to read mag data\n");
-    //关闭设备
-    rt_device_close(mag_dev);
-    LOG_I("mag close");
-}
+//     //读取数据
+//     while (1)
+//     {
+//         /* code */
+//         if(rt_device_read(mag_dev,0,&mag_data,1))//数据读取到全局变量中
+//             break;
+//     }
+//     //显示读取设备出错
+//     LOG_E("faile to read mag data\n");
+//     //关闭设备
+//     rt_device_close(mag_dev);
+//     LOG_I("mag close");
+// }
 
 void rt_hmc5883l_init(void)
 {

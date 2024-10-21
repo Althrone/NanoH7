@@ -28,7 +28,7 @@
 
 static struct rt_mmcsd_host *host1;
 static struct rt_mmcsd_host *host2;
-static rt_mutex_t mmcsd_mutex = RT_NULL;
+// static rt_mutex_t mmcsd_mutex = RT_NULL;
 
 #define SDIO_TX_RX_COMPLETE_TIMEOUT_LOOPS    (1000000)
 
@@ -48,8 +48,15 @@ struct rthw_sdio
     rt_uint8_t *cache_buf;
 };
 
+#ifdef BSP_USING_SDIO1
 ALIGN(SDIO_ALIGN_LEN)
-static rt_uint8_t cache_buf1[SDIO_BUFF_SIZE], cache_buf2[SDIO_BUFF_SIZE];
+static rt_uint8_t cache_buf1[SDIO_BUFF_SIZE];
+#endif
+
+#ifdef BSP_USING_SDIO2
+ALIGN(SDIO_ALIGN_LEN)
+static rt_uint8_t cache_buf2[SDIO_BUFF_SIZE];
+#endif
 
 /**
   * @brief  This function get order from sdio.
