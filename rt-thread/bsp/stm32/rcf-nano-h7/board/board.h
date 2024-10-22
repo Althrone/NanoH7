@@ -79,6 +79,9 @@ extern "C" {
 #define BSP_UART8_RX_BUFSIZE   256
 #define BSP_UART8_TX_BUFSIZE   256
 
+#define BSP_UART1_TX_PIN "PA3"
+#define BSP_UART1_RX_PIN "PA4"
+
 #define BSP_I2C2_SCL_PIN        GET_PIN(B,10)
 #define BSP_I2C2_SDA_PIN        GET_PIN(B,11)
 

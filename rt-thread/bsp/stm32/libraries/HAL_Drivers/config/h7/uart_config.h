@@ -49,6 +49,8 @@ extern "C" {
         .name = "uart2",                                            \
         .Instance = USART2,                                         \
         .irq_type = USART2_IRQn,                                    \
+        .tx_pin_name = BSP_UART1_TX_PIN,                            \
+        .rx_pin_name = BSP_UART1_RX_PIN,                            \
     }
 #endif /* UART2_CONFIG */
 #endif /* BSP_USING_UART2 */

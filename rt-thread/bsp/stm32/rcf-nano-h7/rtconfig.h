@@ -245,7 +245,7 @@
 #define RT_USING_DEVICE_IPC
 #define RT_USING_SERIAL
 // #define RT_USING_SERIAL_V2
-// #define RT_SERIAL_USING_DMA
+#define RT_SERIAL_USING_DMA
 #define RT_USING_I2C
 #define RT_USING_I2C_BITOPS//位操作的意思就是模拟IIC，spi也有类似的
 #define RT_USING_PIN
@@ -392,7 +392,7 @@
 
 #define BSP_USING_UART1
 #define BSP_USING_UART2
-// #define BSP_UART2_RX_USING_DMA
+#define BSP_UART2_RX_USING_DMA
 // #define BSP_USING_UART3
 #define BSP_USING_UART4
 // #define BSP_UART4_RX_USING_DMA
