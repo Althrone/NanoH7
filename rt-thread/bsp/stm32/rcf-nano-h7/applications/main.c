@@ -478,7 +478,7 @@ void gps_rx_thread_entry(void *parameter)
     gps_rx_mb=rt_mb_create("gps_rx_mb", 1, RT_IPC_FLAG_FIFO);
 
     /* 以 DMA 接收及轮询发送方式打开串口设备 */
-    rt_device_open(gps_serial, RT_DEVICE_FLAG_INT_RX|RT_DEVICE_FLAG_INT_TX);
+    rt_device_open(gps_serial, RT_DEVICE_FLAG_DMA_RX|RT_DEVICE_FLAG_INT_TX);
     /* 设置接收回调函数 */
     rt_device_set_rx_indicate(gps_serial, gps_rx_cbk);
 
@@ -497,6 +497,7 @@ void gps_rx_thread_entry(void *parameter)
         {
             /* 从串口读取数据 */
             rt_size_t rx_length = rt_device_read(gps_serial, 0, rc_rx_buffer, size);
+            rt_kprintf("%d\n\r",rx_length);
             // rc_rx_buffer[rx_length] = '\0';
         }
         else if(result == -RT_ETIMEOUT)

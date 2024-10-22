@@ -679,7 +679,7 @@ static void uart_isr(struct rt_serial_device *serial)
         {
             if(serial->parent.open_flag & RT_DEVICE_FLAG_DMA_RX)
             {
-                SCB_InvalidateDCache();
+                // SCB_InvalidateDCache();
             }
             rt_hw_serial_isr(serial, RT_SERIAL_EVENT_RX_DMADONE | (recv_len << 8));
         }
@@ -772,7 +772,7 @@ static void dma_isr(struct rt_serial_device *serial)
         {
             if(serial->parent.open_flag & RT_DEVICE_FLAG_DMA_RX)
             {
-                SCB_InvalidateDCache();
+                // SCB_InvalidateDCache();
             }
             rt_hw_serial_isr(serial, RT_SERIAL_EVENT_RX_DMADONE | (recv_len << 8));
         }
