@@ -447,8 +447,6 @@ static rt_err_t gps_rx_cbk(rt_device_t dev, rt_size_t size)
     rt_err_t result = rt_mq_send(&gps_rx_mq, &size, sizeof(size));
     
     return result;
-
-    // return rt_mb_send(gps_rx_mb, size);
 }
 
 /**
@@ -484,12 +482,6 @@ void gps_rx_thread_entry(void *parameter)
 
     while (1)
     {
-        // rt_size_t len;
-        // if (rt_mb_recv(gps_rx_mb, &len, 400) == RT_EOK)
-        // {
-        //     rt_device_read(gps_serial, 0, rc_rx_buffer, len);
-        // }
-
         rt_size_t size;
         /* 从消息队列中读取消息 */
         rt_err_t result = rt_mq_recv(&gps_rx_mq, &size, sizeof(size), 400);
@@ -497,8 +489,8 @@ void gps_rx_thread_entry(void *parameter)
         {
             /* 从串口读取数据 */
             rt_size_t rx_length = rt_device_read(gps_serial, 0, rc_rx_buffer, size);
-            rt_kprintf("%d\n\r",rx_length);
-            // rc_rx_buffer[rx_length] = '\0';
+            //开始解析吧
+            rt_kprintf("%d\n\r",rx_length);//测试用的
         }
         else if(result == -RT_ETIMEOUT)
         {
