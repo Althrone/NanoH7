@@ -484,6 +484,8 @@ typedef struct
  * pubilc functions declaration
  *****************************************************************************/
 
+void ubx
+
 #ifdef __cplusplus
 }
 #endif
