@@ -34,11 +34,49 @@
  *****************************************************************************/
 
 static rt_err_t ubx_encode(rt_uint8_t msg_class,rt_uint8_t msg_id,rt_uint16_t size,const rt_uint8_t* p_payload,rt_uint8_t* pbuf);
-static rt_err_t Fletcher8(rt_size_t size,const rt_uint8_t* pbuf,rt_uint8_t* ck_a,rt_uint8_t* ck_b);
+static rt_err_t Fletcher8(const rt_uint8_t* pbuf,rt_size_t size,rt_uint8_t* ck_a,rt_uint8_t* ck_b);
 
 /******************************************************************************
  * pubilc functions definition
  *****************************************************************************/
+
+UbxNavPvtStruct navpvt;
+
+void ubx_decode(rt_uint8_t* pbuf,rt_uint32_t size)
+{
+    //检查开头是不是μb
+    if((pbuf[0]!=0xB5)||(pbuf[1]!=0x62))
+    {
+        return;
+    }
+    //获取假定的长度值
+    rt_uint16_t len=pbuf[4]|(((rt_uint16_t)pbuf[5])<<8);
+    rt_uint8_t ck_a=0;
+    rt_uint8_t ck_b=0;
+    Fletcher8(pbuf+2,len+4,&ck_a,&ck_b);
+    if((pbuf[len+6]!=ck_a)||(pbuf[len+6+1]!=ck_b))
+    {
+        return;
+    }
+    //根据id解码
+    switch (pbuf[2])
+    {
+    case UBX_NAV_MSG:
+        switch (pbuf[3])
+        {
+        case UBX_NAV_PVT_ID:
+            rt_memcpy((rt_uint8_t*)&navpvt,(rt_uint8_t*)&(pbuf[4]),len);
+            break;
+        
+        default:
+            break;
+        }
+        break;
+    
+    default:
+        break;
+    }
+}
 
 typedef enum
 {
@@ -133,7 +171,7 @@ static rt_err_t ubx_encode(rt_uint8_t msg_class,rt_uint8_t msg_id,rt_uint16_t si
 }
 
 
-static rt_err_t Fletcher8(rt_size_t size,const rt_uint8_t* pbuf,rt_uint8_t* ck_a,rt_uint8_t* ck_b)
+static rt_err_t Fletcher8(const rt_uint8_t* pbuf,rt_size_t size,rt_uint8_t* ck_a,rt_uint8_t* ck_b)
 {
     rt_uint8_t CK_A = 0;
     rt_uint8_t CK_B = 0;
