@@ -131,6 +131,8 @@ void q_update(int32_t omega_x,int32_t omega_y,
 │VD│   │VD│   └ ┘B │az│      │g│
 └  ┘k+1└  ┘k       └  ┘      └ ┘
 并减去重力，但是不知道为啥公式是加重力
+//对于自由落体设备，IMU获取值为0，但实际上往下掉，所以加g来测速度
+//对于静置桌面设备，IMU获取值为向上一个g，综合计算就为0
 */
 
 /**
@@ -139,6 +141,22 @@ void q_update(int32_t omega_x,int32_t omega_y,
 void v_update(int32_t a_x,int32_t a_y,int32_t a_z,uint32_t delta_usec)
 {
     
+}
+
+/*
+┌  ┐   ┌  ┐        ┌  ┐      ┌ ┐
+│PN│   │PN│    ┌ ┐N │ax│      │0│
+│PE│ = │PE│ + 1/2 │T│ *│ay│*∆t + │0│*∆t
+│PD│   │PD│    └ ┘B │az│      │g│
+└  ┘k+1└  ┘k       └  ┘      └ ┘
+*/
+
+/**
+ * @note    其实可以和上面一个函数揉成一坨
+ */
+void p_update(int32_t a_x,int32_t a_y,int32_t a_z,uint32_t delta_usec)
+{
+
 }
 
 /**

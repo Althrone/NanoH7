@@ -17,6 +17,7 @@
 void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
 void gps_rx_thread_entry(void *parameter);
+void fly_log_thread_entry(void *parameter);
 
 #include <drv_config.h>
 
@@ -29,8 +30,6 @@ extern DMA_HandleTypeDef hdma_tim1_ch2;
 extern DMA_HandleTypeDef hdma_tim1_ch3;
 
 extern DMA_HandleTypeDef hdma_tim1_ch4;
-
-int fd;
 
 void PWM1_CH1_DMA_IRQHandler(void)
 {
@@ -115,25 +114,6 @@ int main(void)
     rt_pin_write(GET_PIN(D,9),PIN_LOW);
     rt_pin_write(GET_PIN(D,8),PIN_LOW);
 
-    // char test_str[]="vcom success!\n\t";
-
-    // //usb测试
-    // rt_device_t dev = RT_NULL;
-    // dev = rt_device_find("vcom");
-    // rt_device_init(dev);
-    // rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
-
-    // if(dev)
-    // {
-    //     while(1)
-    //     {
-    //         // rt_device_open(dev,RT_DEVICE_FLAG_RDWR);
-    //         rt_device_write(dev,0,test_str,sizeof(test_str));
-    //         rt_thread_mdelay(1000);
-    //         // rt_device_close(dev);
-    //     }
-    // }
-
     // rt_pin_mode(GET_PIN(E,9),PIN_MODE_OUTPUT);
     // rt_pin_write(GET_PIN(E,9),PIN_HIGH);
 
@@ -149,11 +129,6 @@ int main(void)
     HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_3,data1,16);
     HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_4,data1,16);
 
-    // 挂载文件系统
-    dfs_mount("sd0","/","elm",0,0);
-
-    // open(filea,path,FA_CREATE_ALWAYS|FA_WRITE|FA_OPEN_ALWAYS); 
-
     // rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
     //                               RT_NULL,1024,5,5);
     // if(t != RT_NULL) rt_thread_startup(t);
@@ -162,15 +137,26 @@ int main(void)
                                     RT_NULL,1024,0,10);
     rt_thread_startup(t1);
 
-    // //RC接收机线程
-    // rt_thread_t rc_t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
-    //                                 RT_NULL,1024*5,0,5);
-    // rt_thread_startup(rc_t);
+    //RC接收机线程
+    rt_thread_t rc_t=rt_thread_create("rc_rx_data",rc_rx_thread_entry,
+                                    RT_NULL,1024,1,5);
+    rt_thread_startup(rc_t);
 
     //gps接收线程
     rt_thread_t gps_t=rt_thread_create("gps_rx_data",gps_rx_thread_entry,
-                                    RT_NULL,1024*5,1,5);
+                                    RT_NULL,1024,1,5);
     rt_thread_startup(gps_t);
+
+    // 挂载文件系统
+    int dfsret=dfs_mount("sd0","/","elm",0,0);
+    //log线程
+    if(dfsret!=-1)
+    {
+        rt_thread_t log_t=rt_thread_create("fly_log",fly_log_thread_entry,
+                                           RT_NULL,1024*2,3,10);
+        rt_thread_startup(log_t);
+    }
+    
 
     return 0;
 }
@@ -378,21 +364,6 @@ static rt_err_t rc_rx_cbk(rt_device_t dev, rt_size_t size)
  */
 void rc_rx_thread_entry(void *parameter)
 {
-    // while(1)
-    // {
-    //     char a[10]={0};
-    //     __itoa(g_bmi08x_acce.data.acce.z,a,10);
-
-    //     fd = open("a.txt", O_RDWR | O_APPEND | O_CREAT, 0);
-    //     // char aaa[]="appppp\r\n";
-    //     // write(fd, aaa, strlen(aaa));
-    //     write(fd, a, strlen(a));
-    //     write(fd, "\r\n", strlen("\r\n"));
-    //     close(fd);
-
-    //     rt_thread_mdelay(1000);
-    // }
-
     rt_device_t rc_serial = rt_device_find("uart4");
     if (!rc_serial)
     {
@@ -417,7 +388,7 @@ void rc_rx_thread_entry(void *parameter)
                RT_IPC_FLAG_FIFO);        /* 如果有多个线程等待，按照先来先得到的方法分配消息 */
 
     /* 以 DMA 接收及轮询发送方式打开串口设备 */
-    rt_device_open(rc_serial, RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_INT_TX);
+    rt_device_open(rc_serial, RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_INT_TX);
     /* 设置接收回调函数 */
     rt_device_set_rx_indicate(rc_serial, rc_rx_cbk);
 
@@ -430,14 +401,15 @@ void rc_rx_thread_entry(void *parameter)
         {
             /* 从串口读取数据 */
             rt_size_t rx_length = rt_device_read(rc_serial, 0, rc_rx_buffer, size);
-            rc_rx_buffer[rx_length] = '\0';
+            // rc_rx_buffer[rx_length] = '\0';
+            rt_kprintf("rc%d\n\r",rx_length);//测试用的
         }
     }
     
 }
 
 static struct rt_messagequeue gps_rx_mq;
-rt_mailbox_t gps_rx_mb;
+static char gps_rx_buffer[BSP_UART2_RX_BUFSIZE + 1];
 
 /**
  * @brief   遥控器接收回调函数
@@ -473,8 +445,6 @@ void gps_rx_thread_entry(void *parameter)
                sizeof(msg_pool),         /* 存放消息的缓冲区大小 */
                RT_IPC_FLAG_FIFO);        /* 如果有多个线程等待，按照先来先得到的方法分配消息 */
 
-    gps_rx_mb=rt_mb_create("gps_rx_mb", 1, RT_IPC_FLAG_FIFO);
-
     /* 以 DMA 接收及轮询发送方式打开串口设备 */
     rt_device_open(gps_serial, RT_DEVICE_FLAG_DMA_RX|RT_DEVICE_FLAG_INT_TX);
     /* 设置接收回调函数 */
@@ -488,9 +458,10 @@ void gps_rx_thread_entry(void *parameter)
         if (result == RT_EOK)
         {
             /* 从串口读取数据 */
-            rt_size_t rx_length = rt_device_read(gps_serial, 0, rc_rx_buffer, size);
+            rt_size_t rx_length = rt_device_read(gps_serial, 0, gps_rx_buffer, size);
             //开始解析吧
-            rt_kprintf("%d\n\r",rx_length);//测试用的
+            ubx_decode(gps_rx_buffer,rx_length);
+            // rt_kprintf("gps%d\n\r",rx_length);//测试用的
         }
         else if(result == -RT_ETIMEOUT)
         {
@@ -498,5 +469,72 @@ void gps_rx_thread_entry(void *parameter)
             struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;  /* 初始化配置参数 */
             config.baud_rate = BAUD_RATE_4800;        // 修改波特率为 9600
         }
+    }
+}
+
+#include <dfs_posix.h>
+
+int fd;
+void fly_log_thread_entry(void *parameter)
+{
+    //查找文件
+    char file_name[]={'0','0','0','.','c','s','v','\0'};
+    for (size_t i = 0; i < 1000; i++)
+    {
+        char ge=i%10+'0';
+        char shi=i/10%10+'0';
+        char bai=i/10/10%10+'0';
+        file_name[0]=bai;
+        file_name[1]=shi;
+        file_name[2]=ge;
+        fd=open(file_name,O_RDWR | O_APPEND | O_CREAT | O_EXCL,0);
+        if(fd==-1)//打开失败，文件已经存在
+        {
+            continue;
+        }
+        else
+        {
+            char* titel="acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z,baro";
+            write(fd, titel, strlen(titel));
+            write(fd, "\r\n", strlen("\r\n"));
+
+            close(fd);
+            break;
+        }
+    }
+    
+    while(1)
+    {
+        fd = open(file_name, O_RDWR | O_APPEND | O_CREAT, 0);
+
+        char a[10]={0};
+        __itoa(g_bmi08x_acce.data.acce.x,a,10);
+        write(fd, a, strlen(a));
+        write(fd, ",", strlen(","));
+        __itoa(g_bmi08x_acce.data.acce.y,a,10);
+        write(fd, a, strlen(a));
+        write(fd, ",", strlen(","));
+        __itoa(g_bmi08x_acce.data.acce.z,a,10);
+        write(fd, a, strlen(a));
+        write(fd, ",", strlen(","));
+        __itoa(g_bmi08x_gyro.data.gyro.x,a,10);
+        write(fd, a, strlen(a));
+        write(fd, ",", strlen(","));
+        __itoa(g_bmi08x_gyro.data.gyro.y,a,10);
+        write(fd, a, strlen(a));
+        write(fd, ",", strlen(","));
+        __itoa(g_bmi08x_gyro.data.gyro.z,a,10);
+        write(fd, a, strlen(a));
+        write(fd, ",", strlen(","));
+        __itoa(g_spl06_baro.data.baro,a,10);
+        write(fd, a, strlen(a));
+        write(fd, ",", strlen(","));
+
+        // char aaa[]="appppp\r\n";
+        // write(fd, aaa, strlen(aaa));
+        write(fd, "\r\n", strlen("\r\n"));
+        close(fd);
+
+        rt_thread_mdelay(500);
     }
 }

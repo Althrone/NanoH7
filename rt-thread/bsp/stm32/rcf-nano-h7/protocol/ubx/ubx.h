@@ -484,7 +484,8 @@ typedef struct
  * pubilc functions declaration
  *****************************************************************************/
 
-void ubx
+void ubx_decode(rt_uint8_t* pbuf,rt_uint32_t size);
+
 
 #ifdef __cplusplus
 }
