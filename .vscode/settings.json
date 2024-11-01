@@ -76,6 +76,7 @@
         "algorithm": "c",
         "cstdlib": "c",
         "usbd_msc.h": "c",
-        "usb_msc.h": "c"
+        "usb_msc.h": "c",
+        "iso15765.h": "c"
     }
 }
