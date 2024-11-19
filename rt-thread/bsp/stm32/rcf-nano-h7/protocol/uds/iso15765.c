@@ -87,7 +87,7 @@ static rt_int32_t _is_diag_addr(rt_uint32_t id)
 {
     rt_int32_t tbl_index=-1;
     
-    for (rt_size_t i = 0;; i < g_uds_addr_tbl.num_of_group; i++)//从表中查找
+    for (rt_size_t i = 0; i < g_uds_addr_tbl.num_of_group; i++)//从表中查找
     {
         if((g_uds_addr_tbl.group[i].diag_phy_req_addr==id)||
            (g_uds_addr_tbl.group[i].diag_func_req_addr==id))
@@ -116,7 +116,7 @@ static void AddrForamtAnalysis(rt_uint32_t id,rt_bool_t ide)
     rt_int32_t index=_is_diag_addr(id);
     if(index==-1)
     {
-        goto _exit;
+        // goto _exit;
     }
 
     switch (g_uds_addr_tbl.group[index].addr_format)
@@ -137,6 +137,6 @@ static void AddrForamtAnalysis(rt_uint32_t id,rt_bool_t ide)
         break;
     }
 
-  _exit:
+//   _exit:
     // return ret;
 }

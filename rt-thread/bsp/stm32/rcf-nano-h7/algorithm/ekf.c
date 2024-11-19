@@ -144,11 +144,13 @@ void v_update(int32_t a_x,int32_t a_y,int32_t a_z,uint32_t delta_usec)
 }
 
 /*
-┌  ┐   ┌  ┐        ┌  ┐      ┌ ┐
-│PN│   │PN│    ┌ ┐N │ax│      │0│
-│PE│ = │PE│ + 1/2 │T│ *│ay│*∆t + │0│*∆t
-│PD│   │PD│    └ ┘B │az│      │g│
-└  ┘k+1└  ┘k       └  ┘      └ ┘
+                 ╭             ╮
+┌  ┐   ┌  ┐      │ ┌  ┐   ┌  ┐ │
+│PN│   │PN│      │ │VN│   │VN│ │
+│PE│ = │PE│ + 1/2│ │VE│ + │VE│ │*∆t
+│PD│   │PD│      │ │VD│   │VD│ │
+└  ┘k+1└  ┘k     │ └  ┘k+1└  ┘k│
+                 ╰             ╯
 */
 
 /**
