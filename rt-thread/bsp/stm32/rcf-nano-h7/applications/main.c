@@ -14,6 +14,9 @@
 
 #include "arm_math.h"
 
+// #include "attitude.h"
+#include "MahonyAHRS.h"
+
 void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
 void gps_rx_thread_entry(void *parameter);
@@ -150,12 +153,12 @@ int main(void)
     // 挂载文件系统
     int dfsret=dfs_mount("sd0","/","elm",0,0);
     //log线程
-    if(dfsret!=-1)
-    {
-        rt_thread_t log_t=rt_thread_create("fly_log",fly_log_thread_entry,
-                                           RT_NULL,1024*2,3,10);
-        rt_thread_startup(log_t);
-    }
+    // if(dfsret!=-1)
+    // {
+    //     rt_thread_t log_t=rt_thread_create("fly_log",fly_log_thread_entry,
+    //                                        RT_NULL,1024*2,3,10);
+    //     rt_thread_startup(log_t);
+    // }
     
 
     return 0;
@@ -274,7 +277,56 @@ void imu_data_thrd(void *parameter)
         spl06_250ms_cnt++;
 
         //解算
+        // rt_kprintf("%d\t%d\t%d\n\r",g_bmi08x_acce.data.acce.x,
+        //                             -g_bmi08x_acce.data.acce.y,
+        //                             g_bmi08x_acce.data.acce.z);//测试用的
 
+        // rt_kprintf("%d\t%d\t%d\n\r",-g_bmi08x_gyro.data.gyro.x,
+        //                             g_bmi08x_gyro.data.gyro.y,
+        //                             -g_bmi08x_gyro.data.gyro.z);//测试用的
+
+        //从传感器坐标系转至机体坐标系
+        //机体坐标系 x↑ y→ z⊗
+        //bmi088方向 x↓y→z⊙
+        //但是手册说了If the sensor is at rest without any rotation and the force of gravity is acting contrary to the indicated directions, the output of the corresponding acceleration channel will be positive
+        //所以应该是y轴取负号
+        //我看了一下6050那一套代码，也是同方向取负号
+
+        // ATT_Mahony((float_t)g_bmi08x_acce.data.acce.x/1000,
+        //            -(float_t)g_bmi08x_acce.data.acce.y/1000,
+        //            (float_t)g_bmi08x_acce.data.acce.z/1000,
+        //            -g_bmi08x_gyro.data.gyro.x*0.01745f/1000,
+        //            g_bmi08x_gyro.data.gyro.y*0.01745f/1000,
+        //            -g_bmi08x_gyro.data.gyro.z*0.01745f/1000,
+        //            1,1,1);
+
+        extern volatile double_t Phi;
+        extern volatile double_t Theta;
+        extern volatile double_t Psi;
+
+        // Theta=Theta+((double_t)g_bmi08x_gyro.data.gyro.y)*0.0025/1000;
+        // Psi=Psi+((double_t)g_bmi08x_gyro.data.gyro.z)*0.0025/1000;
+        // Phi=Phi+((double_t)g_bmi08x_gyro.data.gyro.x+200)*0.0025/1000;
+
+        Theta+=g_bmi08x_gyro.data.gyro.y;
+        Psi+=g_bmi08x_gyro.data.gyro.z;
+        Phi+=g_bmi08x_gyro.data.gyro.x;
+
+        rt_kprintf("%d\t%d\t%d\n\r",Theta,
+                                    Psi,
+                                    Phi);//测试用的
+        
+
+        // if((Theta!=0)&&(Psi!=0)&&(Phi!=0))
+        // {
+        // MahonyAHRSupdateIMU((float_t)g_bmi08x_gyro.data.gyro.x*0.01745f/1000,
+        //            (float_t)g_bmi08x_gyro.data.gyro.y*0.01745f/1000,
+        //            (float_t)g_bmi08x_gyro.data.gyro.z*0.01745f/1000,
+        //            (float_t)g_bmi08x_acce.data.acce.x,
+        //            (float_t)g_bmi08x_acce.data.acce.y,
+        //            (float_t)g_bmi08x_acce.data.acce.z);
+        // }
+        
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);
     }
 }
