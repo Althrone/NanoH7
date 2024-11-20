@@ -18,10 +18,9 @@
 // #include <math.h>
 #include "arm_math.h"
 
-
-volatile double_t Phi=0;
-volatile double_t Theta=0;
-volatile double_t Psi=0;
+float32_t Phi __attribute__((section(".test_data")));
+float32_t Theta __attribute__((section(".test_data")));
+float32_t Psi __attribute__((section(".test_data")));
 
 //---------------------------------------------------------------------------------------------------
 // Definitions
@@ -220,9 +219,9 @@ void MahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float
 	q2 *= recipNorm;
 	q3 *= recipNorm;
 
-	// Phi=atan2(2*(q0*q1+q2*q3),1-2*(q1*q1+q2*q2))*53.7;
-    // Theta=asin(2*(q0*q2-q1*q3))*53.7;
-    // Psi=atan2(2*(q0*q3+q1*q2),1-2*(q2*q2+q3*q3))*53.7;
+	Phi=atan2(2*(q0*q1+q2*q3),1-2*(q1*q1+q2*q2))*53.7;
+    Theta=asin(2*(q0*q2-q1*q3))*53.7;
+    Psi=atan2(2*(q0*q3+q1*q2),1-2*(q2*q2+q3*q3))*53.7;
 }
 
 //---------------------------------------------------------------------------------------------------

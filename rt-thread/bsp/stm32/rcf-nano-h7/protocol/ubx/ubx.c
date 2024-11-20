@@ -40,7 +40,7 @@ static rt_err_t Fletcher8(const rt_uint8_t* pbuf,rt_size_t size,rt_uint8_t* ck_a
  * pubilc functions definition
  *****************************************************************************/
 
-UbxNavPvtStruct navpvt;
+UbxNavPvtStruct navpvt __attribute__((section(".test_data")));
 
 void ubx_decode(rt_uint8_t* pbuf,rt_uint32_t size)
 {
