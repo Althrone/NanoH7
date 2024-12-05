@@ -65,7 +65,7 @@ void ubx_decode(rt_uint8_t* pbuf,rt_uint32_t size)
         switch (pbuf[3])
         {
         case UBX_NAV_PVT_ID:
-            rt_memcpy((rt_uint8_t*)&navpvt,(rt_uint8_t*)&(pbuf[4]),len);
+            rt_memcpy((rt_uint8_t*)&navpvt,(rt_uint8_t*)&(pbuf[6]),len);
             break;
         
         default:

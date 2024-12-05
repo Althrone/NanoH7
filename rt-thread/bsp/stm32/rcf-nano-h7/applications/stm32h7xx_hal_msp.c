@@ -472,6 +472,30 @@ void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef *hfdcan)
 }
 
 /**
+ * @brief CRC MSP Initialization
+ *        This function configures the hardware resources used in this example
+ *        - Peripheral's clock enable
+ *        - Peripheral's GPIO Configuration
+ * @param hfdcan: FDCAN handle pointer
+ * @retval None
+ */
+void HAL_CRC_MspInit(CRC_HandleTypeDef *hcrc)
+{
+  if(hcrc->Instance==CRC)
+  {
+  /* USER CODE BEGIN CRC_MspInit 0 */
+
+  /* USER CODE END CRC_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_CRC_CLK_ENABLE();
+
+  /* USER CODE BEGIN CRC_MspInit 1 */
+
+  /* USER CODE END CRC_MspInit 1 */
+  }
+}
+
+/**
  * @brief PCD MSP Initialization
  *        This function configures the hardware resources used in this example
  *        - Peripheral's clock enable
