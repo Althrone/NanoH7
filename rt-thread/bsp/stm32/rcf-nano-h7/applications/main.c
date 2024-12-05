@@ -106,11 +106,24 @@ void lin_test(void)
 
 //1 625ns 0 312.5
 //250 3/4 3/8
+CRC_HandleTypeDef hcrc={
+    .Instance=CRC,
+    .Init.DefaultPolynomialUse=DEFAULT_POLYNOMIAL_DISABLE,
+    .Init.DefaultInitValueUse=DEFAULT_INIT_VALUE_DISABLE,
+    .Init.GeneratingPolynomial=0xD5,
+    .Init.CRCLength=CRC_POLYLENGTH_8B,
+    .Init.InitValue=0x00,
+    .Init.InputDataInversionMode=CRC_INPUTDATA_INVERSION_NONE,
+    .Init.OutputDataInversionMode=CRC_OUTPUTDATA_INVERSION_DISABLE,
+    .InputDataFormat=CRC_INPUTDATA_FORMAT_BYTES,
+};
 rt_uint32_t data1[16]={188,94,250,188,94,94,94,94,188,188,188,188,188,188,188};
 int main(void)
 {
     //dsplib测试
     float32_t a=arm_sin_f32(PI/2);
+
+    HAL_CRC_Init(&hcrc);
 
     rt_pin_mode(GET_PIN(D,9),PIN_MODE_OUTPUT);
     rt_pin_mode(GET_PIN(D,8),PIN_MODE_OUTPUT);
@@ -387,10 +400,6 @@ void rc_rx_thread_entry(void *parameter)
 
     struct serial_configure config = RT_SERIAL_CONFIG_DEFAULT;  /* 初始化配置参数 */
     config.baud_rate = 420000;        // 修改波特率为 9600
-    config.data_bits = DATA_BITS_8;           // 数据位 8
-    config.stop_bits = STOP_BITS_1;           // 停止位 1
-    config.bufsz     = 128;                // 修改缓冲区 rx buff size 为 128
-    config.parity    = PARITY_NONE;           // 无奇偶校验位
 
     rt_device_control(rc_serial, RT_DEVICE_CTRL_CONFIG, &config);
 
@@ -417,7 +426,8 @@ void rc_rx_thread_entry(void *parameter)
             /* 从串口读取数据 */
             rt_size_t rx_length = rt_device_read(rc_serial, 0, rc_rx_buffer, size);
             // rc_rx_buffer[rx_length] = '\0';
-            rt_kprintf("rc%d\n\r",rx_length);//测试用的
+            // rt_kprintf("rc%d\n\r",rx_length);//测试用的
+            crfs_decode(rc_rx_buffer,rx_length);
         }
     }
     

@@ -79,6 +79,7 @@
         "usb_msc.h": "c",
         "iso15765.h": "c",
         "*.ccccc": "cpp",
-        "mahonyahrs.h": "c"
+        "mahonyahrs.h": "c",
+        "stm32h7xx_hal_crc.h": "c"
     }
 }
