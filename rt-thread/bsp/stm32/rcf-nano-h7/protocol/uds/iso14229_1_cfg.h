@@ -1,15 +1,15 @@
 /******************************************************************************
  * NanoH7 - UAV firmware base on RT-Thread
- * Copyright (C) 2023 - 2024 Althrone <mail>
+ * Copyright (C) 2023 - 2025 Althrone <mail>
  * 
- * @file    rt-thread\bsp\stm32\rcf-nano-h7\protocol\uds\iso15765.h
+ * @file    rt-thread\bsp\stm32\rcf-nano-h7\protocol\uds\iso14229_1_cfg.h
  * 
- * ref: Specification of <ISO 15765-2:2016>
+ * ref: Specification of <some UM RM or Datasheet>
  *****************************************************************************/
 
 //不知道正则表达式怎么支持嵌套，暂时没法按google style风格命名define保护,请手动大写
-#ifndef NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_PROTOCOL_UDS_ISO15765_H_
-#define NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_PROTOCOL_UDS_ISO15765_H_
+#ifndef NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_PROTOCOL_UDS_ISO14229_1_CFG_H_
+#define NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_PROTOCOL_UDS_ISO14229_1_CFG_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,11 +19,11 @@ extern "C" {
  * includes
  *****************************************************************************/
 
-#include "rtthread.h"
-
 /******************************************************************************
  * macros
  *****************************************************************************/
+
+#define UDS_APP_RX_BUF_SIZE (8*1024)
 
 /******************************************************************************
  * pubilc types
@@ -41,4 +41,4 @@ extern "C" {
 }
 #endif
 
-#endif /* NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_PROTOCOL_UDS_ISO15765_H_ */
+#endif /* NANOH7_RT_THREAD_BSP_STM32_RCF_NANO_H7_PROTOCOL_UDS_ISO14229_1_CFG_H_ */

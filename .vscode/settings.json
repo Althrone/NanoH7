@@ -80,6 +80,9 @@
         "iso15765.h": "c",
         "*.ccccc": "cpp",
         "mahonyahrs.h": "c",
-        "stm32h7xx_hal_crc.h": "c"
+        "stm32h7xx_hal_crc.h": "c",
+        "iso15765_2.h": "c",
+        "iso15765_2_cfg.h": "c",
+        "can.h": "c"
     }
 }

@@ -425,16 +425,23 @@ void rc_rx_thread_entry(void *parameter)
         {
             /* 从串口读取数据 */
             rt_size_t rx_length = rt_device_read(rc_serial, 0, rc_rx_buffer, size);
-            // rc_rx_buffer[rx_length] = '\0';
             // rt_kprintf("rc%d\n\r",rx_length);//测试用的
-            crfs_decode(rc_rx_buffer,rx_length);
+
+            rt_kprintf("rc:%d\n\r",rx_length);//输出读取到的长度
+            for (size_t i = 0; i < rx_length; i++)
+            {
+                rt_kprintf("rc:%02X\n\r",rc_rx_buffer[i]);//在终端打印接收到的十六进制值
+            }
+
+            //解析数据
+            // crfs_decode(rc_rx_buffer,rx_length);
         }
     }
     
 }
 
 static struct rt_messagequeue gps_rx_mq;
-static char gps_rx_buffer[BSP_UART2_RX_BUFSIZE + 1];
+static rt_uint8_t gps_rx_buffer[BSP_UART2_RX_BUFSIZE + 1];
 
 /**
  * @brief   遥控器接收回调函数
@@ -484,9 +491,15 @@ void gps_rx_thread_entry(void *parameter)
         {
             /* 从串口读取数据 */
             rt_size_t rx_length = rt_device_read(gps_serial, 0, gps_rx_buffer, size);
+            
+            rt_kprintf("gps:%d\n\r",rx_length);//输出读取到的长度
+            for (size_t i = 0; i < rx_length; i++)
+            {
+                rt_kprintf("gps:%02X\n\r",gps_rx_buffer[i]);//在终端打印接收到的十六进制值
+            }
+
             //开始解析吧
-            ubx_decode(gps_rx_buffer,rx_length);
-            // rt_kprintf("gps%d\n\r",rx_length);//测试用的
+            // ubx_decode(gps_rx_buffer,rx_length);
         }
         else if(result == -RT_ETIMEOUT)
         {
