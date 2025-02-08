@@ -8,7 +8,7 @@
             "name": "debug",
             "type": "cppdbg",
             "request": "launch",
-            "program": "D:/Project/UAV/NanoH7/Firmware/build/RcF_NanoH7_RTT.elf",
+            "program": "D:/Project/NanoH7/build/RcF_NanoH7_RTT.elf",
             "args": [],
             "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
@@ -18,7 +18,7 @@
             "miDebuggerPath": "arm-none-eabi-gdb.exe",
             "setupCommands": [
                 {"text": "target remote localhost:3333"},
-                {"text": "file D:/Project/UAV/NanoH7/Firmware/build/RcF_NanoH7_RTT.elf"},
+                {"text": "file D:/Project/NanoH7/build/RcF_NanoH7_RTT.elf"},
                 {"text": "monitor reset"},
                 {"text": "monitor halt"},
                 {"text": "load"},

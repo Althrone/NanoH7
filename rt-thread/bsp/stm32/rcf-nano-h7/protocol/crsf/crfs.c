@@ -95,6 +95,8 @@ void crfs_decode(rt_uint8_t* pbuf,rt_uint32_t size)
         ch13=crsf_channels_value.ch13;
         ch14=crsf_channels_value.ch14;
         ch15=crsf_channels_value.ch15;
+        rt_kprintf("%03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x\n\r",
+                   ch0,ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8,ch9,ch10,ch11,ch12,ch13,ch14,ch15);
         break;
     
     default:

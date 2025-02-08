@@ -35,7 +35,9 @@
                 "__VFP_FP__",
                 "USE_HAL_DRIVER",
                 "HSE_VALUE=8000000UL",
-                "USE_FULL_LL_DRIVER"
+                "USE_FULL_LL_DRIVER",
+                "BSP_SCB_ENABLE_I_CACHE",
+                "BSP_SCB_ENABLE_D_CACHE"
                 // "__ARM_ARCH_7EM__"
             ],
             // "compilerPath": "D:\\NXP\\S32DS.3.4\\S32DS\\build_tools\\gcc_v10.2\\gcc-10.2-arm32-eabi\\bin\\arm-none-eabi-gcc.exe",
