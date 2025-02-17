@@ -101,6 +101,10 @@ extern "C" {
 #include "drivers/can.h"
 #endif /* RT_USING_CAN */
 
+#ifdef RT_USING_CANX
+#include "drivers/canx.h"
+#endif /* RT_USING_CANX */
+
 #ifdef RT_USING_HWTIMER
 #include "drivers/hwtimer.h"
 #endif /* RT_USING_HWTIMER */

@@ -107,6 +107,91 @@ typedef struct
     uint8_t satellite_count;    //星数
 }CrfsGpsStruct;
 
+typedef struct
+{
+    int16_t vertical_speed;     // cm/s             (e.g. 1.5m/s sent as 150)
+}CrfsVarioStruct;
+
+typedef struct
+{
+    int16_t voltage;    //in dV (Big Endian)
+    //e.g. 25.2V sent as 0x00FC / 252
+    //e.g. 3.7V sent as 0x0025 / 37
+    //e.g. 3276.7V sent as 0x7FFF / 32767
+    int16_t current;    //in dA (Big Endian)
+    //e.g. 18.9A sent as 0x00BD / 189
+    //e.g. 109.4A sent as 0x0446 / 1094
+    int32_t used_capacity;  // in mAh
+    // int24_t used_capacity;  // in mAh
+    //e.g. 2199mAh used sent as 0x0897 / 2199
+    int8_t estimated_battery_remaining; //in percent (%)
+    //e.g. 100% full battery sent as 0x64 / 100
+    //e.g. 20% battery remaining sent as 0x14 / 20
+}CrfsBatteryStruct;
+
+typedef struct
+{
+    uint16_t altitude;
+    //If the high bit is not set, altitude value is in decimeters + 10000, allowing altitudes of -1000.0m to 2276.7m
+    //10m sent as (100 + 10000) = 0x2774 / 10100
+    //-10m sent as (-100 + 10000) = 0x26AC / 9900
+    //If the high bit is set, altitude value is in meters, allowing altitudes of 0m - 32767m
+    //10m sent as (10 | 0x8000) = 0x800A / 32768
+    int16_t vertical_speed; // (optional) in cm/s (e.g. 1.5m/s sent as 150)
+
+    //Vertical speed is listed as optional. This means if the payload is only 2 bytes, it just contains the altitude. If the payload is 4 bytes, it also includes the vertical speed.
+}CrfsBaroStruct;
+
+typedef struct
+{
+    uint16_t origin_device_address;     //(Big Endian)
+    //e.g. Flight Controller is online sends 0xC8 / 200CRSF_ADDRESS_FLIGHT_CONTROLLER
+}CrfsHeartBeatStruct;//CRSFv3
+
+typedef struct
+{
+    uint8_t uplink_rssi_ant1;           // ( dBm * -1 )
+    uint8_t uplink_rssi_ant2;           // ( dBm * -1 )
+    uint8_t uplink_link_quality;        //Package success rate /  ( % )
+    //Uplink LQ of 0 may used to indicate a disconnected status to the handset
+    int8_t uplink_snr;                  // ( dB, or dB*4 for TBS I believe )
+    uint8_t diversity_active_antenna;   // ( enum ant. 1 = 0, ant. 2 = 1 )
+    uint8_t rf_mode;                    // ( 500Hz, 250Hz etc, varies based on ELRS Band or TBS )
+    uint8_t uplink_tx_power;            // ( enum 0mW = 0, 10mW, 25 mW, 100 mW, 500 mW, 1000 mW, 2000mW, 50mW )
+    uint8_t downlink_rssi;              //( dBm * -1 )
+    uint8_t downlink_link_quality;      //package success rate /  ( % )
+    int8_t downlink_snr;                //( dB )
+}CrfsLinkStatisticsStruct;
+
+typedef struct
+{
+    uint8_t config_byte;
+    //bits 0-4 (5 bits) First channel number appearing in this packet (0 = ch1)
+    //bits 5-6 (2 bits) Channel resolution
+    //0 (b00) - 10 bits/channel
+    //1 (b01) - 11 bits/channel
+    //2 (b10) - 12 bits/channel
+    //3 (b11) - 13 bits/channel
+    //bit 7 (1 bit) reserved configuration bit
+    uint8_t data[];// - channel data packed
+}CrfsSubsetChannelsStruct;//CRSFv3
+
+typedef struct
+{
+    int16_t pitch;// angle in radians/10000
+    // e.g. 180 degrees sent as 0x7AB7 / 31415
+    // e.g. 45 degrees sent as 0x1EAD / 7853
+    // e.g. -45 degrees sent as 0xE153 / -7853
+    int16_t roll;
+    int16_t yaw;
+    // All values must be in the +/-180 degree +/-PI radian range.
+}CrfsUasAttitudeStruct;
+
+typedef struct
+{
+    char flight_mode[14];// - Null-terminated string. Max length 14 characters including the null / 13 characters of string data.
+    //e.g. ACRO sent as 41 43 52 4F 00
+}CrfsFlightModeStruct;
 
 /******************************************************************************
  * pubilc types

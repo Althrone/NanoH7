@@ -250,6 +250,7 @@
 #define RT_USING_I2C_BITOPS//位操作的意思就是模拟IIC，spi也有类似的
 #define RT_USING_PIN
 #define RT_USING_CAN
+#define RT_USING_CANX
 #define RT_USING_ADC
 #define RT_USING_SPI
 #define RT_USING_USB_DEVICE
