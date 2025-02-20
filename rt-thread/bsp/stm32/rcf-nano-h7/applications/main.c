@@ -295,6 +295,7 @@ void imu_data_thrd(void *parameter)
         //但是手册说了If the sensor is at rest without any rotation and the force of gravity is acting contrary to the indicated directions, the output of the corresponding acceleration channel will be positive
         //所以应该是y轴取负号
         //我看了一下6050那一套代码，也是同方向取负号
+        //https://blog.csdn.net/weixin_42918498/article/details/121052607
 
         MahonyAHRSupdateIMU(-g_bmi08x_gyro.data.gyro.x*0.01745f/1000,
                             g_bmi08x_gyro.data.gyro.y*0.01745f/1000,
@@ -302,6 +303,8 @@ void imu_data_thrd(void *parameter)
                             g_bmi08x_acce.data.acce.x,
                             -g_bmi08x_acce.data.acce.y,
                             g_bmi08x_acce.data.acce.z);
+
+        
 
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);
     }
