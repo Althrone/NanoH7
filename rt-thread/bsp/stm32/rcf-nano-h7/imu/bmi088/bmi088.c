@@ -407,7 +407,7 @@ rt_err_t bmi088_acce_init(rt_sensor_t sensor)
     //开启同步功能
     /*! Mode (0 = off, 1 = 400Hz, 2 = 1kHz, 3 = 2kHz) */
     rt_uint16_t sync_cfg=0x0001;
-    bmi08x_config_feature(sensor,0x02,&sync_cfg,1);
+    bmi08x_config_feature(sensor,0x04,&sync_cfg,1);
     gs_bmi08x_is_sync_mode=RT_TRUE;
     // gs_bmi08x_acce_range=4;//切换到同步模式，默认的范围变成4g
 
@@ -551,7 +551,7 @@ rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_u
     // struct rt_spi_device *spi_dev=RT_NULL;
     // spi_dev=(struct rt_spi_device *)rt_device_find("spi10");
 
-    rt_size_t read_length = (feature_addr*2) + (feature_len*2);
+    rt_size_t read_length = feature_addr+2;
 	rt_uint8_t feature_data[read_length];
 
     //读取 FEATURE_CFG 寄存器内容
@@ -562,8 +562,8 @@ rt_err_t bmi08x_config_feature(rt_sensor_t sensor, rt_uint8_t feature_addr, rt_u
     for (rt_size_t i = 0; i < feature_len; ++i)
     {
         /* Be careful: the feature config space is 16bit aligned! */
-        feature_data[(feature_addr*2) + (i*2)] = feature_cfg[i]&0xFF;
-        feature_data[(feature_addr*2) + (i*2) + 1] = feature_cfg[i]>>8;
+        feature_data[feature_addr] = feature_cfg[i]&0xFF;
+        feature_data[feature_addr + 1] = feature_cfg[i]>>8;
     }
 
     //写回去
@@ -818,6 +818,10 @@ rt_size_t _bmi088_acce_polling_get_data(struct rt_sensor_device *sensor, struct 
         return 0;
 
     rt_int16_t z=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|((rt_uint16_t)recv_buf[3]<<8));
+
+    x*=-1;
+    // y*=-1;
+    z*=-1;
 
     sensor_data->type = RT_SENSOR_CLASS_ACCE;
     sensor_data->data.acce.x = x/32768.f*gs_bmi08x_acce_range*1000;//mG所以*1000
@@ -1077,10 +1081,14 @@ rt_size_t _bmi08x_gyro_polling_get_data(struct rt_sensor_device *sensor, struct 
     rt_int16_t y=(rt_int16_t)(((rt_uint16_t)recv_buf[2])|(((rt_uint16_t)recv_buf[3])<<8));
     rt_int16_t z=(rt_int16_t)(((rt_uint16_t)recv_buf[4])|(((rt_uint16_t)recv_buf[5])<<8));
 
+    x*=-1;
+    // y*=-1;
+    z*=-1;
+
     sensor_data->type = RT_SENSOR_CLASS_GYRO;
-    sensor_data->data.acce.x = x/32768.f*gs_bmi08x_gyro_range*1000;//mdps所以*1000
-    sensor_data->data.acce.y = y/32768.f*gs_bmi08x_gyro_range*1000;
-    sensor_data->data.acce.z = z/32768.f*gs_bmi08x_gyro_range*1000;
+    sensor_data->data.gyro.x = x/32768.f*gs_bmi08x_gyro_range*1000;//mdps所以*1000
+    sensor_data->data.gyro.y = y/32768.f*gs_bmi08x_gyro_range*1000;
+    sensor_data->data.gyro.z = z/32768.f*gs_bmi08x_gyro_range*1000;
     sensor_data->timestamp = rt_sensor_get_ts();
 
     return 1;

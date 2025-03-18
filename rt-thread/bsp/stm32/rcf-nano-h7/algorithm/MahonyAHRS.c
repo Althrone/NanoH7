@@ -173,6 +173,10 @@ void MahonyAHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float
 		halfvx = q1 * q3 - q0 * q2;
 		halfvy = q0 * q1 + q2 * q3;
 		halfvz = q0 * q0 - 0.5f + q3 * q3;
+
+		halfvx*=-1;
+		halfvy*=-1;
+		halfvz*=-1;
 	
 		// Error is sum of cross product between estimated and measured direction of gravity
 		halfex = (ay * halfvz - az * halfvy);

@@ -188,7 +188,7 @@ $(OBJS_S):$(SRCS_S)
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
 	$(CC) $(OBJECTS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map \
--Wl,--start-group -lc -lm -Wl,--end-group -Wl,-gc-sections \
+-Wl,--start-group -lc -lm -Wl,--end-group -Wl,-gc-sections -Xlinker --print-memory-usage \
 -lnosys \
 -L ./rt-thread/bsp/stm32/libraries/STM32H7xx_HAL/CMSIS/DSP/Lib/GCC -larm_cortexM7lfdp_math \
 -o $@

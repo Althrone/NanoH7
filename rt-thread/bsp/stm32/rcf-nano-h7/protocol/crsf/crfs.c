@@ -43,6 +43,8 @@ uint16_t ch13;
 uint16_t ch14;
 uint16_t ch15;
 
+CrfsLinkStatisticsStruct g_crsf_link __attribute__((section(".test_data")));
+
 /******************************************************************************
  * private variables
  *****************************************************************************/
@@ -95,10 +97,22 @@ void crfs_decode(rt_uint8_t* pbuf,rt_uint32_t size)
         ch13=crsf_channels_value.ch13;
         ch14=crsf_channels_value.ch14;
         ch15=crsf_channels_value.ch15;
+        rt_kprintf("%03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x\n\r",
+                   ch0,ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8,ch9,ch10,ch11,ch12,ch13,ch14,ch15);
+        break;
+    case CRSF_FRAMETYPE_LINK_STATISTICS:
+
+        rt_memcpy(&g_crsf_link,&pbuf[3],sizeof(g_crsf_link));
+
+        // rt_kprintf("up ant1 rssi %d\n\r",g_crsf_link.uplink_rssi_ant1);
+        // rt_kprintf("up ant2 rssi %d\n\r",g_crsf_link.uplink_rssi_ant2);
+        // rt_kprintf("link quality %d\%\n\r",g_crsf_link.uplink_link_quality);
+        // rt_kprintf("rf mode %dHz\n\r",g_crsf_link.rf_mode);
+        // rt_kprintf("tx power %dmW\n\r",g_crsf_link.uplink_tx_power);
+
         // rt_kprintf("%03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x %03x\n\r",
         //            ch0,ch1,ch2,ch3,ch4,ch5,ch6,ch7,ch8,ch9,ch10,ch11,ch12,ch13,ch14,ch15);
         break;
-    
     default:
         break;
     }

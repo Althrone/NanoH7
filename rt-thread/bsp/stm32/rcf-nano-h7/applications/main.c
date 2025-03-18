@@ -289,6 +289,14 @@ void imu_data_thrd(void *parameter)
 
         spl06_250ms_cnt++;
 
+        // rt_kprintf("ax:%d\tay:%d\taz:%d\tgx:%d\tgy:%d\tgz:%d\t\n\r",
+        //            -g_bmi08x_gyro.data.acce.x,
+        //            g_bmi08x_gyro.data.acce.y,
+        //            -g_bmi08x_gyro.data.acce.z,
+        //            g_bmi08x_gyro.data.gyro.x,
+        //            -g_bmi08x_gyro.data.gyro.y,
+        //            g_bmi08x_gyro.data.gyro.z);//输出读取到的长度
+
         //从传感器坐标系转至机体坐标系
         //机体坐标系 x↑ y→ z⊗
         //bmi088方向 x↓y→z⊙
@@ -297,14 +305,12 @@ void imu_data_thrd(void *parameter)
         //我看了一下6050那一套代码，也是同方向取负号
         //https://blog.csdn.net/weixin_42918498/article/details/121052607
 
-        MahonyAHRSupdateIMU(-g_bmi08x_gyro.data.gyro.x*0.01745f/1000,
+        MahonyAHRSupdateIMU(g_bmi08x_gyro.data.gyro.x*0.01745f/1000,
                             g_bmi08x_gyro.data.gyro.y*0.01745f/1000,
-                            -g_bmi08x_gyro.data.gyro.z*0.01745f/1000,
+                            g_bmi08x_gyro.data.gyro.z*0.01745f/1000,
                             g_bmi08x_acce.data.acce.x,
-                            -g_bmi08x_acce.data.acce.y,
+                            g_bmi08x_acce.data.acce.y,
                             g_bmi08x_acce.data.acce.z);
-
-        
 
         rt_sem_take(tim_sem, RT_WAITING_FOREVER);
     }
@@ -490,7 +496,7 @@ void gps_rx_thread_entry(void *parameter)
     {
         rt_size_t size;
         /* 从消息队列中读取消息 */
-        rt_err_t result = rt_mq_recv(&gps_rx_mq, &size, sizeof(size), 400);
+        rt_err_t result = rt_mq_recv(&gps_rx_mq, &size, sizeof(size), RT_WAITING_FOREVER);
         if (result == RT_EOK)
         {
             /* 从串口读取数据 */
