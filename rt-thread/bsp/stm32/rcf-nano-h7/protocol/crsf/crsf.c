@@ -2,7 +2,7 @@
  * NanoH7 - UAV firmware base on RT-Thread
  * Copyright (C) 2023 - 2024 Althrone <mail>
  * 
- * @file    rt-thread\bsp\stm32\rcf-nano-h7\protocol\crsf\crfs.c
+ * @file    rt-thread\bsp\stm32\rcf-nano-h7\protocol\crsf\crsf.c
  * 
  * ref: Specification of <some UM RM or Datasheet>
  *****************************************************************************/
@@ -11,7 +11,7 @@
  * includes
  *****************************************************************************/
 
-#include "crfs.h"
+#include "crsf.h"
 
 /******************************************************************************
  * private macros
@@ -43,7 +43,7 @@ uint16_t ch13;
 uint16_t ch14;
 uint16_t ch15;
 
-CrfsLinkStatisticsStruct g_crsf_link __attribute__((section(".test_data")));
+CrsfLinkStatisticsStruct g_crsf_link __attribute__((section(".test_data")));
 
 /******************************************************************************
  * private variables
@@ -59,7 +59,7 @@ extern CRC_HandleTypeDef hcrc;
  * pubilc functions definition
  *****************************************************************************/
 
-void crfs_decode(rt_uint8_t* pbuf,rt_uint32_t size)
+void crsf_decode(rt_uint8_t* pbuf,rt_uint32_t size)
 {
     //检查开头是不是0xC8
     if(pbuf[0]!=0xC8)
@@ -76,7 +76,7 @@ void crfs_decode(rt_uint8_t* pbuf,rt_uint32_t size)
     if(crc!=pbuf[len+1])
         return;
 
-    switch ((CrfsPacketTypesEnum)pbuf[2])
+    switch ((CrsfPacketTypesEnum)pbuf[2])
     {
     case CRSF_FRAMETYPE_RC_CHANNELS_PACKED:
 

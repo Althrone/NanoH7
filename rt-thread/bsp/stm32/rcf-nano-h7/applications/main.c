@@ -444,7 +444,7 @@ void rc_rx_thread_entry(void *parameter)
             // rt_kprintf("\n\r");//输出读取到的长度
 
             //解析数据
-            crfs_decode(rc_rx_buffer,rx_length);
+            crsf_decode(rc_rx_buffer,rx_length);
         }
     }
     

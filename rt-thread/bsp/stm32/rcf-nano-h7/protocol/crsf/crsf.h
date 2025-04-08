@@ -2,14 +2,14 @@
  * NanoH7 - UAV firmware base on RT-Thread
  * Copyright (C) 2023 - 2024 Althrone <mail>
  * 
- * @file    rt-thread\bsp\stm32\rcf-nano-h7\protocol\crsf\crfs.h
+ * @file    rt-thread\bsp\stm32\rcf-nano-h7\protocol\crsf\crsf.h
  * 
  * ref: Specification of <some UM RM or Datasheet>
  *****************************************************************************/
 
 //不知道正则表达式怎么支持嵌套，暂时没法按google style风格命名define保护,请手动大写
-#ifndef NANOH7_rt_thread_bsp_stm32_rcf_nano_h7_protocol_crsf_crfs_h_
-#define NANOH7_rt_thread_bsp_stm32_rcf_nano_h7_protocol_crsf_crfs_h_
+#ifndef NANOH7_rt_thread_bsp_stm32_rcf_nano_h7_protocol_crsf_crsf_h_
+#define NANOH7_rt_thread_bsp_stm32_rcf_nano_h7_protocol_crsf_crsf_h_
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +55,7 @@ typedef enum
     CRSF_FRAMETYPE_MSP_WRITE                    = 0x7C, //MSP parameter write
     CRSF_FRAMETYPE_DISPLAYPORT_CMD              = 0x7D, //(CRSFv3) MSP DisplayPort control command
     CRSF_FRAMETYPE_ARDUPILOT_RESP               = 0x80, //Ardupilot output?
-}CrfsPacketTypesEnum;
+}CrsfPacketTypesEnum;
 
 typedef enum
 {
@@ -74,7 +74,7 @@ typedef enum
     CRSF_ADDRESS_CRSF_RECEIVER      = 0xEC, //Receiver hardware (TBS Nano RX / RadioMaster RP1)
     CRSF_ADDRESS_CRSF_TRANSMITTER   = 0xEE, //Transmitter module, not handset
     CRSF_ADDRESS_ELRS_LUA           = 0xEF, //!!Non-Standard!! Source address used by ExpressLRS Lua
-}CrfsAddrEnum;
+}CrsfAddrEnum;
 
 typedef struct __attribute__((packed))
 {
@@ -105,12 +105,12 @@ typedef struct
     int16_t ground_course;      //degrees * 100,    e.g. 90 degrees sent as 0x2328 / 9000
     uint16_t altitude;          //meters + 1000m,   e.g. 10m sent as 0x03F2 / 1010
     uint8_t satellite_count;    //星数
-}CrfsGpsStruct;
+}CrsfGpsStruct;
 
 typedef struct
 {
     int16_t vertical_speed;     // cm/s             (e.g. 1.5m/s sent as 150)
-}CrfsVarioStruct;
+}CrsfVarioStruct;
 
 typedef struct
 {
@@ -127,7 +127,7 @@ typedef struct
     int8_t estimated_battery_remaining; //in percent (%)
     //e.g. 100% full battery sent as 0x64 / 100
     //e.g. 20% battery remaining sent as 0x14 / 20
-}CrfsBatteryStruct;
+}CrsfBatteryStruct;
 
 typedef struct
 {
@@ -140,13 +140,13 @@ typedef struct
     int16_t vertical_speed; // (optional) in cm/s (e.g. 1.5m/s sent as 150)
 
     //Vertical speed is listed as optional. This means if the payload is only 2 bytes, it just contains the altitude. If the payload is 4 bytes, it also includes the vertical speed.
-}CrfsBaroStruct;
+}CrsfBaroStruct;
 
 typedef struct
 {
     uint16_t origin_device_address;     //(Big Endian)
     //e.g. Flight Controller is online sends 0xC8 / 200CRSF_ADDRESS_FLIGHT_CONTROLLER
-}CrfsHeartBeatStruct;//CRSFv3
+}CrsfHeartBeatStruct;//CRSFv3
 
 typedef struct
 {
@@ -161,7 +161,7 @@ typedef struct
     uint8_t downlink_rssi;              //( dBm * -1 )
     uint8_t downlink_link_quality;      //package success rate /  ( % )
     int8_t downlink_snr;                //( dB )
-}CrfsLinkStatisticsStruct;
+}CrsfLinkStatisticsStruct;
 
 typedef struct
 {
@@ -174,7 +174,7 @@ typedef struct
     //3 (b11) - 13 bits/channel
     //bit 7 (1 bit) reserved configuration bit
     uint8_t data[];// - channel data packed
-}CrfsSubsetChannelsStruct;//CRSFv3
+}CrsfSubsetChannelsStruct;//CRSFv3
 
 typedef struct
 {
@@ -185,13 +185,13 @@ typedef struct
     int16_t roll;
     int16_t yaw;
     // All values must be in the +/-180 degree +/-PI radian range.
-}CrfsUasAttitudeStruct;
+}CrsfUasAttitudeStruct;
 
 typedef struct
 {
     char flight_mode[14];// - Null-terminated string. Max length 14 characters including the null / 13 characters of string data.
     //e.g. ACRO sent as 41 43 52 4F 00
-}CrfsFlightModeStruct;
+}CrsfFlightModeStruct;
 
 /******************************************************************************
  * pubilc types
@@ -204,10 +204,10 @@ typedef struct
 /******************************************************************************
  * pubilc functions declaration
  *****************************************************************************/
-void crfs_decode(rt_uint8_t* pbuf,rt_uint32_t size);
+void crsf_decode(rt_uint8_t* pbuf,rt_uint32_t size);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* NANOH7_rt_thread_bsp_stm32_rcf_nano_h7_protocol_crsf_crfs_h_ */
+#endif /* NANOH7_rt_thread_bsp_stm32_rcf_nano_h7_protocol_crsf_crsf_h_ */
