@@ -74,16 +74,22 @@ struct canx_configure
 
 typedef enum
 {
-    kCanxRxMsg,
-    kCanxTxMsg,
-}CanxMsgType;
+  kOpenCanSend,
+  kOpenCanRecv,
+}OpenCanMsgDirEnum;
+
+typedef enum
+{
+    kOpenCanStdId,
+    kOpenCanExtId,
+}OpenCanIdType;
 
 typedef struct
 {
     char name[16];
     rt_uint32_t id;
     rt_uint8_t len;
-    CanxMsgType type;
+    OpenCanMsgDirEnum dir;
     rt_uint16_t time;
 }CanxMatrixStruct;
 
