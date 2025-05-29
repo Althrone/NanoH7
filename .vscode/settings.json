@@ -85,6 +85,8 @@
         "iso15765_2_cfg.h": "c",
         "can.h": "c",
         "serialx.h": "c",
-        "canx.h": "c"
+        "canx.h": "c",
+        "lin.h": "c",
+        "mcan_config.h": "c"
     }
 }

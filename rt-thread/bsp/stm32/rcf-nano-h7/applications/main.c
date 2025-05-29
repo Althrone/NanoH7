@@ -17,6 +17,8 @@
 // #include "attitude.h"
 #include "MahonyAHRS.h"
 
+#include "mcan_config.h"
+
 void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
 void gps_rx_thread_entry(void *parameter);
@@ -122,6 +124,8 @@ int main(void)
 {
     //dsplib测试
     float32_t a=arm_sin_f32(PI/2);
+    _mcan_test();
+    _mcan_msg_ram_auto_cfg();
 
     HAL_CRC_Init(&hcrc);
 
@@ -502,7 +506,7 @@ void gps_rx_thread_entry(void *parameter)
             /* 从串口读取数据 */
             rt_size_t rx_length = rt_device_read(gps_serial, 0, gps_rx_buffer, size);
             
-            // rt_kprintf("gps:%d\n\r",rx_length);//输出读取到的长度
+            rt_kprintf("gps:%d\n\r",rx_length);//输出读取到的长度
             // rt_kprintf("gps:");//在终端打印接收到的十六进制值
             // for (size_t i = 0; i < rx_length; i++)
             // {

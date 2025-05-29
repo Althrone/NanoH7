@@ -126,6 +126,7 @@ extern "C" {
 // #include "h7/usbd_config.h"
 #include "dma_config.h"
 #include "uart_config.h"
+#include "mcan_config.h"
 #include "spi_config.h"
 #include "qspi_config.h"
 #include "adc_config.h"

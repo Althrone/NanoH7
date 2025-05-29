@@ -57,21 +57,6 @@ struct canx_configure
     canx_res_config termination_resistor;
 };
 
-/* Default config for canx_configure structure */
-// #define RT_CANX_CONFIG_DEFAULT          \
-// {                                       \
-//     {                                   \
-//         1000000,                        \
-//         800,                            \
-//     }                                   \
-// #ifdef RT_CANX_USING_FD
-//     {
-//         5000000,
-//         800,
-//     }
-// #endif /* RT_CANX_USING_FD */
-// }
-
 typedef enum
 {
   kOpenCanSend,
@@ -80,9 +65,35 @@ typedef enum
 
 typedef enum
 {
+  kOpenCanBuf,
+  kOpenCanFifo,
+}OpenCanStoreType;
+
+typedef enum
+{
     kOpenCanStdId,
     kOpenCanExtId,
 }OpenCanIdType;
+
+typedef enum
+{
+    kOpenCan0,
+    kOpenCan1,
+    kOpenCan2,
+    kOpenCan3,
+    kOpenCan4,
+    kOpenCan5,
+    kOpenCan6,
+    kOpenCan7,
+    kOpenCan8,
+    kOpenCan12,
+    kOpenCan16,
+    kOpenCan20,
+    kOpenCan24,
+    kOpenCan32,
+    kOpenCan48,
+    kOpenCan64,
+}OpenCanDlc;
 
 typedef struct
 {

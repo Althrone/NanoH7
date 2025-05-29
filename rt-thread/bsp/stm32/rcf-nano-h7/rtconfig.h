@@ -252,6 +252,7 @@
 #define RT_USING_PIN
 #define RT_USING_CAN
 #define RT_USING_CANX
+#define RT_USING_LIN
 #define RT_USING_ADC
 #define RT_USING_SPI
 #define RT_USING_USB_DEVICE
@@ -405,6 +406,7 @@
 // #define BSP_SPI1_RX_USING_DMA
 // #define BSP_SPI1_TX_USING_DMA
 #define BSP_USING_FDCAN1
+#define BSP_USING_MCAN1
 #define BSP_USING_SDIO
 #define BSP_USING_SDIO1
 #define BSP_USING_USBD

@@ -85,6 +85,9 @@ extern "C" {
 #define BSP_UART4_TX_PIN "PA0"
 #define BSP_UART4_RX_PIN "PA1"
 
+#define BSP_MCAN1_TX_PIN "PB9"
+#define BSP_MCAN1_RX_PIN "PB8"
+
 #define BSP_I2C2_SCL_PIN        GET_PIN(B,10)
 #define BSP_I2C2_SDA_PIN        GET_PIN(B,11)
 
