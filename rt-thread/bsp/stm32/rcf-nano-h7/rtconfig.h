@@ -252,6 +252,7 @@
 #define RT_USING_PIN
 #define RT_USING_CAN
 #define RT_USING_CANX
+#define RT_CANX_CALC_BITTIMING
 #define RT_USING_LIN
 #define RT_USING_ADC
 #define RT_USING_SPI

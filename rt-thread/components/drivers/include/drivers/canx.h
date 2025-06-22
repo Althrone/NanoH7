@@ -24,7 +24,33 @@ extern "C" {
  * macros
  *****************************************************************************/
 
-#define RT_CANX_CALC_BITTIMING
+#ifdef RT_CANX_USING_FD
+  #ifdef RT_CANX_CALC_BITTIMING
+    #define RT_CANX_CONFIGDEFAULT         \
+    {                                     \
+        1*1000*1000,  /* 1Mbps */         \
+        8000          /* 80.00% */        \
+        5*1000*1000,  /* 5Mbps */         \
+        8000          /* 80.00% */        \
+    }
+  #else
+    #define RT_CANX_CONFIGDEFAULT         \
+    {                                     \
+        1,  /* 1Mbps */         \
+        2          /* 80.00% */        \
+        3,  /* 5Mbps */         \
+        4          /* 80.00% */        \
+        1,  /* 1Mbps */         \
+        2          /* 80.00% */        \
+        3,  /* 5Mbps */         \
+        4          /* 80.00% */        \
+    }
+  #endif /* RT_CANX_CALC_BITTIMING */
+#else /* Classic CAN */
+
+#endif /* RT_CANX_USING_FD */
+
+
 
 typedef enum
 {
@@ -38,8 +64,9 @@ typedef struct
 {
   #ifdef RT_CANX_CALC_BITTIMING
     rt_uint32_t baud_rate;//波特率误差±1%以内，优先满足
-    rt_uint16_t sample_point_permille;
+    rt_uint16_t sample_point;//万分数，比如85.00%输入8500
   #else
+    //canx定义的四个参数为直接计算参数，对应寄存器是否需要-1要自行实现
     rt_uint16_t brp;
     rt_uint16_t sjw;
     rt_uint16_t seg1;
@@ -59,50 +86,21 @@ struct canx_configure
 
 typedef enum
 {
+  kOpenCanClassic,
+  kOpenCanFd,
+}OpenCanFrameFmt;
+
+typedef enum
+{
   kOpenCanSend,
   kOpenCanRecv,
 }OpenCanMsgDirEnum;
 
 typedef enum
 {
-  kOpenCanBuf,
-  kOpenCanFifo,
-}OpenCanStoreType;
-
-typedef enum
-{
     kOpenCanStdId,
     kOpenCanExtId,
 }OpenCanIdType;
-
-typedef enum
-{
-    kOpenCan0,
-    kOpenCan1,
-    kOpenCan2,
-    kOpenCan3,
-    kOpenCan4,
-    kOpenCan5,
-    kOpenCan6,
-    kOpenCan7,
-    kOpenCan8,
-    kOpenCan12,
-    kOpenCan16,
-    kOpenCan20,
-    kOpenCan24,
-    kOpenCan32,
-    kOpenCan48,
-    kOpenCan64,
-}OpenCanDlc;
-
-typedef struct
-{
-    char name[16];
-    rt_uint32_t id;
-    rt_uint8_t len;
-    OpenCanMsgDirEnum dir;
-    rt_uint16_t time;
-}CanxMatrixStruct;
 
 /******************************************************************************
  * pubilc types
