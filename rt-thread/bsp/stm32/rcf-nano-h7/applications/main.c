@@ -23,6 +23,7 @@ void imu_data_thrd(void *parameter);
 void rc_rx_thread_entry(void *parameter);
 void gps_rx_thread_entry(void *parameter);
 void fly_log_thread_entry(void *parameter);
+void can_thread_entry(void *parameter);
 
 #include <drv_config.h>
 
@@ -149,9 +150,9 @@ int main(void)
     HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_3,data1,16);
     HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_4,data1,16);
 
-    // rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
-    //                               RT_NULL,1024,5,5);
-    // if(t != RT_NULL) rt_thread_startup(t);
+    rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
+                                  RT_NULL,1024,5,5);
+    if(t != RT_NULL) rt_thread_startup(t);
 
     rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
                                     RT_NULL,1024,0,10);
@@ -331,6 +332,60 @@ void vcom_test(void)
     rt_device_close(dev);//关闭之前要判断是否发完
 }MSH_CMD_EXPORT(vcom_test, vcom test);
 
+FDCAN_HandleTypeDef hfdcan={
+    .Instance=FDCAN1,
+    .Init.FrameFormat=FDCAN_FRAME_FD_BRS,//FDCAN_FRAME_FD_BRS,
+    .Init.Mode=FDCAN_MODE_NORMAL,
+    .Init.AutoRetransmission=DISABLE,
+    .Init.TransmitPause=DISABLE,
+    .Init.ProtocolException=DISABLE,
+    //波特率1m 5m
+    .Init.NominalPrescaler=5,
+    .Init.NominalSyncJumpWidth=8,
+    .Init.NominalTimeSeg1=15,
+    .Init.NominalTimeSeg2=4,
+    .Init.DataPrescaler=1,
+    .Init.DataSyncJumpWidth=8,
+    .Init.DataTimeSeg1=15,
+    .Init.DataTimeSeg2=4,
+    //msg ram
+    .Init.MessageRAMOffset=0,
+    .Init.StdFiltersNbr=1,
+    .Init.ExtFiltersNbr=1,
+    .Init.RxFifo0ElmtsNbr=1,
+    .Init.RxFifo0ElmtSize=FDCAN_DATA_BYTES_64,//FDCAN_DATA_BYTES_64
+    .Init.RxFifo1ElmtsNbr=1,
+    .Init.RxFifo1ElmtSize=FDCAN_DATA_BYTES_64,
+    .Init.RxBuffersNbr=0,
+    .Init.TxEventsNbr=0,
+    .Init.TxBuffersNbr=1,
+    .Init.TxFifoQueueElmtsNbr=0,
+    .Init.TxFifoQueueMode=FDCAN_TX_FIFO_OPERATION,
+    .Init.TxElmtSize=FDCAN_DATA_BYTES_64,
+};
+
+FDCAN_FilterTypeDef sFilterConfig={
+    .IdType=FDCAN_STANDARD_ID,
+    .FilterIndex=0,
+    .FilterType=FDCAN_FILTER_RANGE,
+    .FilterConfig=FDCAN_FILTER_TO_RXFIFO0,
+    .FilterID1=0,
+    .FilterID2=0x7ff,
+    .IsCalibrationMsg=0,
+};
+
+FDCAN_TxHeaderTypeDef TxHeader={
+    .Identifier=0x5aa,
+    .IdType=FDCAN_STANDARD_ID,
+    .TxFrameType=FDCAN_DATA_FRAME,
+    .DataLength=FDCAN_DLC_BYTES_64,//FDCAN_DLC_BYTES_64
+    .ErrorStateIndicator=FDCAN_ESI_ACTIVE,
+    .BitRateSwitch=FDCAN_BRS_ON,//FDCAN_BRS_ON
+    .FDFormat=FDCAN_FD_CAN,
+    .TxEventFifoControl=FDCAN_NO_TX_EVENTS,
+    .MessageMarker=0xaa,
+};
+
 void can_thread_entry(void *parameter)
 {
     rt_pin_mode(GET_PIN(D,5),PIN_MODE_OUTPUT);
@@ -339,50 +394,65 @@ void can_thread_entry(void *parameter)
     rt_pin_mode(GET_PIN(D,4),PIN_MODE_OUTPUT);
     rt_pin_write(GET_PIN(D,4),PIN_LOW);//can收发器使能
 
-    static rt_device_t can_dev;
-    volatile rt_err_t ret;
-    can_dev=rt_device_find("fdcan1");
-    /* 以中断接收及发送模式打开 CAN 设备 */
-    ret=rt_device_open(can_dev, RT_DEVICE_FLAG_INT_TX | RT_DEVICE_FLAG_INT_RX);
+    // static rt_device_t can_dev;
+    // volatile rt_err_t ret;
+    // can_dev=rt_device_find("fdcan1");
+    // /* 以中断接收及发送模式打开 CAN 设备 */
+    // ret=rt_device_open(can_dev, RT_DEVICE_FLAG_INT_TX | RT_DEVICE_FLAG_INT_RX);
 
-    /* 设置 CAN 的工作模式为正常工作模式 */
-    ret = rt_device_control(can_dev, RT_CAN_CMD_SET_MODE, (void *)RT_CAN_MODE_NORMAL);
+    // /* 设置 CAN 的工作模式为正常工作模式 */
+    // ret = rt_device_control(can_dev, RT_CAN_CMD_SET_MODE, (void *)RT_CAN_MODE_NORMAL);
 
-    // RT_CAN_MODE_LOOPBACK
-    static struct rt_can_status status;    /* 获取到的 CAN 总线状态 */
-    ret=rt_device_control(can_dev, RT_CAN_CMD_GET_STATUS, &status);
+    // // RT_CAN_MODE_LOOPBACK
+    // static struct rt_can_status status;    /* 获取到的 CAN 总线状态 */
+    // ret=rt_device_control(can_dev, RT_CAN_CMD_GET_STATUS, &status);
 
-    struct rt_can_msg msg = {0};
+    // struct rt_can_msg msg = {0};
 
-    msg.id = 0x78;              /* ID 为 0x78 */
-    msg.ide = RT_CAN_STDID;     /* 标准格式 */
-    msg.rtr = RT_CAN_DTR;       /* 数据帧 */
-    msg.len = 8;                /* 数据长度为 8 */
-    /* 待发送的 8 字节数据 */
-    msg.data[0] = 0x00;
-    msg.data[1] = 0x11;
-    msg.data[2] = 0x22;
-    msg.data[3] = 0x33;
-    msg.data[4] = 0x44;
-    msg.data[5] = 0x55;
-    msg.data[6] = 0x66;
-    msg.data[7] = 0x77;
+    // msg.id = 0x78;              /* ID 为 0x78 */
+    // msg.ide = RT_CAN_STDID;     /* 标准格式 */
+    // msg.rtr = RT_CAN_DTR;       /* 数据帧 */
+    // msg.len = 8;                /* 数据长度为 8 */
+    // /* 待发送的 8 字节数据 */
+    // msg.data[0] = 0x00;
+    // msg.data[1] = 0x11;
+    // msg.data[2] = 0x22;
+    // msg.data[3] = 0x33;
+    // msg.data[4] = 0x44;
+    // msg.data[5] = 0x55;
+    // msg.data[6] = 0x66;
+    // msg.data[7] = 0x77;
 
-    /* 发送一帧 CAN 数据 */
+    // /* 发送一帧 CAN 数据 */
+    // while(1)
+    // {
+    //     rt_size_t size=rt_device_write(can_dev, 0, &msg, sizeof(msg));
+    //     if (size == 0)
+    //     {
+    //         rt_kprintf("can dev write data failed!\n");
+    //     }
+    //     else
+    //     {
+    //         rt_kprintf("can dev write data success!\n");
+    //     }
+
+    //     rt_thread_mdelay(500);	        
+
+    // }
+
+    //使用hal测试canfd功能
+
+    HAL_FDCAN_Init(&hfdcan);
+    HAL_FDCAN_ConfigFilter(&hfdcan,&sFilterConfig);
+    HAL_FDCAN_Start(&hfdcan);
+
     while(1)
     {
-        rt_size_t size=rt_device_write(can_dev, 0, &msg, sizeof(msg));
-        if (size == 0)
-        {
-            rt_kprintf("can dev write data failed!\n");
-        }
-        else
-        {
-            rt_kprintf("can dev write data success!\n");
-        }
-
+        uint8_t data[64]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
+        0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
+        HAL_FDCAN_AddMessageToTxBuffer(&hfdcan,&TxHeader,data,FDCAN_TX_BUFFER0);
+        HAL_FDCAN_EnableTxBufferRequest(&hfdcan,FDCAN_TX_BUFFER0);
         rt_thread_mdelay(500);	        
-
     }
 }
 

@@ -27,6 +27,8 @@
 
 #include "drv_config.h"
 
+#include "can.h"
+
 /******************************************************************************
  * pubilc variables
  *****************************************************************************/
@@ -69,6 +71,16 @@ static struct stm32_mcan_config s_mcan_config[]=
     MCAN2_CONFIG,
 #endif
 };
+
+static rt_err_t _inline_can_configure(struct rt_can_device *can, struct can_configure *cfg);
+
+// static const struct rt_can_ops _mcan_ops={
+// {
+//     .configure= _inline_can_configure,
+//     // _inline_can_control,
+//     // _inline_can_sendmsg,
+//     // _inline_can_recvmsg,
+// };
 
 //发送周期报文数量
 #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
@@ -123,6 +135,11 @@ rt_uint8_t s_mcan1_rxbuf_ele_size=0;
 /******************************************************************************
  * private functions definition
  *****************************************************************************/
+
+static rt_err_t _inline_can_configure(struct rt_can_device *can, struct can_configure *cfg)
+{
+
+}
 
 /**
  * @brief   根据报文表自动返回最小的适合报文的ram大小

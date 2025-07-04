@@ -87,6 +87,8 @@
         "serialx.h": "c",
         "canx.h": "c",
         "lin.h": "c",
-        "mcan_config.h": "c"
+        "mcan_config.h": "c",
+        "nmstack_types.h": "c",
+        "drv_fdcan.h": "c"
     }
 }
