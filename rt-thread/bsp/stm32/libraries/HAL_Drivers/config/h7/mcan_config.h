@@ -24,42 +24,42 @@ extern "C" {
  * macros
  *****************************************************************************/
 
-    //canindx       framefmt       brs   idtype        id      send/recv   dlc cyc 
+    //canindx      fdf brs ide    id      send/recv   dlc cyc 
 #define CAN_MSG_MATRIX \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x083,  kOpenCanRecv, 8,  10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x0A2,  kOpenCanRecv, 8,  20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x0D3,  kOpenCanRecv, 8,  10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x0D4,  kOpenCanRecv, 24, 10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x0FE,  kOpenCanRecv, 8,  20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x101,  kOpenCanRecv, 8,  10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x102,  kOpenCanRecv, 8,  20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x119,  kOpenCanRecv, 8,  20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x11D,  kOpenCanRecv, 8,  20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x121,  kOpenCanRecv, 8,  10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x124,  kOpenCanRecv, 8,  10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x132,  kOpenCanRecv, 8,  20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x133,  kOpenCanRecv, 8,  10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x142,  kOpenCanRecv, 8,  10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x144,  kOpenCanRecv, 8,  10  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x188,  kOpenCanRecv, 8,  20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x1B0,  kOpenCanRecv, 16, 20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x1FB,  kOpenCanRecv, 8,  20  )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x30C,  kOpenCanRecv, 8,  100 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x320,  kOpenCanRecv, 8,  100 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x33C,  kOpenCanRecv, 8,  100 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x341,  kOpenCanRecv, 8,  100 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x3DA,  kOpenCanRecv, 8,  100 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x3F2,  kOpenCanRecv, 8,  100 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x443,  kOpenCanSend, 8,  100 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x4DA,  kOpenCanRecv, 8,  1000)   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x584,  kOpenCanRecv, 8,  500 )   \
-    Y(MCAN1_INDEX,kOpenCanClassic,  0,kOpenCanStdId,  0x599,  kOpenCanRecv, 8,  500 )   \
-    Y(MCAN1_INDEX,kOpenCanClassic,  0,kOpenCanStdId,  0x5B5,  kOpenCanSend, 8,  500 )   \
-    Y(MCAN1_INDEX,kOpenCanClassic,  0,kOpenCanStdId,  0x5B6,  kOpenCanRecv, 8,  500 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x643,  kOpenCanSend, 16, 500 )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x741,  kOpenCanRecv, 8,  0   )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x749,  kOpenCanSend, 8,  0   )   \
-    Y(MCAN1_INDEX,kOpenCanFd,       1,kOpenCanStdId,  0x7DF,  kOpenCanRecv, 8,  0   )
+    Y(MCAN1_INDEX,  1,  1,  1,  0x083,  kOpenCanRecv, 8,  10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x0A2,  kOpenCanRecv, 8,  20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x0D3,  kOpenCanRecv, 8,  10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x0D4,  kOpenCanRecv, 24, 10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x0FE,  kOpenCanRecv, 8,  20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x101,  kOpenCanRecv, 8,  10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x102,  kOpenCanRecv, 8,  20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x119,  kOpenCanRecv, 8,  20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x11D,  kOpenCanRecv, 8,  20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x121,  kOpenCanRecv, 8,  10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x124,  kOpenCanRecv, 8,  10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x132,  kOpenCanRecv, 8,  20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x133,  kOpenCanRecv, 8,  10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x142,  kOpenCanRecv, 8,  10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x144,  kOpenCanRecv, 8,  10  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x188,  kOpenCanRecv, 8,  20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x1B0,  kOpenCanRecv, 16, 20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x1FB,  kOpenCanRecv, 8,  20  )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x30C,  kOpenCanRecv, 8,  100 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x320,  kOpenCanRecv, 8,  100 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x33C,  kOpenCanRecv, 8,  100 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x341,  kOpenCanRecv, 8,  100 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x3DA,  kOpenCanRecv, 8,  100 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x3F2,  kOpenCanRecv, 8,  100 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x443,  kOpenCanSend, 8,  100 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x4DA,  kOpenCanRecv, 8,  1000)   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x584,  kOpenCanRecv, 8,  500 )   \
+    Y(MCAN1_INDEX,  0,  0,  1,  0x599,  kOpenCanRecv, 8,  500 )   \
+    Y(MCAN1_INDEX,  0,  0,  1,  0x5B5,  kOpenCanSend, 8,  500 )   \
+    Y(MCAN1_INDEX,  0,  0,  1,  0x5B6,  kOpenCanRecv, 8,  500 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x643,  kOpenCanSend, 16, 500 )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x741,  kOpenCanRecv, 8,  0   )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x749,  kOpenCanSend, 8,  0   )   \
+    Y(MCAN1_INDEX,  1,  1,  1,  0x7DF,  kOpenCanRecv, 8,  0   )
 
 #if defined(BSP_USING_MCAN1)
 #ifndef MCAN1_CONFIG
@@ -100,8 +100,6 @@ extern "C" {
 /******************************************************************************
  * pubilc functions declaration
  *****************************************************************************/
-void _mcan_msg_ram_auto_cfg(void);
-rt_err_t _stm32_mcan1_init(FDCAN_HandleTypeDef* pmcan);
 
 #ifdef __cplusplus
 }

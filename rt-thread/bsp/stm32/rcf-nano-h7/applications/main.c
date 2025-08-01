@@ -125,8 +125,6 @@ int main(void)
 {
     //dsplib测试
     float32_t a=arm_sin_f32(PI/2);
-    FDCAN_HandleTypeDef pma;
-    _stm32_mcan1_init(&pma);
 
     HAL_CRC_Init(&hcrc);
 

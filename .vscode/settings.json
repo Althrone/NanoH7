@@ -89,6 +89,7 @@
         "lin.h": "c",
         "mcan_config.h": "c",
         "nmstack_types.h": "c",
-        "drv_fdcan.h": "c"
+        "drv_fdcan.h": "c",
+        "can_matrix.h": "c"
     }
 }
