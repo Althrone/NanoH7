@@ -128,7 +128,7 @@ struct rt_canx_msg
     rt_uint32_t ovr:1;//用户没有读数据，中断直接重写buf了
 
     rt_uint32_t :24;//可以用来放user data
-    rt_uint8_t data[64];
+    rt_uint8_t data[0];//灵活数组
 };
 
 struct rt_canx_ops

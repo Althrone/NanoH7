@@ -254,7 +254,6 @@
 #define RT_USING_CANX
 #define RT_CANX_CALC_BITTIMING//功能有限，建议自己算
 #define RT_CANX_USING_FD
-#define RT_USING_LIN
 #define RT_USING_ADC
 #define RT_USING_SPI
 #define RT_USING_USB_DEVICE
@@ -402,6 +401,7 @@
 #define BSP_USING_UART4
 #define BSP_UART4_RX_USING_DMA
 #define BSP_USING_UART6
+#define BSP_UART6_USING_LIN
 #define BSP_USING_UART8
 #define BSP_USING_I2C2
 #define BSP_USING_SPI1

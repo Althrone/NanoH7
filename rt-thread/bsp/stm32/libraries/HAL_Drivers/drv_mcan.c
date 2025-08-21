@@ -323,7 +323,7 @@ static rt_err_t _inline_canx_control(struct rt_canx_device *canx, int cmd, void 
         HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_RX_FIFO0_NEW_MESSAGE, FDCAN_INTERRUPT_LINE0);
         HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_RX_FIFO0_NEW_MESSAGE, FDCAN_INTERRUPT_LINE0);
         //tx
-        HAL_FDCAN_ActivateNotification(&pmcan->hmcan,FDCAN_IT_TX_COMPLETE,);//开了几个buf就写几个
+        // HAL_FDCAN_ActivateNotification(&pmcan->hmcan,FDCAN_IT_TX_COMPLETE,);//开了几个buf就写几个
         //丢去初始化
         HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_TX_COMPLETE, FDCAN_INTERRUPT_LINE1);
         break;
@@ -388,7 +388,6 @@ static int _inline_canx_sendmsg(struct rt_canx_device *canx, const void *buf, rt
     //获取父结构体
     pmcan = rt_container_of(canx, struct stm32_mcan, canx);
 
-    struct rt_canx_msg *pmsg=(struct rt_canx_msg*)buf;
     //根据boxnumber决定txheader
     FDCAN_TxHeaderTypeDef TxHeader={0};
     TxHeader.Identifier=pmsg->id;
@@ -818,146 +817,146 @@ static void _mcan1_get_ext_event_msg_classic_filter(uint32_t* id1_filter,uint32_
 
 void _mcan_msg_ram_auto_cfg(void)
 {
-    //带周期的stdid帧和extid帧少于64个，直接安排
-    if((num_of_mcan1_recv_stdid_buf+num_of_mcan1_recv_extid_buf>0)&&
-       (num_of_mcan1_recv_stdid_buf+num_of_mcan1_recv_extid_buf<=64))
-    {
+    // //带周期的stdid帧和extid帧少于64个，直接安排
+    // if((num_of_mcan1_recv_stdid_buf+num_of_mcan1_recv_extid_buf>0)&&
+    //    (num_of_mcan1_recv_stdid_buf+num_of_mcan1_recv_extid_buf<=64))
+    // {
 
 
-        //处理事件报文
+    //     //处理事件报文
 
-        //如果stdid只有两个周期为0的帧
-        if(num_of_mcan1_recv_stdid_fifo==2)
-        {
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-            ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
-             (dir==kOpenCanRecv)&&(cycle==0))?(id):
-            uint32_t id1=CAN_MSG_MATRIX 0;
-            #undef Y
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-            ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(id!=id1)&&\
-             (dir==kOpenCanRecv)&&(cycle==0))?(id):
-            uint32_t id2=CAN_MSG_MATRIX 0;
-            #undef Y
-            FDCAN_FilterTypeDef sStdFifoFilterConfig;
-            sStdFifoFilterConfig.IdType=FDCAN_STANDARD_ID;
-            sStdFifoFilterConfig.FilterIndex=std_filt_index;
-            sStdFifoFilterConfig.FilterType=FDCAN_FILTER_DUAL;
-            sStdFifoFilterConfig.FilterConfig=FDCAN_FILTER_TO_RXFIFO0;
-            sStdFifoFilterConfig.FilterID1=id1;
-            sStdFifoFilterConfig.FilterID2=id2;
-            sStdFifoFilterConfig.RxBufferIndex=0;//ignored
-            sStdFifoFilterConfig.IsCalibrationMsg=0;//ignored
-            std_filt_index++;
-        }
-        else if(num_of_mcan1_recv_stdid_fifo>2)
-        {
-            //如果是连续的，用range 如果不是 用classic filter mask
-            //range不好实现
+    //     //如果stdid只有两个周期为0的帧
+    //     if(num_of_mcan1_recv_stdid_fifo==2)
+    //     {
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
+    //         uint32_t id1=CAN_MSG_MATRIX 0;
+    //         #undef Y
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(id!=id1)&&\
+    //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
+    //         uint32_t id2=CAN_MSG_MATRIX 0;
+    //         #undef Y
+    //         FDCAN_FilterTypeDef sStdFifoFilterConfig;
+    //         sStdFifoFilterConfig.IdType=FDCAN_STANDARD_ID;
+    //         sStdFifoFilterConfig.FilterIndex=std_filt_index;
+    //         sStdFifoFilterConfig.FilterType=FDCAN_FILTER_DUAL;
+    //         sStdFifoFilterConfig.FilterConfig=FDCAN_FILTER_TO_RXFIFO0;
+    //         sStdFifoFilterConfig.FilterID1=id1;
+    //         sStdFifoFilterConfig.FilterID2=id2;
+    //         sStdFifoFilterConfig.RxBufferIndex=0;//ignored
+    //         sStdFifoFilterConfig.IsCalibrationMsg=0;//ignored
+    //         std_filt_index++;
+    //     }
+    //     else if(num_of_mcan1_recv_stdid_fifo>2)
+    //     {
+    //         //如果是连续的，用range 如果不是 用classic filter mask
+    //         //range不好实现
 
-            //先找到符合的id中都是1的位
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-                (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
-                  (dir==kOpenCanRecv)&&(cycle==0))?id:0x7FF)&
-                rt_uint16_t bit1_mask=CAN_MSG_MATRIX 0x7FF;
-            #undef Y
+    //         //先找到符合的id中都是1的位
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //               (dir==kOpenCanRecv)&&(cycle==0))?id:0x7FF)&
+    //             rt_uint16_t bit1_mask=CAN_MSG_MATRIX 0x7FF;
+    //         #undef Y
 
-            //查找符合的id中都是0的位
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-                (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
-                  (dir==kOpenCanRecv)&&(cycle==0))?(~id):0x7FF)&
-                rt_uint16_t bit0_mask=CAN_MSG_MATRIX 0x7FF;
-            #undef Y
+    //         //查找符合的id中都是0的位
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //               (dir==kOpenCanRecv)&&(cycle==0))?(~id):0x7FF)&
+    //             rt_uint16_t bit0_mask=CAN_MSG_MATRIX 0x7FF;
+    //         #undef Y
 
-            rt_uint16_t mask_bit=bit1_mask|bit0_mask;//其中为1的位，对应的filter_bit的0或者1要匹配
+    //         rt_uint16_t mask_bit=bit1_mask|bit0_mask;//其中为1的位，对应的filter_bit的0或者1要匹配
 
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-            ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
-             (dir==kOpenCanRecv)&&(cycle==0))?(id):
-            uint32_t filter_bit=CAN_MSG_MATRIX 0;
-            #undef Y
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
+    //         uint32_t filter_bit=CAN_MSG_MATRIX 0;
+    //         #undef Y
 
-            FDCAN_FilterTypeDef sStdFifoFilterConfig;
-            sStdFifoFilterConfig.IdType=FDCAN_STANDARD_ID;
-            sStdFifoFilterConfig.FilterIndex=std_filt_index;
-            sStdFifoFilterConfig.FilterType=FDCAN_FILTER_MASK;
-            sStdFifoFilterConfig.FilterConfig=FDCAN_FILTER_TO_RXFIFO0;
-            sStdFifoFilterConfig.FilterID1=filter_bit;
-            sStdFifoFilterConfig.FilterID2=mask_bit;
-            sStdFifoFilterConfig.RxBufferIndex=0;//ignored
-            sStdFifoFilterConfig.IsCalibrationMsg=0;//ignored
-            std_filt_index++;
-        }
+    //         FDCAN_FilterTypeDef sStdFifoFilterConfig;
+    //         sStdFifoFilterConfig.IdType=FDCAN_STANDARD_ID;
+    //         sStdFifoFilterConfig.FilterIndex=std_filt_index;
+    //         sStdFifoFilterConfig.FilterType=FDCAN_FILTER_MASK;
+    //         sStdFifoFilterConfig.FilterConfig=FDCAN_FILTER_TO_RXFIFO0;
+    //         sStdFifoFilterConfig.FilterID1=filter_bit;
+    //         sStdFifoFilterConfig.FilterID2=mask_bit;
+    //         sStdFifoFilterConfig.RxBufferIndex=0;//ignored
+    //         sStdFifoFilterConfig.IsCalibrationMsg=0;//ignored
+    //         std_filt_index++;
+    //     }
 
-        //如果extid只有两个周期为0的帧
-        if(num_of_mcan1_recv_extid_fifo==2)
-        {
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-            ((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
-             (dir==kOpenCanRecv)&&(cycle==0))?(id):
-            uint32_t id1=CAN_MSG_MATRIX 0;
-            #undef Y
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-            ((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(id!=id1)&&\
-             (dir==kOpenCanRecv)&&(cycle==0))?(id):
-            uint32_t id2=CAN_MSG_MATRIX 0;
-            #undef Y
-            FDCAN_FilterTypeDef sExtFifoFilterConfig;
-            sExtFifoFilterConfig.IdType=FDCAN_EXTENDED_ID;
-            sExtFifoFilterConfig.FilterIndex=std_filt_index;
-            sExtFifoFilterConfig.FilterType=FDCAN_FILTER_DUAL;
-            sExtFifoFilterConfig.FilterConfig=FDCAN_FILTER_TO_RXFIFO1;
-            sExtFifoFilterConfig.FilterID1=id1;
-            sExtFifoFilterConfig.FilterID2=id2;
-            sExtFifoFilterConfig.RxBufferIndex=0;//ignored
-            sExtFifoFilterConfig.IsCalibrationMsg=0;//ignored
-            std_filt_index++;
-        }
-        else if(num_of_mcan1_recv_stdid_fifo>2)
-        {
-            //如果是连续的，用range 如果不是 用classic filter mask
-            //range不好实现
+    //     //如果extid只有两个周期为0的帧
+    //     if(num_of_mcan1_recv_extid_fifo==2)
+    //     {
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
+    //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
+    //         uint32_t id1=CAN_MSG_MATRIX 0;
+    //         #undef Y
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(id!=id1)&&\
+    //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
+    //         uint32_t id2=CAN_MSG_MATRIX 0;
+    //         #undef Y
+    //         FDCAN_FilterTypeDef sExtFifoFilterConfig;
+    //         sExtFifoFilterConfig.IdType=FDCAN_EXTENDED_ID;
+    //         sExtFifoFilterConfig.FilterIndex=std_filt_index;
+    //         sExtFifoFilterConfig.FilterType=FDCAN_FILTER_DUAL;
+    //         sExtFifoFilterConfig.FilterConfig=FDCAN_FILTER_TO_RXFIFO1;
+    //         sExtFifoFilterConfig.FilterID1=id1;
+    //         sExtFifoFilterConfig.FilterID2=id2;
+    //         sExtFifoFilterConfig.RxBufferIndex=0;//ignored
+    //         sExtFifoFilterConfig.IsCalibrationMsg=0;//ignored
+    //         std_filt_index++;
+    //     }
+    //     else if(num_of_mcan1_recv_stdid_fifo>2)
+    //     {
+    //         //如果是连续的，用range 如果不是 用classic filter mask
+    //         //range不好实现
 
-            //先找到符合的id中都是1的位
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-                (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
-                  (dir==kOpenCanRecv)&&(cycle==0))?id:0x7FF)&
-                rt_uint16_t bit1_mask=CAN_MSG_MATRIX 0x7FF;
-            #undef Y
+    //         //先找到符合的id中都是1的位
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //               (dir==kOpenCanRecv)&&(cycle==0))?id:0x7FF)&
+    //             rt_uint16_t bit1_mask=CAN_MSG_MATRIX 0x7FF;
+    //         #undef Y
 
-            //查找符合的id中都是0的位
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-                (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
-                  (dir==kOpenCanRecv)&&(cycle==0))?(~id):0x7FF)&
-                rt_uint16_t bit0_mask=CAN_MSG_MATRIX 0x7FF;
-            #undef Y
+    //         //查找符合的id中都是0的位
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //               (dir==kOpenCanRecv)&&(cycle==0))?(~id):0x7FF)&
+    //             rt_uint16_t bit0_mask=CAN_MSG_MATRIX 0x7FF;
+    //         #undef Y
 
-            rt_uint16_t mask_bit=bit1_mask|bit0_mask;//其中为1的位，对应的filter_bit的0或者1要匹配
+    //         rt_uint16_t mask_bit=bit1_mask|bit0_mask;//其中为1的位，对应的filter_bit的0或者1要匹配
 
-            #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-            ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
-             (dir==kOpenCanRecv)&&(cycle==0))?(id):
-            uint32_t filter_bit=CAN_MSG_MATRIX 0;
-            #undef Y
+    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
+    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
+    //         uint32_t filter_bit=CAN_MSG_MATRIX 0;
+    //         #undef Y
 
-            FDCAN_FilterTypeDef sStdFifoFilterConfig;
-            sStdFifoFilterConfig.IdType=FDCAN_STANDARD_ID;
-            sStdFifoFilterConfig.FilterIndex=std_filt_index;
-            sStdFifoFilterConfig.FilterType=FDCAN_FILTER_MASK;
-            sStdFifoFilterConfig.FilterConfig=FDCAN_FILTER_TO_RXFIFO0;
-            sStdFifoFilterConfig.FilterID1=filter_bit;
-            sStdFifoFilterConfig.FilterID2=mask_bit;
-            sStdFifoFilterConfig.RxBufferIndex=0;//ignored
-            sStdFifoFilterConfig.IsCalibrationMsg=0;//ignored
-            std_filt_index++;
-        }
+    //         FDCAN_FilterTypeDef sStdFifoFilterConfig;
+    //         sStdFifoFilterConfig.IdType=FDCAN_STANDARD_ID;
+    //         sStdFifoFilterConfig.FilterIndex=std_filt_index;
+    //         sStdFifoFilterConfig.FilterType=FDCAN_FILTER_MASK;
+    //         sStdFifoFilterConfig.FilterConfig=FDCAN_FILTER_TO_RXFIFO0;
+    //         sStdFifoFilterConfig.FilterID1=filter_bit;
+    //         sStdFifoFilterConfig.FilterID2=mask_bit;
+    //         sStdFifoFilterConfig.RxBufferIndex=0;//ignored
+    //         sStdFifoFilterConfig.IsCalibrationMsg=0;//ignored
+    //         std_filt_index++;
+    //     }
 
 
-    }
-    else if(num_of_mcan1_recv_stdid_buf+num_of_mcan1_recv_extid_buf>64)//有周期的帧多于64个
-    {
-        //周期短的先安排，
-    }
+    // }
+    // else if(num_of_mcan1_recv_stdid_buf+num_of_mcan1_recv_extid_buf>64)//有周期的帧多于64个
+    // {
+    //     //周期短的先安排，
+    // }
 }
 
 static rt_err_t _stm32_mcan_baud_cfg(FDCAN_HandleTypeDef* pmcan,struct canx_configure *cfg)

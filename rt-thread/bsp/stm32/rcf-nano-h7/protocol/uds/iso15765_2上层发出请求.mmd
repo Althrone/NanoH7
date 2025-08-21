@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant App as 上层应用
+    participant TP as ISO-TP层
+    participant CAN as CAN驱动/总线
+
+    App->>TP: N_USData.req(SA, TA, Data, Len)
+    Note over TP: 拆分数据成帧<br/>FF, CFs...
+    TP->>CAN: 发送首帧(FF)
+    TP->>CAN: 等待流控帧(FC)
+    CAN-->>TP: 收到FC
+    TP->>CAN: 发送连续帧(CF)
+    loop 直到所有数据发送完毕
+        TP->>CAN: 发送连续帧(CF)
+    end
+    TP->>App: N_USData.cfm(N_OK)

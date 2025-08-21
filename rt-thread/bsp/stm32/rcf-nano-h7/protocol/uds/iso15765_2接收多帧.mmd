@@ -1,0 +1,13 @@
+sequenceDiagram
+    participant App as 上层应用
+    participant TP as ISO-TP层
+    participant CAN as CAN驱动/总线
+
+    CAN-->>TP: 收到首帧(FF)
+    TP->>App: N_USData_FF.ind(SA, TA, Length)
+    TP->>CAN: 发送流控帧(FC)(CTS)
+    loop 接收连续帧
+        CAN-->>TP: 收到连续帧(CF)
+    end
+    Note over TP: 重组所有数据
+    TP->>App: N_USData.ind(SA, TA, Data, Len, N_OK)

@@ -1,0 +1,26 @@
+sequenceDiagram
+    participant CAN as CAN总线
+    participant TP as ISO-TP层
+    participant App as 上层应用<br>(e.g., 诊断服务)
+
+    Note over CAN, TP: 1. 接收CAN帧
+    CAN->>TP: 接收到CAN数据帧<br>(CAN ID, DLC, Data[])
+
+    Note over TP: 2. 帧类型解析与验证
+    TP->>TP: 解析数据帧
+    alt 是单帧(SF)吗?
+        TP->>TP: 是SF，提取PCI
+        TP->>TP: 检查PCI中的长度 ≤ 7
+        alt 长度有效?
+            Note over TP: 3. 处理单帧数据
+            TP->>TP: 从数据域提取用户数据<br>(SF_DL = PCI & 0x0F)
+            Note over TP, App: 4. 立即通知上层
+            TP->>App: N_USData.indication(<br/>Mtype, N_SA, N_TA,<br/>N_TAtype, N_AE,<br/>*MessageData, SF_DL,<br/>N_OK<br/>)
+            Note over App: 5. 上层应用处理
+            App->>App: 处理完整消息<br>(e.g., 解析UDS命令)
+        else 长度无效
+            TP->>TP: 丢弃该帧<br>(N_Result = N_ERROR)
+        end
+    else 不是单帧(SF)
+        TP->>TP: 按多帧流程处理<br>(FF/CF/FC)
+    end

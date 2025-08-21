@@ -19,10 +19,14 @@ extern "C" {
  * includes
  *****************************************************************************/
 
-#include "rtthread.h"
-#include "rtdevice.h"
+#include <stdint.h>
+#include <time.h>
+#include <stdbool.h>
+
+#include "rtdevice.h"//引入rt_canx_msg类型
+
 #include "iso15765_2_cfg.h"
-#include "iso14229_1_cfg.h"
+// #include "iso14229_1_cfg.h"
 
 /******************************************************************************
  * macros
@@ -77,11 +81,109 @@ typedef enum
 
 typedef enum
 {
+    N_OK,               /*This value means that the service execution has been 
+                          completed successfully; it can be issued to a service
+                          user on both the sender and receiver sides.*/
+    N_RX_ON,            /*This value is issued to the service user to indicate 
+                          that the service did not execute since reception of 
+                          the message identified by <N_AI> was taking place; it
+                          can be issued to the service user on the receiver 
+                          side only.*/
+    N_WRONG_PARAMETER,  /*This value is issued to the service user to indicate 
+                          that the service did not execute due to an undefined 
+                          <Parameter>; it can be issued to a service user on 
+                          both the receiver and sender sides.*/
+    N_WRONG_VALUE,      /*This value is issued to the service user to indicate 
+                          that the service did not execute due to an 
+                          out-of-range <Parameter_Value>; it can be issued to a
+                          service user on both the receiver and sender sides.*/
+}Result_ChangeParameter;
+
+typedef enum
+{
+    //both ISO 17987-2 and ISO 15765-2
     kNPciSF,//单帧
     kNPciFF,//首帧
     kNPciCF,//续帧
+    //ISO 15765-2 only
     kNPciFC,//流控帧
 }N_PCItype;//Table 8 — Definition of N_PCItype bit values
+
+typedef enum
+{
+    kDiagnostics=0,
+    kRemoteDiagnostics
+}MtypeEnum;
+
+typedef enum
+{
+    kPhyCanBaseFmt=1,
+    kFuncCanBaseFmt,
+    kPhyCanFdBaseFmt,
+    kFuncCanFdBaseFmt,
+    kPhyCanExtFmt,
+    kFuncCanExtFmt,
+    kPhyCanFdExtFmt,
+    kFuncCanFdExtFmt,
+}N_TAtypeEnum;
+
+typedef struct
+{
+    uint8_t N_TA;
+    uint8_t N_SA;
+    N_TAtypeEnum N_TAtype;
+    uint8_t N_AE;
+}N_AIStruct;
+
+typedef enum
+{
+    kFsCTS,
+    kFsWAIT,
+    kFsOVFLW,
+}FlowStatusEnum;
+
+typedef struct
+{
+    MtypeEnum Mtype;
+    N_AIStruct N_AI;
+    uint8_t STmin;  //可修改
+    uint8_t BS;     //可修改
+    size_t sdu_buf_size; //对应多帧接收缓冲区大小
+    uint8_t* sdu_buf;//传输给上层的buf,与ff_dl相关
+    //非iso参数
+    uint32_t can_id;
+    bool is_extended;//设置此参数时N_TA有效,与Mtype互斥
+    bool is_padding;//仅dlc<=8时有效
+    FlowStatusEnum FlowStatus;
+    uint8_t SequenceNumber;
+    size_t sdu_index;//多帧传输时当前已经接收/发送的字节数
+    size_t sdu_len;//=ff_dl
+
+    //从FF帧获取的参数，与sf no padding无关
+    uint8_t RX_DL;//默认为8
+}N_SDU;
+
+typedef struct
+{
+    struct rt_canx_msg can_head;//主要是用id和ide
+    bool is_extended;//设置此参数时N_TA有效,与Mtype互斥
+}N_UserExtStruct;
+
+struct N_USDataOps
+{
+    void (*request)         (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
+    N_Result (*confirm)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_UserExtStruct N_UserExt);
+    N_Result (*indication)  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
+};
+struct N_USData_FFOps
+{
+    void (*indication)      (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, size_t Length, N_UserExtStruct N_UserExt);
+};
+struct N_ChangeParameterOps
+{
+    void (*request)                  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt);
+    Result_ChangeParameter (*confirm)(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, N_UserExtStruct N_UserExt);
+};
 
 /******************************************************************************
  * pubilc variables declaration
