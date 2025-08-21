@@ -158,30 +158,32 @@ typedef struct
     uint8_t SequenceNumber;
     size_t sdu_index;//多帧传输时当前已经接收/发送的字节数
     size_t sdu_len;//=ff_dl
-
+    size_t N_WFTmax;//固定值，发送流控的时候才用，指示我们（当前是client）在接收多帧时可以发送的多少个等待流控
+    size_t N_WFTcnt;
     //从FF帧获取的参数，与sf no padding无关
     uint8_t RX_DL;//默认为8
 }N_SDU;
 
 typedef struct
 {
-    struct rt_canx_msg can_head;//主要是用id和ide
+    uint32_t can_id;
+    bool ide;
     bool is_extended;//设置此参数时N_TA有效,与Mtype互斥
 }N_UserExtStruct;
 
 struct N_USDataOps
 {
-    void (*request)         (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
-    N_Result (*confirm)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_UserExtStruct N_UserExt);
-    N_Result (*indication)  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
+    void (*request)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
+    void (*confirm)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_Result Result, N_UserExtStruct N_UserExt);
+    void (*indication)  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_Result Result, N_UserExtStruct N_UserExt);
 };
 struct N_USData_FFOps
 {
-    void (*indication)      (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, size_t Length, N_UserExtStruct N_UserExt);
+    void (*indication)  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, size_t Length, N_UserExtStruct N_UserExt);
 };
 struct N_ChangeParameterOps
 {
-    void (*request)                  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt);
+    void (*request)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt);
     Result_ChangeParameter (*confirm)(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, N_UserExtStruct N_UserExt);
 };
 
