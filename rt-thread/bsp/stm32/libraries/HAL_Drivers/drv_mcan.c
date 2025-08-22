@@ -147,7 +147,7 @@ static rt_err_t _stm32_mcan_filter_cfg(FDCAN_HandleTypeDef* pmcan);
 /******************************************************************************
  * pubilc functions definition
  *****************************************************************************/
-
+#if 0
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
     struct stm32_mcan *mcan;
@@ -287,7 +287,7 @@ void HAL_FDCAN_TxFifoEmptyCallback(FDCAN_HandleTypeDef *hfdcan)
         rt_hw_canx_isr(&mcan->canx,RT_CANX_EVENT_TX_DONE);//isr识别到高位为0就是fifo空的意思
     }
 }
-
+#endif
 /******************************************************************************
  * private functions definition
  *****************************************************************************/

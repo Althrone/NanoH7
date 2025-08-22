@@ -24,6 +24,9 @@
 extern N_SDU g_n_sdu_tbl[];
 extern const size_t kg_num_of_sdu;
 
+extern const struct L_DataOps L_Data;
+
+
 static void N_USData_request        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
 static void N_USData_confirm        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_Result Result, N_UserExtStruct N_UserExt);
 static void N_USData_indication     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_Result Result, N_UserExtStruct N_UserExt);
@@ -46,8 +49,9 @@ const struct N_ChangeParameterOps N_ChangeParameter={
     .confirm=N_ChangeParameter_confirm,
 };
 
-//tp层给上层的buf
-uint8_t tp2up_layer_buf[0xFFF];
+//传输层给会话层发送数据
+uint8_t Transport2SessionBuf[0xFFF];//暂且设置为非转义ff_dl的最大值
+uint8_t Transport2DataLinkBuf[64];//canfd的最大帧长为64字节
 
 /******************************************************************************
  * private types
@@ -198,7 +202,7 @@ void NetworkLayerTimingTask(uint16_t ms)
 void DoCanTpTask(void)
 {
     //从ringbuf读取一个can帧出来
-    kgs_docan_tp_fsm_tbl[gs_docan_tp_sm.event][gs_docan_tp_sm.state](&gs_data_len,gs_pbuf);
+    // kgs_docan_tp_fsm_tbl[gs_docan_tp_sm.event][gs_docan_tp_sm.state](&gs_data_len,gs_pbuf);
 }
 
 /******************************************************************************
@@ -463,15 +467,16 @@ static N_Result _DelRxSf(struct rt_canx_msg* rx_can_msg){
         payload_offset++;
     }
 
-    //copy len=sf_dl data to tp2up_layer_buf
-    memcpy(tp2up_layer_buf,rx_can_msg->data[payload_offset],SF_DL);
+    //copy len=sf_dl data to Transport2SessionBuf
+    memcpy(Transport2SessionBuf,rx_can_msg->data[payload_offset],SF_DL);
     N_UserExtStruct N_UserExt={
         .can_id=rx_can_msg->id,
         .ide=rx_can_msg->ide,
         .is_extended=temp_is_extended,
     };
+    // can rx中断应调用L_Data.indication()
     N_USData.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
-                        tp2up_layer_buf,SF_DL,
+                        Transport2SessionBuf,SF_DL,
                         N_OK,
                         N_UserExt);
     gs_docan_tp_sm.event=kDoCanTpFinishEvent;
@@ -566,7 +571,7 @@ static N_Result _DelRxFf(struct rt_canx_msg* rx_can_msg){
       than the available receiver buffer size, then this shall be considered as
       an error condition. The network layer shall abort the message reception 
       and send an FC N_PDU with the parameter FlowStatus = Overflow.*/
-    if(tmp_ff_dl>sizeof(tp2up_layer_buf))
+    if(tmp_ff_dl>sizeof(Transport2SessionBuf))
     {
         gs_docan_tp_sm.event=kDoCanTpSendFcEvent;
         g_n_sdu_tbl[sdu_index].FlowStatus=kFsOVFLW;
@@ -611,7 +616,7 @@ static N_Result _DelRxFf(struct rt_canx_msg* rx_can_msg){
     }
     uint8_t copy_len=CAN_DL-payload_offset;
     //复制首帧中的上层数据到 uds app buf
-    memcpy(tp2up_layer_buf,&rx_can_msg->data[payload_offset],copy_len);
+    memcpy(Transport2SessionBuf,&rx_can_msg->data[payload_offset],copy_len);
     g_n_sdu_tbl[sdu_index].sdu_index+=copy_len;
     gs_docan_tp_sm.event=kDoCanTpSendFcEvent;
     g_n_sdu_tbl[sdu_index].FlowStatus=kFsCTS;
@@ -622,6 +627,12 @@ static N_Result _DelRxFf(struct rt_canx_msg* rx_can_msg){
         .ide=rx_can_msg->ide,
         .is_extended=temp_is_extended,
     };
+    /* Receiver L_Data.ind: the data link layer issues to the transport/network
+       layer the reception of the CAN frame; the receiver starts the N_Br timer */
+    // 应该在can rx中断中调用并开启N_Br定时器
+
+    /* Receiver N_USDataFF.ind: the transport/network layer issues to the 
+       session layer the reception of a FirstFrame of a segmented message */
     N_USData_FF.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
                            FF_DL,
                            N_UserExt);
@@ -735,6 +746,26 @@ static N_Result _DelRxFc(struct rt_canx_msg* rx_can_msg){
     }
     g_n_sdu_tbl[sdu_index].FlowStatus=temp_fs;
 
+    /* Sender L_Data.ind: the data link layer issues to the transport/network 
+       layer the reception of the CAN frame; the sender stops the N_Bs timer 
+       and starts the N_Cs timer */
+    // can接收的时候调用L_Data.ind
+    //stop N_Bs timer
+    //start N_Cs timer
+
+    /* Sender L_Data.ind: the data link layer issues to the transport/network 
+       layer the reception of the CAN frame; the sender restarts the N_Bs timer */
+    //N_Bs清零重新来
+
+    /* Sender L_Data.ind: the data link layer issues to the transport/network 
+       layer the reception of the CAN frame; the sender stops the N_Bs timer 
+       and starts the N_Cs timer */
+    //接收到CTS的时候
+    //stop N_Bs timer
+    //start N_Cs timer
+    //同上上条
+
+
 
     return N_OK;
 }
@@ -825,11 +856,57 @@ static N_Result _DelRxCf(struct rt_canx_msg* rx_can_msg){
     //更新sdu的index
     //判断还有没有剩余字节，或者需不需要发送流控帧
 
+    /* Receiver L_Data.ind: the data link layer issues to the transport/network
+       layer the reception of the CAN frame; the receiver restarts the N_Cr 
+       timer */
+    //接收到续帧，重新开始N_Cr 计数
+
+    /* Receiver L_Data.ind: the data link layer issues to the transport/network
+       layer the reception of the CAN frame; the receiver stops the N_Cr timer 
+       and starts the N_Br timer */
+    //接收方判断bs到达才执行这个
+    //stop N_Cr timer
+    //start N_Br timer
+
+    /* Receiver L_Data.ind: the data link layer issues to the transport/network
+       layer the reception of the CAN frame; the receiver restarts the N_Cr 
+       timer */
+    //接收到续帧，重新开始N_Cr 计数
+    //上上条完全一样
+
+    /* Receiver L_Data.ind: the data link layer issues to the transport/network
+       layer the reception of the CAN frame; the receiver stops the N_Cr timer */
+    //接收最后一个续帧
+    //stop N_Cr timer
+
+    /* Receiver N_USData.ind: the transport/network layer issues to the session
+       layer the completion of the segmented message*/
+    //接受完了所有帧，通知上层
+
     return N_OK;
 }
 
-static N_Result _DelTxSf(struct rt_canx_msg* rx_can_msg){return N_OK;}
-static N_Result _DelTxFf(struct rt_canx_msg* rx_can_msg){return N_OK;}
+static N_Result _DelTxSf(struct rt_canx_msg* rx_can_msg){
+
+    // L_Data.request()
+    //starts the N_As timer
+    return N_OK;
+}
+//can发送完成中断中调用L_Data.con以停止N_As timer
+
+static N_Result _DelTxFf(struct rt_canx_msg* rx_can_msg){
+
+    /* Sender L_Data.req: the transport/network layer transmits the FirstFrame 
+       to the data link layer and starts the N_As timer */
+    // L_Data.request()
+    //starts the N_As timer
+    return N_OK;
+}
+/* Sender L_Data.con: the data link layer confirms to the transport/network layer that the CAN frame has been 
+acknowledged; the sender stops the N_As timer and starts the N_Bs timer */
+//can发送完成中断中调用L_Data.con以停止N_As timer 开启N_Bs timer
+
+
 static N_Result _DelTxFc(struct rt_canx_msg* rx_can_msg){
 
     // 9.8.4 Wait frame error handling
@@ -844,6 +921,27 @@ static N_Result _DelTxFc(struct rt_canx_msg* rx_can_msg){
     // N_WFTmax
     //N_WFT_OVRN
 
+    /* Receiver L_Data.req: the transport/network layer transmits the 
+       FlowControl (ContinueToSend and BlockSize value = 2d) to the data link 
+       layer and starts the N_Ar timer */
+    //我们是client，bs不能变
+    //start N_Ar timer
+    //stop N_Br timer
+
+    /* Receiver L_Data.req: the transport/network layer transmits the 
+       FlowControl (Wait) to the data link layer and starts the N_Ar timer */
+    //某些条件不满足，发送wait
+    //start N_Ar timer
+    //stop N_Br timer
+
+    /* Receiver L_Data.req: the transport/network layer transmits the 
+       FlowControl (ContinueToSend) to the data link layer and starts the N_Ar 
+       timer */
+    //发送cts
+    //start N_Ar timer
+    //stop N_Br timer
+    //跟上上条很类似
+
     //tx_buf填充N_PCI和FS
     rx_can_msg->data[0]=(kNPciFC<<4)|gs_docan_tp_stat.FlowStatus;
     //BS
@@ -852,7 +950,89 @@ static N_Result _DelTxFc(struct rt_canx_msg* rx_can_msg){
         // rx_can_msg->data[1]=
     }
 }
-static N_Result _DelTxCf(struct rt_canx_msg* rx_can_msg){}
+/* Receiver L_Data.con: the data link layer confirms to the transport/network 
+   layer that the CAN frame has been acknowledged; the receiver stops the N_Ar 
+   timer and starts the N_Cr timer */
+//发送完流控的中断要调用L_Data.con
+//stop N_Ar timer
+//start N_Cr timer
+
+/* Receiver L_Data.con: the data link layer confirms to the transport/network 
+   layer that the CAN frame has been acknowledged; the receiver stops the N_Ar 
+   timer and starts the N_Br timer */
+//发完等待流控的中断
+//stop N_Ar timer
+//start N_Br timer
+
+/* Receiver L_Data.con: the data link layer confirms to the transport/network 
+   layer that the CAN frame has been acknowledged; the receiver stops the N_Ar 
+   timer and starts the N_Cr timer */
+//发送完流控的中断要调用L_Data.con
+//stop N_Ar timer
+//start N_Cr timer
+//跟上上条完全一样
+
+static N_Result _DelTxCf(struct rt_canx_msg* rx_can_msg){
+    /* Sender L_Data.req: the transport/network layer transmits the first 
+       ConsecutiveFrame to the data link layer and starts the N_As timer */
+    //start N_As timer
+    //stop N_Cs timer
+
+    /* Sender L_Data.req: when the N_Cs timer is elapsed (STmin), the 
+       transport/network layer transmits the next ConsecutiveFrame to the data 
+       link layer and starts the N_As timer */
+    //N_Cs到达设定的STmin就继续发续帧（如果有的话）
+    //start N_As timer
+    //stop N_Cs timer
+
+    /* Sender L_Data.req: the transport/network layer transmits the 
+       ConsecutiveFrame to the data link layer and starts the N_As timer */
+    //start N_As timer
+    //stop N_Cs timer
+    //本质上跟上上条一样
+
+    /* Sender L_Data.req: when the N_Cs timer is elapsed (STmin), the 
+       transport/network layer transmits the last ConsecutiveFrame to the data 
+       link layer and starts the N_As timer */
+    //最后一个续帧
+    //N_Cs到达设定的STmin就继续发续帧（如果有的话）
+    //start N_As timer
+    //stop N_Cs timer
+}
+/* Sender L_Data.con: the data link layer confirms to the transport/network 
+   layer that the CAN frame has been acknowledged; the sender stops the N_As 
+   timer and starts the N_Cs timer according to the separation time value 
+   (STmin) of the previous FlowControl */
+//can tx ok中断要调用L_Data.con
+//stop N_As timer
+//start N_Cs timer
+
+/* Sender L_Data.con: the data link layer confirms to the transport/network 
+   layer that the CAN frame has been acknowledged; the sender stops the N_As 
+   timer and starts the N_Bs timer; the sender is waiting for the next 
+   FlowControl. */
+//bs耗尽，等待发流控
+//stop N_As timer
+//start N_Bs timer
+
+/* Sender L_Data.con: the data link layer confirms to the transport/network 
+   layer that the CAN frame has been acknowledged; the sender stops the N_As 
+   timer and starts the N_Cs timer according to the separation time value 
+   (STmin) of the previous FlowControl */
+//can tx ok中断要调用L_Data.con
+//stop N_As timer
+//start N_Cs timer
+//本质上跟上上条一样
+
+/* Sender L_Data.con: the data link layer confirms to the transport/network 
+   layer that the CAN frame has been acknowledged; the sender stops the N_As 
+   timer */
+//最后一个续帧发完的中断，停止N_As timer
+
+/* Sender N_USData.con: the transport/network layer issues to session layer the
+   completion of the segmented message */
+//应该在某个函数内调用N_USData_con
+
 static N_Result _DelError(struct rt_canx_msg* rx_can_msg){}
 
 static void N_USData_request        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt){}

@@ -26,6 +26,7 @@ extern "C" {
 #include "rtdevice.h"//引入rt_canx_msg类型
 
 #include "iso15765_2_cfg.h"
+#include "iso11898_1.h"//引入L_Data的指针函数
 // #include "iso14229_1_cfg.h"
 
 /******************************************************************************
@@ -81,10 +82,10 @@ typedef enum
 
 typedef enum
 {
-    N_OK,               /*This value means that the service execution has been 
-                          completed successfully; it can be issued to a service
-                          user on both the sender and receiver sides.*/
-    N_RX_ON,            /*This value is issued to the service user to indicate 
+    // N_OK,               /*This value means that the service execution has been 
+                        //   completed successfully; it can be issued to a service
+                        //   user on both the sender and receiver sides.*/
+    N_RX_ON=1,            /*This value is issued to the service user to indicate 
                           that the service did not execute since reception of 
                           the message identified by <N_AI> was taking place; it
                           can be issued to the service user on the receiver 
