@@ -26,7 +26,6 @@ extern "C" {
 #include "rtdevice.h"//引入rt_canx_msg类型
 
 #include "iso15765_2_cfg.h"
-#include "iso11898_1.h"//引入L_Data的指针函数
 // #include "iso14229_1_cfg.h"
 
 /******************************************************************************
@@ -159,10 +158,15 @@ typedef struct
     uint8_t SequenceNumber;
     size_t sdu_index;//多帧传输时当前已经接收/发送的字节数
     size_t sdu_len;//=ff_dl
+    uint8_t BS_cnt;
     size_t N_WFTmax;//固定值，发送流控的时候才用，指示我们（当前是client）在接收多帧时可以发送的多少个等待流控
     size_t N_WFTcnt;
     //从FF帧获取的参数，与sf no padding无关
-    uint8_t RX_DL;//默认为8
+    union
+    {
+        uint8_t RX_DL;//默认为8
+        uint8_t TX_DL;//发送用的，这个配置了就不能被程序修改
+    };
 }N_SDU;
 
 typedef struct
@@ -186,6 +190,20 @@ struct N_ChangeParameterOps
 {
     void (*request)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt);
     Result_ChangeParameter (*confirm)(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, N_UserExtStruct N_UserExt);
+};
+
+typedef enum
+{
+    kComplete,
+    kNot_Complete,
+    kAborted,
+}Transfer_StatusEnum;
+
+struct L_DataOps
+{
+    void (*request)(struct rt_canx_msg* tx_can_msg);
+    void (*confirm)(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status);
+    void (*indication)(struct rt_canx_msg* rx_can_msg);
 };
 
 /******************************************************************************
