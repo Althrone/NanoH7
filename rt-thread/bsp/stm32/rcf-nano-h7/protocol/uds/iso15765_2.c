@@ -159,6 +159,103 @@ struct rt_ringbuffer * g_docan_tp_tx_rb=NULL;
  * private functions declaration
  *****************************************************************************/
 
+/**
+ * Peek data from ring buffer without moving the read pointer.
+ *
+ * @param rb            Pointer to the ring buffer.
+ * @param ptr           Pointer to the data buffer where the data will be stored.
+ * @param length        The desired length of data to peek. Must be less than or equal to the data length in the buffer.
+ * @return              The actual number of bytes peeked.
+ */
+rt_size_t rt_ringbuffer_peek(struct rt_ringbuffer *rb, rt_uint8_t *ptr, rt_uint16_t length)
+{
+    rt_base_t level;
+    rt_size_t len = 0;
+    rt_uint16_t read_index, write_index;
+    rt_uint16_t read_mirror, write_mirror;
+    rt_int16_t buffer_size;
+
+    /* 为了线程安全，禁止中断或加锁 */
+    level = rt_hw_interrupt_disable();
+
+    /* 保存当前读写下标和镜像位 */
+    read_index = rb->read_index;
+    write_index = rb->write_index;
+    read_mirror = rb->read_mirror;
+    write_mirror = rb->write_mirror;
+    buffer_size = rb->buffer_size;
+
+    /* 检查是否有足够的数据可读 */
+    rt_size_t data_len = rt_ringbuffer_data_len(rb);
+    if (length > data_len)
+    {
+        length = data_len; // 不能读取超过已有数据量的数据
+    }
+
+    if (length == 0)
+    {
+        rt_hw_interrupt_enable(level);
+        return 0;
+    }
+
+    /* 计算从当前 read_index 开始，到缓冲区末尾的数据长度 */
+    rt_size_t first_part_len = buffer_size - read_index;
+    if (first_part_len > length)
+    {
+        first_part_len = length;
+    }
+
+    /* 复制第一部分数据 (从 read_index 到缓冲区结束) */
+    if (ptr != RT_NULL && first_part_len > 0)
+    {
+        memcpy(ptr, &rb->buffer_ptr[read_index], first_part_len);
+    }
+
+    /* 如果需要，复制第二部分数据 (从缓冲区开始处环绕) */
+    if (length > first_part_len)
+    {
+        rt_size_t second_part_len = length - first_part_len;
+        if (ptr != RT_NULL && second_part_len > 0)
+        {
+            memcpy(ptr + first_part_len, &rb->buffer_ptr[0], second_part_len);
+        }
+    }
+
+    len = length;
+
+    /* 注意：这里我们没有修改 rb->read_index 和 rb->read_mirror */
+
+    /* 恢复中断 */
+    rt_hw_interrupt_enable(level);
+
+    return len;
+}
+/**
+ * Peek a character from ring buffer without moving the read pointer.
+ *
+ * @param rb            Pointer to the ring buffer.
+ * @param ch            Pointer to the character where the data will be stored.
+ * @return              1 if successful, 0 otherwise.
+ */
+rt_size_t rt_ringbuffer_peekchar(struct rt_ringbuffer *rb, rt_uint8_t *ch)
+{
+    rt_base_t level;
+    rt_size_t ret = 0;
+
+    if (rt_ringbuffer_data_len(rb) < 1)
+    {
+        return 0;
+    }
+
+    level = rt_hw_interrupt_disable();
+
+    *ch = rb->buffer_ptr[rb->read_index]; // 直接读取当前读指针处的字符
+    ret = 1;
+
+    rt_hw_interrupt_enable(level);
+    return ret;
+}
+
 /******************************************************************************
  * pubilc functions definition
  *****************************************************************************/
