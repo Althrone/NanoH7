@@ -77,7 +77,7 @@ typedef enum
                       network layer and no other parameter value can be used to
                       better describe the error. It can be issued to the 
                       service user on both the sender and receiver side.*/
-}N_Result;
+}N_ResultEnum;
 
 typedef enum
 {
@@ -97,7 +97,7 @@ typedef enum
                           that the service did not execute due to an 
                           out-of-range <Parameter_Value>; it can be issued to a
                           service user on both the receiver and sender sides.*/
-}Result_ChangeParameter;
+}Result_ChangeParameterEnum;
 
 typedef enum
 {
@@ -142,31 +142,92 @@ typedef enum
     kFsOVFLW,
 }FlowStatusEnum;
 
+typedef enum
+{
+    kSduRecv,
+    kSduSend,
+}SduDirEnum;
+
+typedef enum
+{
+    kSduServer,
+    kSduClient,
+}SduRoleEnum;
+
 typedef struct
 {
     MtypeEnum Mtype;
     N_AIStruct N_AI;
-    uint8_t STmin;  //可修改
-    uint8_t BS;     //可修改
-    size_t sdu_buf_size; //对应多帧接收缓冲区大小
-    uint8_t* sdu_buf;//传输给上层的buf,与ff_dl相关
+    
+    size_t Length; //发送方可变，接收方为固定配置
+    uint8_t* MessageData;//与上层实体交换数据的缓冲区
+
+    // N_ChangeParameters.request修改的参数
+    // 9.6.5.6 Dynamic BS/STmin values in subsequent FlowControl frames
+    /* If the server is the receiver of a segmented message transfer (i.e. the 
+       sender of the FlowControl frame), it may choose either to use the same 
+       values for BS and STmin in subsequent FC (CTS) frames of the same 
+       segmented message or to vary these values from FC to FC frame. */
+    //如果这个sdu是从服务端接收的，每次接收到流控帧都要去做修改
+    /* If the client, connected to an ISO 15765-compliant in-vehicle diagnostic
+       network, is the receiver of a segmented message transfer (i.e. the 
+       sender of the FlowControl frame), it shall use the same values for BS 
+       and STmin in subsequent FC (CTS) frames of the same segmented message. */
+    //如果这个sdu 我们客户端发送的，两个参数作为配置，配置完不能改
+    uint8_t STmin;
+    uint8_t BS;
+    //confirm参数返回到这里
+    N_ResultEnum N_Result;
+    Result_ChangeParameterEnum Result_ChangeParameter;
+
     //非iso参数
     uint32_t can_id;
+    // bool ide;这个条件隐含在N_AI.N_TAtype中
     bool is_extended;//设置此参数时N_TA有效,与Mtype互斥
+
+    SduRoleEnum role;//客户端还是服务端
+    SduDirEnum dir;//发送还是接收
+
     bool is_padding;//仅dlc<=8时有效
-    FlowStatusEnum FlowStatus;
-    uint8_t SequenceNumber;
-    size_t sdu_index;//多帧传输时当前已经接收/发送的字节数
-    size_t sdu_len;//=ff_dl
-    uint8_t BS_cnt;
-    size_t N_WFTmax;//固定值，发送流控的时候才用，指示我们（当前是client）在接收多帧时可以发送的多少个等待流控
-    size_t N_WFTcnt;
+    uint8_t padding_val;//填充值，接收方无效
     //从FF帧获取的参数，与sf no padding无关
     union
     {
         uint8_t RX_DL;//默认为8
         uint8_t TX_DL;//发送用的，这个配置了就不能被程序修改
     };
+    size_t N_WFTmax;//固定值，发送流控的时候才用，指示我们（当前是client）在接收多帧时可以发送的多少个等待流控
+
+    FlowStatusEnum FlowStatus;
+    uint8_t SequenceNumber;
+    union
+    {
+        bool n_send_req;
+        bool l_recv_ind;
+    };
+
+    size_t sdu_index;//多帧传输时当前已经接收/发送的字节数
+    // size_t sdu_len;//=ff_dl
+    uint8_t BS_cnt;
+    size_t N_WFTcnt;
+
+    //tp层时间参数变量
+    time_t N_As;
+    time_t N_Ar;
+    time_t N_Bs;
+    time_t N_Br;
+    time_t N_Cs;
+    time_t N_Cr;
+
+    bool N_As_timing_enable;
+    bool N_Ar_timing_enable;
+    bool N_Bs_timing_enable;
+    bool N_Br_timing_enable;
+    bool N_Cs_timing_enable;
+    bool N_Cr_timing_enable;
+
+    //根据与下层的接口进行变化
+    struct rt_ringbuffer* datalink_rb;
 }N_SDU;
 
 typedef struct
@@ -179,8 +240,8 @@ typedef struct
 struct N_USDataOps
 {
     void (*request)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
-    void (*confirm)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_Result Result, N_UserExtStruct N_UserExt);
-    void (*indication)  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_Result Result, N_UserExtStruct N_UserExt);
+    void (*confirm)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_ResultEnum N_Result, N_UserExtStruct N_UserExt);
+    void (*indication)  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_ResultEnum N_Result, N_UserExtStruct N_UserExt);
 };
 struct N_USData_FFOps
 {
@@ -188,8 +249,8 @@ struct N_USData_FFOps
 };
 struct N_ChangeParameterOps
 {
-    void (*request)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt);
-    Result_ChangeParameter (*confirm)(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, N_UserExtStruct N_UserExt);
+    void (*request)(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt);
+    void (*confirm)(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, Result_ChangeParameterEnum Result_ChangeParameter, N_UserExtStruct N_UserExt);
 };
 
 typedef enum

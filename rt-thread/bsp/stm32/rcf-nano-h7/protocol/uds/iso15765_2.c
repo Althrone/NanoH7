@@ -27,12 +27,12 @@ extern const size_t kg_num_of_sdu;
 extern const struct L_DataOps L_Data;
 
 
-static void N_USData_request        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
-static void N_USData_confirm        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_Result Result, N_UserExtStruct N_UserExt);
-static void N_USData_indication     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_Result Result, N_UserExtStruct N_UserExt);
-static void N_USData_FF_indication  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, size_t Length, N_UserExtStruct N_UserExt);
-static void N_ChangeParameter_request(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt);
-static Result_ChangeParameter N_ChangeParameter_confirm(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, N_UserExtStruct N_UserExt);
+static void N_USData_request            (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
+static void N_USData_confirm            (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_ResultEnum N_Result, N_UserExtStruct N_UserExt);
+static void N_USData_indication         (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_ResultEnum N_Result, N_UserExtStruct N_UserExt);
+static void N_USData_FF_indication      (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, size_t Length, N_UserExtStruct N_UserExt);
+static void N_ChangeParameter_request   (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt);
+static void N_ChangeParameter_confirm   (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, Result_ChangeParameterEnum Result_ChangeParameter, N_UserExtStruct N_UserExt);
 
 const struct N_USDataOps N_USData={
     .request=N_USData_request,
@@ -75,7 +75,7 @@ typedef struct
     uint8_t st_min;
 }DoCanTpStat;
 
-typedef N_Result (*N_Result_pfun_void)(struct rt_canx_msg* rx_can_msg); /* pointer to function */
+typedef N_ResultEnum (*N_Result_pfun_void)(struct rt_canx_msg* rx_can_msg); /* pointer to function */
 
 typedef enum
 {
@@ -118,16 +118,16 @@ typedef struct
 
 DoCanTpStat gs_docan_tp_stat;
 
-static N_Result _DelIdle(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelRxSf(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelRxFf(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelRxFc(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelRxCf(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelTxSf(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelTxFf(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelTxFc(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelTxCf(struct rt_canx_msg* rx_can_msg);
-static N_Result _DelError(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelIdle(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelRxFc(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelRxCf(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelTxSf(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelTxFf(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelTxFc(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelTxCf(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelError(struct rt_canx_msg* rx_can_msg);
 
 static DoCanTpSM gs_docan_tp_sm={
     .state=kDoCanTpIdle,
@@ -155,25 +155,6 @@ static const uint8_t DLCtoBytes[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 
 struct rt_ringbuffer * g_docan_tp_rx_rb=NULL;
 struct rt_ringbuffer * g_docan_tp_tx_rb=NULL;
 
-static uint8_t gs_data_len=0;
-static uint8_t gs_rx_buf[64]={0};
-static uint8_t gs_tx_buf[64]={0};
-static uint8_t* gs_pbuf=gs_rx_buf;
-
-bool N_As_timing_enable=0;
-bool N_Ar_timing_enable=0;
-bool N_Bs_timing_enable=0;
-bool N_Br_timing_enable=0;
-bool N_Cs_timing_enable=0;
-bool N_Cr_timing_enable=0;
-
-time_t N_As=0;
-time_t N_Ar=0;
-time_t N_Bs=0;
-time_t N_Br=0;
-time_t N_Cs=0;
-time_t N_Cr=0;
-
 /******************************************************************************
  * private functions declaration
  *****************************************************************************/
@@ -197,10 +178,10 @@ void DoCanTpInit(void)
  */
 void NetworkLayerTimingTask(uint16_t ms)
 {
-    if(N_As_timing_enable&&(N_As<N_AS_TIMEOUT_MS))
-    {
-        N_As+=ms;
-    }
+    // if(N_As_timing_enable&&(N_As<N_AS_TIMEOUT_MS))
+    // {
+    //     N_As+=ms;
+    // }
 }
 
 void DoCanTpTask(void)
@@ -208,7 +189,7 @@ void DoCanTpTask(void)
     //进来先检查N_Br是不是在计数
     //是的话就是有首帧进来了
     //从ringbuf读取一个can帧出来
-    // kgs_docan_tp_fsm_tbl[gs_docan_tp_sm.event][gs_docan_tp_sm.state](&gs_data_len,gs_pbuf);
+    kgs_docan_tp_fsm_tbl[gs_docan_tp_sm.event][gs_docan_tp_sm.state](&gs_data_len,gs_pbuf);
 }
 
 /******************************************************************************
@@ -246,73 +227,100 @@ static bool _SearchSduIndex(struct rt_canx_msg* rx_can_msg,size_t* sdu_index){
     return data_matches;
 }
 
-static N_Result _DelIdle(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelIdle(struct rt_canx_msg* rx_can_msg){
 
-    //在此之前要获取rb长度
-    if(rt_ringbuffer_data_len(g_docan_tp_rx_rb))
-        return N_OK;//buf为空，不需要执行
+    size_t sdu_index ;
 
-    struct rt_canx_msg* tmp_ptr =NULL;
-    tmp_ptr= (struct rt_canx_msg*)malloc(sizeof(struct rt_canx_msg));
-    if(tmp_ptr==NULL)
-        return N_ERROR;//分配失败
-
-    rt_ringbuffer_get(g_docan_tp_rx_rb,(uint8_t *)tmp_ptr,8);//获取rt_canx_msg的头
-
-    if(rt_ringbuffer_data_len(g_docan_tp_rx_rb)<DLCtoBytes[tmp_ptr->dlc])
-        while(1);//////////////////////等待？？？一般来说不会出现这种情况
-
-    struct rt_canx_msg* new_tmp_ptr = NULL;
-    new_tmp_ptr=realloc(tmp_ptr,sizeof(struct rt_canx_msg)+DLCtoBytes[tmp_ptr->dlc]);
-    if(new_tmp_ptr==NULL)
+    //扫描所有的sdu，看看有没有从数据链路层（can接收中断）接收ind
+    sdu_index = 0;
+    bool is_l_ind=false;
+    for (; sdu_index < kg_num_of_sdu; sdu_index++)
     {
-        free(tmp_ptr);
-        return N_ERROR;//分配失败
+        if (g_n_sdu_tbl[sdu_index].l_recv_ind) {
+            is_l_ind=true;
+            break;
+        }
     }
-    tmp_ptr=new_tmp_ptr;
-
-    //将data[]的整个包读出来
-    rt_ringbuffer_get(g_docan_tp_rx_rb,tmp_ptr->data,DLCtoBytes[tmp_ptr->dlc]);
-
-    rx_can_msg=tmp_ptr;
-
-    //根据PDU的ID查SDU tbl
-    size_t sdu_index=0;
-    if(_SearchSduIndex(rx_can_msg,&sdu_index)==false)
+    //如果有执行接收序列
+    if(is_l_ind)
     {
-        //Ignore Frame
-        free(rx_can_msg);
-        //can帧塞回另一个buffer
-        return N_UNEXP_PDU;//sdu tbl没有找到匹配的参数
+        //在此之前要获取rb长度
+        if(rt_ringbuffer_data_len(g_docan_tp_rx_rb))
+            return N_OK;//buf为空，不需要执行
+
+        struct rt_canx_msg* tmp_ptr =NULL;
+        tmp_ptr= (struct rt_canx_msg*)malloc(sizeof(struct rt_canx_msg));
+        if(tmp_ptr==NULL)
+            return N_ERROR;//分配失败
+
+        rt_ringbuffer_get(g_docan_tp_rx_rb,(uint8_t *)tmp_ptr,8);//获取rt_canx_msg的头
+
+        if(rt_ringbuffer_data_len(g_docan_tp_rx_rb)<DLCtoBytes[tmp_ptr->dlc])
+            while(1);//////////////////////等待？？？一般来说不会出现这种情况
+
+        struct rt_canx_msg* new_tmp_ptr = NULL;
+        new_tmp_ptr=realloc(tmp_ptr,sizeof(struct rt_canx_msg)+DLCtoBytes[tmp_ptr->dlc]);
+        if(new_tmp_ptr==NULL)
+        {
+            free(tmp_ptr);
+            return N_ERROR;//分配失败
+        }
+        tmp_ptr=new_tmp_ptr;
+
+        //将data[]的整个包读出来
+        rt_ringbuffer_get(g_docan_tp_rx_rb,tmp_ptr->data,DLCtoBytes[tmp_ptr->dlc]);
+
+        rx_can_msg=tmp_ptr;
+
+        //根据PDU的ID查SDU tbl
+        size_t sdu_index=0;
+        if(_SearchSduIndex(rx_can_msg,&sdu_index)==false)
+        {
+            //Ignore Frame
+            free(rx_can_msg);
+            //can帧塞回另一个buffer
+            return N_UNEXP_PDU;//sdu tbl没有找到匹配的参数
+        }
+
+        //N_PCItype is the high nibble of N_PCI byte (Byte #1)
+        uint8_t n_pci_byte1=rx_can_msg->data[0+(g_n_sdu_tbl[sdu_index].Mtype|g_n_sdu_tbl[sdu_index].is_extended)]>>4;
+
+        switch (n_pci_byte1)
+        {
+        case kNPciSF:
+            gs_docan_tp_sm.event=kDoCanTpRecvSfEvent;
+            break;
+        case kNPciFF:
+            gs_docan_tp_sm.event=kDoCanTpRecvFfEvent;
+            break;
+        default:
+            free(rx_can_msg);
+            return N_UNEXP_PDU;//Ignore Frame
+            break;
+        }
+        return N_OK;
     }
 
-    //N_PCItype is the high nibble of N_PCI byte (Byte #1)
-    uint8_t n_pci_byte1=rx_can_msg->data[0+(g_n_sdu_tbl[sdu_index].Mtype|g_n_sdu_tbl[sdu_index].is_extended)]>>4;
-
-    switch (n_pci_byte1)
+    //扫描所有的sdu，看看有没有从会话层接收到发送请求
+    sdu_index = 0;
+    bool is_n_req=false;
+    for (; sdu_index < kg_num_of_sdu; sdu_index++)
     {
-    case kNPciSF:
-        gs_docan_tp_sm.event=kDoCanTpRecvSfEvent;
-        break;
-    case kNPciFF:
-        gs_docan_tp_sm.event=kDoCanTpRecvFfEvent;
-        break;
-    // case kNPciCF:
-    //     gs_docan_tp_sm.event=kDoCanTpRecvCfEvent;
-    //     break;
-    // case kNPciFC:
-    //     gs_docan_tp_sm.event=kDoCanTpRecvFcEvent;
-    //     break;
-    default:
-        free(rx_can_msg);
-        return N_UNEXP_PDU;//Ignore Frame
-        break;
+        if (g_n_sdu_tbl[sdu_index].n_send_req) {
+            is_n_req=true;
+            break;
+        }
+    }
+    //如果有执行发送序列
+    if(is_l_ind)
+    {
+        return N_OK;
     }
 
-    return N_OK;
+    return N_OK;//既没有接收到新的帧，也没有发送请求
 }
 
-static N_Result _DelRxSf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
 
     //根据PDU的ID查SDU tbl
     size_t sdu_index=0;
@@ -490,7 +498,7 @@ static N_Result _DelRxSf(struct rt_canx_msg* rx_can_msg){
     return N_OK;
 }
 
-static N_Result _DelRxFf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
 
     //根据PDU的ID查SDU tbl
     size_t sdu_index=0;
@@ -626,7 +634,7 @@ static N_Result _DelRxFf(struct rt_canx_msg* rx_can_msg){
     g_n_sdu_tbl[sdu_index].sdu_index+=copy_len;
     gs_docan_tp_sm.event=kDoCanTpSendFcEvent;
     g_n_sdu_tbl[sdu_index].FlowStatus=kFsCTS;
-    g_n_sdu_tbl[sdu_index].sdu_len=FF_DL;
+    g_n_sdu_tbl[sdu_index].Length=FF_DL;
     g_n_sdu_tbl[sdu_index].SequenceNumber++;
     N_UserExtStruct N_UserExt={
         .can_id=rx_can_msg->id,
@@ -644,7 +652,7 @@ static N_Result _DelRxFf(struct rt_canx_msg* rx_can_msg){
     return N_OK;
 }
 
-static N_Result _DelRxFc(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelRxFc(struct rt_canx_msg* rx_can_msg){
 
     //根据PDU的ID查SDU tbl
     size_t sdu_index = 0;
@@ -752,7 +760,7 @@ static N_Result _DelRxFc(struct rt_canx_msg* rx_can_msg){
     return N_OK;
 }
 
-static N_Result _DelRxCf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelRxCf(struct rt_canx_msg* rx_can_msg){
 
     //根据PDU的ID查SDU tbl
     size_t sdu_index=0;
@@ -780,7 +788,7 @@ static N_Result _DelRxCf(struct rt_canx_msg* rx_can_msg){
         {
             if((g_n_sdu_tbl[sdu_index].Mtype==kRemoteDiagnostics)||g_n_sdu_tbl[sdu_index].is_extended)
             {
-                size_t remaining_length=g_n_sdu_tbl[sdu_index].sdu_len-(g_n_sdu_tbl[sdu_index].sdu_index);
+                size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].sdu_index);
                 if(remaining_length<=(8-2))//剩余长度<=6
                 {
                     if(DLCtoBytes[rx_can_msg->dlc]!=remaining_length+2)
@@ -794,7 +802,7 @@ static N_Result _DelRxCf(struct rt_canx_msg* rx_can_msg){
             }
             else//normal addressing
             {
-                size_t remaining_length=g_n_sdu_tbl[sdu_index].sdu_len-(g_n_sdu_tbl[sdu_index].sdu_index);
+                size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].sdu_index);
                 if(remaining_length<=(8-1))//剩余长度<=7
                 {
                     if(DLCtoBytes[rx_can_msg->dlc]!=remaining_length+1)
@@ -845,14 +853,14 @@ static N_Result _DelRxCf(struct rt_canx_msg* rx_can_msg){
     return N_OK;
 }
 
-static N_Result _DelTxSf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelTxSf(struct rt_canx_msg* rx_can_msg){
 
     // L_Data.request()
     //starts the N_As timer
     return N_OK;
 }
 
-static N_Result _DelTxFf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelTxFf(struct rt_canx_msg* rx_can_msg){
 
     /* Sender L_Data.req: the transport/network layer transmits the FirstFrame 
        to the data link layer and starts the N_As timer */
@@ -861,7 +869,7 @@ static N_Result _DelTxFf(struct rt_canx_msg* rx_can_msg){
     return N_OK;
 }
 
-static N_Result _DelTxFc(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelTxFc(struct rt_canx_msg* rx_can_msg){
 
     // 9.8.4 Wait frame error handling
     /* If the receiver has transmitted N_WFTmax FlowControl wait network 
@@ -905,7 +913,7 @@ static N_Result _DelTxFc(struct rt_canx_msg* rx_can_msg){
     }
 }
 
-static N_Result _DelTxCf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelTxCf(struct rt_canx_msg* rx_can_msg){
     /* Sender L_Data.req: the transport/network layer transmits the first 
        ConsecutiveFrame to the data link layer and starts the N_As timer */
     //start N_As timer
@@ -937,14 +945,63 @@ static N_Result _DelTxCf(struct rt_canx_msg* rx_can_msg){
    completion of the segmented message */
 //应该在某个函数内调用N_USData_con
 
-static N_Result _DelError(struct rt_canx_msg* rx_can_msg){}
+static N_ResultEnum _DelError(struct rt_canx_msg* rx_can_msg){}
 
-static void N_USData_request        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt){}
-static void N_USData_confirm        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_Result Result, N_UserExtStruct N_UserExt){}
-static void N_USData_indication     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_Result Result, N_UserExtStruct N_UserExt){}
+static bool _NetworkLayerParamCheck(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE,
+                                    N_UserExtStruct N_UserExt,size_t* index)
+{
+    //找到传入的地址信息与配置表匹配的那一个
+    size_t i = 0;
+    bool data_matches = false;
+    for (; i < kg_num_of_sdu; i++)
+    {
+        if (N_UserExt.can_id != g_n_sdu_tbl[i].can_id)//id不一致直接跳过
+            continue;
+        // if(N_UserExt.ide!= g_n_sdu_tbl[i].ide)//有可能id一样，但是一个是11位一个是27位
+        //     continue;包含在N_AI.N_TAtype中
+        if(N_TAtype!=g_n_sdu_tbl[i].N_AI.N_TAtype)
+            continue;
+        if(Mtype!=g_n_sdu_tbl[i].Mtype)
+            continue;
+        if(N_AE!=g_n_sdu_tbl[i].N_AI.N_AE)
+            continue;
+        if(N_UserExt.is_extended!=g_n_sdu_tbl[i].is_extended)
+            continue;
+        if(N_TA!=g_n_sdu_tbl[i].N_AI.N_TA)
+            continue;
+        if(N_SA!=g_n_sdu_tbl[i].N_AI.N_SA)
+            continue;
+
+        break;
+    }
+    if(i>=kg_num_of_sdu)
+    {
+        data_matches=false;
+    }
+
+    *index=i;
+    return data_matches;
+}
+
+static void N_USData_request(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, 
+                             uint8_t* MessageData, size_t Length, 
+                             N_UserExtStruct N_UserExt)
+{
+    size_t sdu_index=0;
+    if(false==_NetworkLayerParamCheck(Mtype, N_SA, N_TA, N_TAtype, N_AE, N_UserExt,&sdu_index))
+    {
+        //理论上这里要上报一个错误
+        while(1);
+        return;
+    }
+    g_n_sdu_tbl[sdu_index].n_send_req=true;
+}
+
+static void N_USData_confirm        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_ResultEnum N_Result, N_UserExtStruct N_UserExt){}
+static void N_USData_indication     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_ResultEnum N_Result, N_UserExtStruct N_UserExt){}
 static void N_USData_FF_indication  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, size_t Length, N_UserExtStruct N_UserExt){}
 static void N_ChangeParameter_request(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt){}
-static Result_ChangeParameter N_ChangeParameter_confirm(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, N_UserExtStruct N_UserExt){}
+static void N_ChangeParameter_confirm(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, Result_ChangeParameterEnum Result_ChangeParameter, N_UserExtStruct N_UserExt){}
 
 static void L_Data_request(struct rt_canx_msg* tx_can_msg){
 
@@ -982,8 +1039,8 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
             /* Sender L_Data.con: the data link layer confirms to the 
                transport/network layer that the CAN frame has been 
                acknowledged; the sender stops the N_As timer */
-            N_As_timing_enable=false;
-            N_As=0;
+            g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+            g_n_sdu_tbl[sdu_index].N_As=0;
             /* Sender N_USData.con: the transport/network layer issues to the 
                session layer the completion of the unsegmented message */
             break;
@@ -993,13 +1050,13 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
                acknowledged; the sender stops the N_As timer and starts the 
                N_Bs timer */
             //can发送完成中断中调用L_Data.con以停止N_As timer 开启N_Bs timer
-            N_As_timing_enable=false;
-            N_As=0;
-            N_Bs_timing_enable=true;
+            g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+            g_n_sdu_tbl[sdu_index].N_As=0;
+            g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=true;
             break;
         case kNPciCF://发送连续帧
             //判断是否为最后一个续帧或者本次块传输的最后一个block
-            size_t remaining_length=g_n_sdu_tbl[sdu_index].sdu_len-(g_n_sdu_tbl[sdu_index].sdu_index);
+            size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].sdu_index);
             uint8_t tmp_rx_payload_len=g_n_sdu_tbl[sdu_index].TX_DL-1;//工程配置的续帧和首帧长度
             if(temp_is_remote_diagnostics||temp_is_extended)//带N_AE或者N_TA在第一字节的can帧
                 tmp_rx_payload_len-=1;
@@ -1009,8 +1066,8 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
                acknowledged; the sender stops the N_As timer */
             if(remaining_length<=tmp_rx_payload_len)
             {
-                N_As_timing_enable=false;
-                N_As=0;
+                g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+                g_n_sdu_tbl[sdu_index].N_As=0;
                 break;
             }
 
@@ -1023,9 +1080,9 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
             //start N_Bs timer
             if(g_n_sdu_tbl[sdu_index].BS_cnt==g_n_sdu_tbl[sdu_index].BS-1)
             {
-                N_As_timing_enable=false;
-                N_As=0;
-                N_Bs_timing_enable=true;
+                g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+                g_n_sdu_tbl[sdu_index].N_As=0;
+                g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=true;
             }
             //6 14
             /* Sender L_Data.con: the data link layer confirms to the 
@@ -1038,9 +1095,9 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
             //start N_Cs timer
             else
             {
-                N_As_timing_enable=false;
-                N_As=0;
-                N_Cs_timing_enable=true;
+                g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+                g_n_sdu_tbl[sdu_index].N_As=0;
+                g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=true;
             }
             break;
         case kNPciFC://发送流控帧
@@ -1056,9 +1113,9 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
                 //stop N_Ar timer
                 //start N_Cr timer
                 case kFsCTS:
-                    N_Ar_timing_enable=false;
-                    N_Ar=0;
-                    N_Cr_timing_enable=true;
+                    g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=false;
+                    g_n_sdu_tbl[sdu_index].N_Ar=0;
+                    g_n_sdu_tbl[sdu_index].N_Cr_timing_enable=true;
                     break;
                 /* Receiver L_Data.con: the data link layer confirms to the 
                    transport/network layer that the CAN frame has been 
@@ -1068,9 +1125,9 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
                 //stop N_Ar timer
                 //start N_Br timer
                 case kFsWAIT:
-                    N_Ar_timing_enable=false;
-                    N_Ar=0;
-                    N_Br_timing_enable=true;
+                    g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=false;
+                    g_n_sdu_tbl[sdu_index].N_Ar=0;
+                    g_n_sdu_tbl[sdu_index].N_Br_timing_enable=true;
                     break;
                 case kFsOVFLW:
                     while(1);//还不知道怎么处理
@@ -1114,18 +1171,23 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
     switch(n_pci_type)
     {
         case kNPciSF://接收到单帧
+            /* Receiver L_Data.ind: the data link layer issues to the 
+               transport/network layer the reception of the CAN frame */
+            while(g_n_sdu_tbl[sdu_index].l_recv_ind);//单帧来的太快了
+            g_n_sdu_tbl[sdu_index].l_recv_ind=true;
             break;
         case kNPciFF://接收到首帧
             /* Receiver L_Data.ind: the data link layer issues to the 
                transport/network layer the reception of the CAN frame; the 
                receiver starts the N_Br timer */
-            // 应该在can rx中断中调用并开启N_Br定时器
-            N_Br_timing_enable=true;
+            while(g_n_sdu_tbl[sdu_index].l_recv_ind);//理论上不会出现多次接收到首帧的情况
+            g_n_sdu_tbl[sdu_index].l_recv_ind=true;
+            g_n_sdu_tbl[sdu_index].N_Br_timing_enable=true;
             break;
         case kNPciCF://接收到续帧
             //续帧增加判断是否最后一个续帧
             //最后一个续帧必停N_Cr，而且最后一个续帧有可能是本次块传输的最后一块，所以先校验
-            size_t remaining_length=g_n_sdu_tbl[sdu_index].sdu_len-(g_n_sdu_tbl[sdu_index].sdu_index);
+            size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].sdu_index);
             //不判断真实的dlc长度，这个放在tp_task里判断
             //接收到一个帧，就认为长度和首帧长度是一致的
             uint8_t tmp_rx_payload_len=g_n_sdu_tbl[sdu_index].RX_DL-1;//减去续帧的N_PCI bytes长度
@@ -1138,8 +1200,8 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
             //stop N_Cr timer
             if(remaining_length<=tmp_rx_payload_len)
             {
-                N_Cr_timing_enable=false;//最后一个续帧，必停N_Cr
-                N_Cr=0;
+                g_n_sdu_tbl[sdu_index].N_Cr_timing_enable=false;//最后一个续帧，必停N_Cr
+                g_n_sdu_tbl[sdu_index].N_Cr=0;
                 break;
             }
             /* Receiver L_Data.ind: the data link layer issues to the 
@@ -1148,9 +1210,9 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
             //接收方判断bs到达才执行这个
             if(g_n_sdu_tbl[sdu_index].BS_cnt==g_n_sdu_tbl[sdu_index].BS-1)
             {
-                N_Cr_timing_enable=false;//bs耗尽，必停N_Cr
-                N_Cr=0;
-                N_Br_timing_enable=true;
+                g_n_sdu_tbl[sdu_index].N_Cr_timing_enable=false;//bs耗尽，必停N_Cr
+                g_n_sdu_tbl[sdu_index].N_Cr=0;
+                g_n_sdu_tbl[sdu_index].N_Br_timing_enable=true;
             }
             //6 14
             /* Receiver L_Data.ind: the data link layer issues to the 
@@ -1158,7 +1220,7 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
                receiver restarts the N_Cr timer */
             //接收到续帧，重新开始N_Cr 计数
             else
-                N_Cr=0;//bs未耗尽，重置N_Cr
+                g_n_sdu_tbl[sdu_index].N_Cr=0;//bs未耗尽，重置N_Cr
             break;
         case kNPciFC://接收到流控帧
             //流控增加判断FS
@@ -1172,16 +1234,16 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
             //stop N_Bs timer
             //start N_Cs timer
             case kFsCTS:
-                N_Bs_timing_enable=false;
-                N_Bs=0;
-                N_Cs_timing_enable=true;
+                g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=false;
+                g_n_sdu_tbl[sdu_index].N_Bs=0;
+                g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=true;
                 break;
             /* Sender L_Data.ind: the data link layer issues to the 
                transport/network layer the reception of the CAN frame; the 
                sender restarts the N_Bs timer */
             //N_Bs清零继续等待
             case kFsWAIT:
-                N_Bs=0;
+                g_n_sdu_tbl[sdu_index].N_Bs=0;
                 break;
             case kFsOVFLW:
                 //N_USData.confirm <N_Result> = N_BUFF_ER_OVFLW给上层
