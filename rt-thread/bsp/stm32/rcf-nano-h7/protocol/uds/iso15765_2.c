@@ -823,8 +823,6 @@ static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu){
        and STmin in subsequent FC (CTS) frames of the same segmented message. */
     //这一段丢到Tx_FC
 
-    
-
     p_n_sdu->FlowStatus=temp_fs;
 
     switch (temp_fs)
@@ -844,6 +842,7 @@ static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu){
         break;
     case kFsOVFLW:
         //返回会话层
+        ///////////////////////////////////////////
         break;
     default:
         while(1);//不可能出现
@@ -855,9 +854,11 @@ static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu){
 
 static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
 
-    //根据PDU的ID查SDU tbl
-    size_t sdu_index=0;
-    _SearchSduIndex(rx_can_msg,&sdu_index);
+    //从rb读取can帧
+    struct rt_canx_msg rx_msg;
+    rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
+    //将头+data[dlc]的整个包读出来
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
 
     /* The payload data length CAN_DL of the received CAN frame has to match 
        the RX_DL value which was determined in the reception process of the 
@@ -865,44 +866,41 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
        contain less than RX_DL bytes. */
 
     //CAN_DL correct for the determined RX_DL
-    if(g_n_sdu_tbl[sdu_index].RX_DL==8)//首帧接收到的长度是8字节
+    if(p_n_sdu->RX_DL==8)//首帧接收到的长度是8字节
     {
-        if(g_n_sdu_tbl[sdu_index].is_padding)//填充模式
+        if(p_n_sdu->is_padding)//填充模式
         {
-            if(DLCtoBytes[rx_can_msg->dlc]!=8)
+            if(DLCtoBytes[rx_msg.dlc]!=8)
             {
                 //ignore frame
-                gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-                free(rx_can_msg);
+                p_n_sdu->sm.event=kDoCanTpFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
         else//变长模式
         {
-            if((g_n_sdu_tbl[sdu_index].Mtype==kRemoteDiagnostics)||g_n_sdu_tbl[sdu_index].is_extended)
+            if((p_n_sdu->Mtype==kRemoteDiagnostics)||p_n_sdu->is_extended)
             {
-                size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].msg_index);
+                size_t remaining_length=p_n_sdu->Length-p_n_sdu->msg_index;
                 if(remaining_length<=(8-2))//剩余长度<=6
                 {
-                    if(DLCtoBytes[rx_can_msg->dlc]!=remaining_length+2)
+                    if(DLCtoBytes[rx_msg.dlc]!=remaining_length+2)
                     {
                         //ignore frame
-                        gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-                        free(rx_can_msg);
+                        p_n_sdu->sm.event=kDoCanTpFinishEvent;
                         return N_UNEXP_PDU;
                     }
                 }
             }
             else//normal addressing
             {
-                size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].msg_index);
+                size_t remaining_length=p_n_sdu->Length-p_n_sdu->msg_index;
                 if(remaining_length<=(8-1))//剩余长度<=7
                 {
-                    if(DLCtoBytes[rx_can_msg->dlc]!=remaining_length+1)
+                    if(DLCtoBytes[rx_msg.dlc]!=remaining_length+1)
                     {
                         //ignore frame
-                        gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-                        free(rx_can_msg);
+                        p_n_sdu->sm.event=kDoCanTpFinishEvent;
                         return N_UNEXP_PDU;
                     }
                 }
@@ -911,11 +909,10 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
     }
     else//can fd only
     {
-        if(DLCtoBytes[rx_can_msg->dlc]!=g_n_sdu_tbl[sdu_index].RX_DL)
+        if(DLCtoBytes[rx_msg.dlc]!=p_n_sdu->RX_DL)
         {
             //ignore frame
-            gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-            free(rx_can_msg);
+            p_n_sdu->sm.event=kDoCanTpFinishEvent;
             return N_UNEXP_PDU;
         }
     }
@@ -926,15 +923,14 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
        shall be aborted and the network layer shall make an N_USData.indication
        service call with the parameter <N_Result> = N_WRONG_SN to the adjacent 
        upper layer. */
-    uint8_t SequenceNumber = rx_can_msg->data[0+(g_n_sdu_tbl[sdu_index].Mtype|g_n_sdu_tbl[sdu_index].is_extended)]&0x0F;
-    if(SequenceNumber!=g_n_sdu_tbl[sdu_index].SequenceNumber)
+    uint8_t SequenceNumber = rx_msg.data[0+(p_n_sdu->Mtype|p_n_sdu->is_extended)]&0x0F;
+    if(SequenceNumber!=p_n_sdu->SequenceNumber)
     {
-        gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-        free(rx_can_msg);
+        p_n_sdu->sm.event=kDoCanTpFinishEvent;
         return N_WRONG_SN;
     }
 
-    g_n_sdu_tbl[sdu_index].SequenceNumber++;
+    p_n_sdu->SequenceNumber++;
     //复制续帧的数据到sdu
     //更新sdu的index
     //判断还有没有剩余字节，或者需不需要发送流控帧
@@ -998,7 +994,7 @@ static N_ResultEnum _DelTxFc(N_SDU* p_n_sdu){
     //跟上上条很类似
 
     //tx_buf填充N_PCI和FS
-    rx_can_msg->data[0]=(kNPciFC<<4)|gs_docan_tp_stat.FlowStatus;
+    // rx_can_msg->data[0]=(kNPciFC<<4)|gs_docan_tp_stat.FlowStatus;
     //BS
     if(gs_docan_tp_stat.FlowStatus==kFsCTS)
     {
@@ -1100,6 +1096,21 @@ static void N_ChangeParameter_confirm(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_T
 
 static void L_Data_request(struct rt_canx_msg* tx_can_msg){
 
+    //根据PDU的ID查SDU tbl
+    size_t sdu_index=0;
+    if(_SearchSduIndex(tx_can_msg,&sdu_index)==false)
+        return ;
+
+    //发一个单帧 首帧 续帧
+    g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
+    // 只有发续帧才关N_Cs
+    g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=false;
+    g_n_sdu_tbl[sdu_index].N_Cs=0;
+
+    // 发流控帧
+    g_n_sdu_tbl[sdu_index].N_Br_timing_enable=false;
+    g_n_sdu_tbl[sdu_index].N_Br=0;
+    g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=true;
 }
 
 static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status){
@@ -1228,6 +1239,7 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
                     g_n_sdu_tbl[sdu_index].N_Br_timing_enable=true;
                     break;
                 case kFsOVFLW:
+                    //发出的帧发送完成了
                     while(1);//还不知道怎么处理
                     break;
                 default:
@@ -1245,6 +1257,7 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
 }
 
 static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
+
     //根据PDU的ID查SDU tbl
     size_t sdu_index=0;
     if(_SearchSduIndex(rx_can_msg,&sdu_index)==false)
@@ -1346,11 +1359,20 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
                 g_n_sdu_tbl[sdu_index].N_Bs=0;
                 break;
             case kFsOVFLW:
-                //N_USData.confirm <N_Result> = N_BUFF_ER_OVFLW给上层
+                //准备终止传输
+                g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=false;
+                g_n_sdu_tbl[sdu_index].N_Bs=0;
                 break;
             default:
                 //9.6.5.2 FlowStatus (FS) error handling
-                //通过网络层返回N_USData.confirm <N_Result> = N_INVALID_FS给上层
+                /* If an FC N_PDU message is received with an invalid 
+                   (reserved) FS parameter value, the message transmission 
+                   shall be aborted and the network layer shall make an 
+                   N_USData.confirm service call with the parameter <N_Result> 
+                   = N_INVALID_FS to the adjacent upper layer */
+                //准备终止传输
+                g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=false;
+                g_n_sdu_tbl[sdu_index].N_Bs=0;
                 break;
             }
             break;
