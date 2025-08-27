@@ -154,13 +154,48 @@ typedef enum
     kSduClient,
 }SduRoleEnum;
 
+typedef enum
+{
+    kDoCanTpIdle,
+    kDoCanTpRxSf,
+    kDoCanTpRxFf,
+    kDoCanTpRxFc,
+    kDoCanTpRxCf,
+    kDoCanTpTxSf,
+    kDoCanTpTxFf,
+    kDoCanTpTxFc,
+    kDoCanTpTxCf,
+    kDoCanTpError,
+}DoCanTpStateEnum;
+
+typedef enum
+{
+    kDoCanTpWaitEvent,
+    kDoCanTpRecvSfEvent,
+    kDoCanTpRecvFfEvent,
+    kDoCanTpRecvCfEvent,
+    kDoCanTpRecvFcEvent,
+    kDoCanTpSendSfEvent,
+    kDoCanTpSendFfEvent,
+    kDoCanTpSendCfEvent,
+    kDoCanTpSendFcEvent,
+    kDoCanTpFinishEvent,
+}DoCanTpEventEnum;
+
+typedef struct
+{
+    DoCanTpStateEnum state;
+    DoCanTpEventEnum event;
+}DoCanTpSM;
+
 typedef struct
 {
     MtypeEnum Mtype;
     N_AIStruct N_AI;
     
-    size_t Length; //发送方可变，接收方为固定配置
+    size_t Length;
     uint8_t* MessageData;//与上层实体交换数据的缓冲区
+    size_t msg_buf_max_size;
 
     // N_ChangeParameters.request修改的参数
     // 9.6.5.6 Dynamic BS/STmin values in subsequent FlowControl frames
@@ -198,6 +233,14 @@ typedef struct
     };
     size_t N_WFTmax;//固定值，发送流控的时候才用，指示我们（当前是client）在接收多帧时可以发送的多少个等待流控
 
+    time_t N_As_threshold;//单位ms，类型仅作标识用途，不要调用time.h的函数
+    time_t N_Ar_threshold;//单位ms，类型仅作标识用途，不要调用time.h的函数
+    time_t N_Bs_threshold;//单位ms，类型仅作标识用途，不要调用time.h的函数
+    time_t N_Br_threshold;//单位ms，类型仅作标识用途，不要调用time.h的函数
+    time_t N_Cs_threshold;//单位ms，类型仅作标识用途，不要调用time.h的函数
+    time_t N_Cr_threshold;//单位ms，类型仅作标识用途，不要调用time.h的函数
+
+    DoCanTpSM sm;
     FlowStatusEnum FlowStatus;
     uint8_t SequenceNumber;
     union
@@ -206,18 +249,18 @@ typedef struct
         bool l_recv_ind;
     };
 
-    size_t sdu_index;//多帧传输时当前已经接收/发送的字节数
+    size_t msg_index;//多帧传输时当前已经接收/发送的字节数
     // size_t sdu_len;//=ff_dl
     uint8_t BS_cnt;
     size_t N_WFTcnt;
 
     //tp层时间参数变量
-    time_t N_As;
-    time_t N_Ar;
-    time_t N_Bs;
-    time_t N_Br;
-    time_t N_Cs;
-    time_t N_Cr;
+    time_t N_As;//单位ms，类型仅作标识用途，不要调用time.h的
+    time_t N_Ar;//单位ms，类型仅作标识用途，不要调用time.h的
+    time_t N_Bs;//单位ms，类型仅作标识用途，不要调用time.h的
+    time_t N_Br;//单位ms，类型仅作标识用途，不要调用time.h的
+    time_t N_Cs;//单位ms，类型仅作标识用途，不要调用time.h的
+    time_t N_Cr;//单位ms，类型仅作标识用途，不要调用time.h的
 
     bool N_As_timing_enable;
     bool N_Ar_timing_enable;

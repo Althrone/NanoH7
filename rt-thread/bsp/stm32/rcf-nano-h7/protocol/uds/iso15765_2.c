@@ -60,10 +60,6 @@ const struct L_DataOps L_Data=
     .indication=L_Data_indication,
 };
 
-//传输层给会话层发送数据
-uint8_t Transport2SessionBuf[0xFFF];//暂且设置为非转义ff_dl的最大值
-uint8_t Transport2DataLinkBuf[64];//canfd的最大帧长为64字节
-
 /******************************************************************************
  * private types
  *****************************************************************************/
@@ -75,42 +71,7 @@ typedef struct
     uint8_t st_min;
 }DoCanTpStat;
 
-typedef N_ResultEnum (*N_Result_pfun_void)(struct rt_canx_msg* rx_can_msg); /* pointer to function */
-
-typedef enum
-{
-    kDoCanTpIdle,
-    kDoCanTpRxSf,
-    kDoCanTpRxFf,
-    kDoCanTpRxFc,
-    kDoCanTpRxCf,
-    kDoCanTpTxSf,
-    kDoCanTpTxFf,
-    kDoCanTpTxFc,
-    kDoCanTpTxCf,
-    kDoCanTpError,
-}DoCanTpStateEnum;
-
-typedef enum
-{
-    kDoCanTpWaitEvent,
-    kDoCanTpRecvSfEvent,
-    kDoCanTpRecvFfEvent,
-    kDoCanTpRecvCfEvent,
-    kDoCanTpRecvFcEvent,
-    kDoCanTpSendSfEvent,
-    kDoCanTpSendFfEvent,
-    kDoCanTpSendCfEvent,
-    kDoCanTpSendFcEvent,
-    kDoCanTpFinishEvent,
-}DoCanTpEventEnum;
-
-typedef struct
-{
-    DoCanTpStateEnum state;
-    DoCanTpEventEnum event;
-}DoCanTpSM;
-
+typedef N_ResultEnum (*N_Result_pfun_p_n_sdu)(N_SDU* p_n_sdu); /* pointer to function */
 
 /******************************************************************************
  * private variables
@@ -118,24 +79,24 @@ typedef struct
 
 DoCanTpStat gs_docan_tp_stat;
 
-static N_ResultEnum _DelIdle(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelRxFc(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelRxCf(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelTxSf(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelTxFf(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelTxFc(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelTxCf(struct rt_canx_msg* rx_can_msg);
-static N_ResultEnum _DelError(struct rt_canx_msg* rx_can_msg);
+static N_ResultEnum _DelIdle(N_SDU* p_n_sdu);
+static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu);
+static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu);
+static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu);
+static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu);
+static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu);
+static N_ResultEnum _DelTxFf(N_SDU* p_n_sdu);
+static N_ResultEnum _DelTxFc(N_SDU* p_n_sdu);
+static N_ResultEnum _DelTxCf(N_SDU* p_n_sdu);
+static N_ResultEnum _DelError(N_SDU* p_n_sdu);
 
-static DoCanTpSM gs_docan_tp_sm={
-    .state=kDoCanTpIdle,
-    .event=kDoCanTpWaitEvent,
-};
+// static DoCanTpSM gs_docan_tp_sm={
+//     .state=kDoCanTpIdle,
+//     .event=kDoCanTpWaitEvent,
+// };
 
 // docan tp层有限状态机状态转移表
-const static N_Result_pfun_void kgs_docan_tp_fsm_tbl[10][9]={
+const static N_Result_pfun_p_n_sdu kgs_docan_tp_fsm_tbl[10][9]={
     /* Current State    Idle    RxSf        RxFf        RxCf        RxFc        TxSf        TxFf        TxCf        TxFc        Error */
     /* Event  */
     /*  Wait  */    {_DelIdle,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
@@ -152,9 +113,6 @@ const static N_Result_pfun_void kgs_docan_tp_fsm_tbl[10][9]={
 
 static const uint8_t DLCtoBytes[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
 
-struct rt_ringbuffer * g_docan_tp_rx_rb=NULL;
-struct rt_ringbuffer * g_docan_tp_tx_rb=NULL;
-
 /******************************************************************************
  * private functions declaration
  *****************************************************************************/
@@ -167,7 +125,7 @@ struct rt_ringbuffer * g_docan_tp_tx_rb=NULL;
  * @param length        The desired length of data to peek. Must be less than or equal to the data length in the buffer.
  * @return              The actual number of bytes peeked.
  */
-rt_size_t rt_ringbuffer_peek(struct rt_ringbuffer *rb, rt_uint8_t *ptr, rt_uint16_t length)
+rt_size_t rt_ringbuffer_peek(struct rt_ringbuffer *rb, rt_uint8_t *ptr, rt_size_t length)
 {
     rt_base_t level;
     rt_size_t len = 0;
@@ -262,8 +220,8 @@ rt_size_t rt_ringbuffer_peekchar(struct rt_ringbuffer *rb, rt_uint8_t *ch)
 
 void DoCanTpInit(void)
 {
-    g_docan_tp_rx_rb=rt_ringbuffer_create(DOCAN_TP_FF_DL);
-    g_docan_tp_tx_rb=rt_ringbuffer_create(DOCAN_TP_FF_DL);
+    // g_docan_tp_rx_rb=rt_ringbuffer_create(DOCAN_TP_FF_DL);
+    // g_docan_tp_tx_rb=rt_ringbuffer_create(DOCAN_TP_FF_DL);
     // #if(DOCAN_TP_FF_DL<=4095)
 
     // #else
@@ -283,10 +241,10 @@ void NetworkLayerTimingTask(uint16_t ms)
 
 void DoCanTpTask(void)
 {
-    //进来先检查N_Br是不是在计数
-    //是的话就是有首帧进来了
-    //从ringbuf读取一个can帧出来
-    kgs_docan_tp_fsm_tbl[gs_docan_tp_sm.event][gs_docan_tp_sm.state](&gs_data_len,gs_pbuf);
+    for (size_t i = 0; i < kg_num_of_sdu; i++)
+    {
+        g_n_sdu_tbl[i].N_Result=kgs_docan_tp_fsm_tbl[g_n_sdu_tbl[i].sm.event][g_n_sdu_tbl[i].sm.state](&g_n_sdu_tbl[i]);
+    }
 }
 
 /******************************************************************************
@@ -324,117 +282,147 @@ static bool _SearchSduIndex(struct rt_canx_msg* rx_can_msg,size_t* sdu_index){
     return data_matches;
 }
 
-static N_ResultEnum _DelIdle(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelIdle(N_SDU* p_n_sdu){
 
-    size_t sdu_index ;
-
-    //扫描所有的sdu，看看有没有从数据链路层（can接收中断）接收ind
-    sdu_index = 0;
-    bool is_l_ind=false;
-    for (; sdu_index < kg_num_of_sdu; sdu_index++)
-    {
-        if (g_n_sdu_tbl[sdu_index].l_recv_ind) {
-            is_l_ind=true;
-            break;
-        }
-    }
     //如果有执行接收序列
-    if(is_l_ind)
+    if(p_n_sdu->l_recv_ind)
     {
         //在此之前要获取rb长度
-        if(rt_ringbuffer_data_len(g_docan_tp_rx_rb))
-            return N_OK;//buf为空，不需要执行
+        if(rt_ringbuffer_data_len(p_n_sdu->datalink_rb)==0)//buf为空，数据还没进rb，不需要执行
+            return N_OK;//几乎不可能出现
 
-        struct rt_canx_msg* tmp_ptr =NULL;
-        tmp_ptr= (struct rt_canx_msg*)malloc(sizeof(struct rt_canx_msg));
-        if(tmp_ptr==NULL)
-            return N_ERROR;//分配失败
+        struct rt_canx_msg peek_rx_msg;
+        rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8);//获取rt_canx_msg的头
 
-        rt_ringbuffer_get(g_docan_tp_rx_rb,(uint8_t *)tmp_ptr,8);//获取rt_canx_msg的头
-
-        if(rt_ringbuffer_data_len(g_docan_tp_rx_rb)<DLCtoBytes[tmp_ptr->dlc])
+        if(rt_ringbuffer_data_len(p_n_sdu->datalink_rb)<DLCtoBytes[peek_rx_msg.dlc])
             while(1);//////////////////////等待？？？一般来说不会出现这种情况
 
-        struct rt_canx_msg* new_tmp_ptr = NULL;
-        new_tmp_ptr=realloc(tmp_ptr,sizeof(struct rt_canx_msg)+DLCtoBytes[tmp_ptr->dlc]);
-        if(new_tmp_ptr==NULL)
-        {
-            free(tmp_ptr);
-            return N_ERROR;//分配失败
-        }
-        tmp_ptr=new_tmp_ptr;
-
-        //将data[]的整个包读出来
-        rt_ringbuffer_get(g_docan_tp_rx_rb,tmp_ptr->data,DLCtoBytes[tmp_ptr->dlc]);
-
-        rx_can_msg=tmp_ptr;
-
-        //根据PDU的ID查SDU tbl
-        size_t sdu_index=0;
-        if(_SearchSduIndex(rx_can_msg,&sdu_index)==false)
-        {
-            //Ignore Frame
-            free(rx_can_msg);
-            //can帧塞回另一个buffer
-            return N_UNEXP_PDU;//sdu tbl没有找到匹配的参数
-        }
+        //将头+data[dlc]的整个包读出来
+        rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8+DLCtoBytes[peek_rx_msg.dlc]);
 
         //N_PCItype is the high nibble of N_PCI byte (Byte #1)
-        uint8_t n_pci_byte1=rx_can_msg->data[0+(g_n_sdu_tbl[sdu_index].Mtype|g_n_sdu_tbl[sdu_index].is_extended)]>>4;
+        uint8_t n_pci_type=peek_rx_msg.data[0+(p_n_sdu->Mtype|p_n_sdu->is_extended)]>>4;
 
-        switch (n_pci_byte1)
+        switch (n_pci_type)
         {
         case kNPciSF:
-            gs_docan_tp_sm.event=kDoCanTpRecvSfEvent;
+            p_n_sdu->sm.event=kDoCanTpRecvSfEvent;
+            p_n_sdu->l_recv_ind=false;
             break;
         case kNPciFF:
-            gs_docan_tp_sm.event=kDoCanTpRecvFfEvent;
+            p_n_sdu->sm.event=kDoCanTpRecvFfEvent;
+            p_n_sdu->l_recv_ind=false;
             break;
         default:
-            free(rx_can_msg);
+            //丢弃这一段数据
+            rt_ringbuffer_get(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8+DLCtoBytes[peek_rx_msg.dlc]);
+            p_n_sdu->l_recv_ind=false;
             return N_UNEXP_PDU;//Ignore Frame
             break;
         }
         return N_OK;
     }
 
-    //扫描所有的sdu，看看有没有从会话层接收到发送请求
-    sdu_index = 0;
-    bool is_n_req=false;
-    for (; sdu_index < kg_num_of_sdu; sdu_index++)
-    {
-        if (g_n_sdu_tbl[sdu_index].n_send_req) {
-            is_n_req=true;
-            break;
-        }
-    }
     //如果有执行发送序列
-    if(is_l_ind)
+    if(p_n_sdu->n_send_req)
     {
+        MtypeEnum temp_Mtype=p_n_sdu->Mtype;
+        bool temp_is_extended=p_n_sdu->is_extended;
+        bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
+        bool temp_is_padding=p_n_sdu->is_padding;
+        uint8_t temp_TX_DL=p_n_sdu->TX_DL;
+        //判断MessageData的长度是通过单帧发送还是多帧发送
+        //上层msg长度+一字节n_pci_type长度+可能存在的N_TA或者N_AE长度
+        size_t temp_sf_dl=p_n_sdu->Length;
+        
+        if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
+        {
+            if(temp_sf_dl<=6)
+            {
+                // if(temp_is_padding)
+                // {
+                //     //发送8字节的单帧
+                // }
+                // else{//发送temp_sf_dl+2的单帧
+                //     }
+                //都是发送单帧
+                p_n_sdu->sm.event=kDoCanTpSendSfEvent;
+            }
+            else//temp_sf_dl>6
+            {
+                // if(temp_is_padding)
+                // {
+                //     //填充到tx_DL的长度发送单帧
+                // }
+                // else
+                // {
+                //     //强制填充到tx_dl以内支持的最小的可容纳此帧的dlc的长度发送单帧
+                // }
+                //都是发送单帧
+                //如果超过tx_DL-3的长度，则发送多帧
+                if(temp_sf_dl>temp_TX_DL-3)
+                {
+                    p_n_sdu->sm.event=kDoCanTpSendFfEvent;
+                }
+            }
+        }
+        else//normal addr
+        {
+            if(temp_sf_dl<=7)
+            {
+                // if(temp_is_padding)
+                // {
+                //     //发送8字节的单帧
+                // }
+                // else{//发送temp_sf_dl+1的单帧
+                //     }
+                //都是发送单帧
+                p_n_sdu->sm.event=kDoCanTpSendSfEvent;
+            }
+            else//temp_sf_dl>7
+            {
+                // if(temp_is_padding)
+                // {
+                //     //填充到tx_DL的长度发送单帧
+                // }
+                // else
+                // {
+                //     //强制填充到最小的dlc的长度发送单帧
+                // }
+                //如果超过tx_DL-2的长度，则发送多帧
+                if(temp_sf_dl>temp_TX_DL-2)
+                {
+                    p_n_sdu->sm.event=kDoCanTpSendFfEvent;
+                }
+            }
+        }
+        p_n_sdu->n_send_req=false;
         return N_OK;
     }
 
     return N_OK;//既没有接收到新的帧，也没有发送请求
 }
 
-static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
-
-    //根据PDU的ID查SDU tbl
-    size_t sdu_index=0;
-    _SearchSduIndex(rx_can_msg,&sdu_index);
+static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu){
 
     //本函数内的临时变量，降低代码长度
-    MtypeEnum temp_Mtype=g_n_sdu_tbl[sdu_index].Mtype;
-    uint8_t temp_N_SA=g_n_sdu_tbl[sdu_index].N_AI.N_SA;
-    uint8_t temp_N_TA=g_n_sdu_tbl[sdu_index].N_AI.N_TA;
-    N_TAtypeEnum temp_N_TAtype=g_n_sdu_tbl[sdu_index].N_AI.N_TAtype;
-    uint8_t temp_N_AE=g_n_sdu_tbl[sdu_index].N_AI.N_AE;
-    bool temp_is_extended=g_n_sdu_tbl[sdu_index].is_extended;
-    bool temp_is_padding=g_n_sdu_tbl[sdu_index].is_padding;
-    bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
+    MtypeEnum       temp_Mtype                  =p_n_sdu->Mtype;
+    uint8_t         temp_N_SA                   =p_n_sdu->N_AI.N_SA;
+    uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
+    N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
+    uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
+    bool            temp_is_extended            =p_n_sdu->is_extended;
+    bool            temp_is_padding             =p_n_sdu->is_padding;
+    bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
+
+    //从rb读取can帧
+    struct rt_canx_msg rx_msg;
+    rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
+    //将头+data[dlc]的整个包读出来
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
 
     uint8_t temp_sf_dl=1;//SF_DL最小的有效值
-    uint8_t CAN_DL=DLCtoBytes[rx_can_msg->dlc];
+    uint8_t CAN_DL=DLCtoBytes[rx_msg.dlc];
 
     uint8_t N_PCI_bytes_offset=0;
     if(temp_is_remote_diagnostics||temp_is_extended)//带N_AE或者N_TA在第一字节的can帧
@@ -444,21 +432,20 @@ static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
 
     if(CAN_DL>8)
     {
-        uint8_t n_pci_byte1=rx_can_msg->data[N_PCI_bytes_offset]&0x0F;
+        uint8_t n_pci_byte1=rx_msg.data[N_PCI_bytes_offset]&0x0F;
 
         //4 bit SF_DL value in Byte #1 low nibble equals zero
         if(n_pci_byte1!=0)
         {
-            free(rx_can_msg);
             return N_UNEXP_PDU;//Ignore Frame
         }
 
         //Get 8 bit SF_DL value from Byte #2. Message data start offset +1
-        temp_sf_dl=rx_can_msg->data[1+N_PCI_bytes_offset];
+        temp_sf_dl=rx_msg.data[1+N_PCI_bytes_offset];
     }
     else//CAN_DL<=8
     {
-        temp_sf_dl=rx_can_msg->data[N_PCI_bytes_offset]&0x0F;
+        temp_sf_dl=rx_msg.data[N_PCI_bytes_offset]&0x0F;
     }
 
     //Check for valid SF_DL and process Single Frame (SF)
@@ -471,8 +458,7 @@ static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
           the network layer shall ignore the received SF N_PDU*/
         if(temp_sf_dl==0)
         {
-            gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-            free(rx_can_msg);
+            p_n_sdu->sm.event=kDoCanTpFinishEvent;
             return N_UNEXP_PDU;
         }
 
@@ -484,8 +470,7 @@ static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
         {
             if(temp_sf_dl>(CAN_DL-2))
             {
-                gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-                free(rx_can_msg);
+                p_n_sdu->sm.event=kDoCanTpFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -493,8 +478,7 @@ static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
         {
             if(temp_sf_dl>(CAN_DL-1))
             {
-                gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-                free(rx_can_msg);
+                p_n_sdu->sm.event=kDoCanTpFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -506,8 +490,7 @@ static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
         {
             if(CAN_DL!=8)
             {
-                gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-                free(rx_can_msg);
+                p_n_sdu->sm.event=kDoCanTpFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -523,10 +506,9 @@ static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
                 {NULL,NULL,NULL,1,2,3,4,5,6} //Mixed or extended
             };
 
-            if(temp_sf_dl!=table12[temp_is_remote_diagnostics|temp_is_extended][rx_can_msg->dlc])
+            if(temp_sf_dl!=table12[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc])
             {
-                gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-                free(rx_can_msg);
+                p_n_sdu->sm.event=kDoCanTpFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -556,11 +538,10 @@ static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
         };
 
         //根据 Mtype is_extended dlc 找到对应的元素，要求SF_DL在元素结构体的范围内
-        if(table13[temp_is_remote_diagnostics|temp_is_extended][rx_can_msg->dlc-9].SF_DL_min>temp_sf_dl ||
-        table13[temp_is_remote_diagnostics|temp_is_extended][rx_can_msg->dlc-9].SF_DL_max<temp_sf_dl )
+        if(table13[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc-9].SF_DL_min>temp_sf_dl ||
+        table13[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc-9].SF_DL_max<temp_sf_dl )
         {
-            gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-            free(rx_can_msg);
+            p_n_sdu->sm.event=kDoCanTpFinishEvent;
             return N_UNEXP_PDU;
         }
     }
@@ -579,60 +560,60 @@ static N_ResultEnum _DelRxSf(struct rt_canx_msg* rx_can_msg){
     }
 
     //copy len=sf_dl data to Transport2SessionBuf
-    memcpy(Transport2SessionBuf,rx_can_msg->data[payload_offset],SF_DL);
+    memcpy(p_n_sdu->MessageData,&rx_msg.data[payload_offset],SF_DL);
     N_UserExtStruct N_UserExt={
-        .can_id=rx_can_msg->id,
-        .ide=rx_can_msg->ide,
+        .can_id=rx_msg.id,
+        .ide=rx_msg.ide,
         .is_extended=temp_is_extended,
     };
     // can rx中断应调用L_Data.indication()
     N_USData.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
-                        Transport2SessionBuf,SF_DL,
+                        p_n_sdu->MessageData,SF_DL,
                         N_OK,
                         N_UserExt);
-    gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-    free(rx_can_msg);
+    p_n_sdu->sm.event=kDoCanTpFinishEvent;
     return N_OK;
 }
 
-static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
-
-    //根据PDU的ID查SDU tbl
-    size_t sdu_index=0;
-    _SearchSduIndex(rx_can_msg,&sdu_index);
+static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu){
 
     //本函数内的临时变量，降低代码长度
-    MtypeEnum       temp_Mtype                  =g_n_sdu_tbl[sdu_index].Mtype;
-    uint8_t         temp_N_SA                   =g_n_sdu_tbl[sdu_index].N_AI.N_SA;
-    uint8_t         temp_N_TA                   =g_n_sdu_tbl[sdu_index].N_AI.N_TA;
-    N_TAtypeEnum    temp_N_TAtype               =g_n_sdu_tbl[sdu_index].N_AI.N_TAtype;
-    uint8_t         temp_N_AE                   =g_n_sdu_tbl[sdu_index].N_AI.N_AE;
-    bool            temp_is_extended            =g_n_sdu_tbl[sdu_index].is_extended;
-    bool            temp_is_padding             =g_n_sdu_tbl[sdu_index].is_padding;
+    MtypeEnum       temp_Mtype                  =p_n_sdu->Mtype;
+    uint8_t         temp_N_SA                   =p_n_sdu->N_AI.N_SA;
+    uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
+    N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
+    uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
+    bool            temp_is_extended            =p_n_sdu->is_extended;
+    bool            temp_is_padding             =p_n_sdu->is_padding;
     bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
+
+    //从rb读取can帧
+    struct rt_canx_msg rx_msg;
+    rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
+    //将头+data[dlc]的整个包读出来
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
 
     // 9.6.3.2 FF_DL error handling
 
     /*If the network layer receives an N_PDU indicating a FirstFrame and 
       CAN_DL < 8, then the network layer shall ignore the FF N_PDU*/
-    uint8_t CAN_DL=DLCtoBytes[rx_can_msg->dlc];
+    uint8_t CAN_DL=DLCtoBytes[rx_msg.dlc];
     if(CAN_DL<8)
     {
-        gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-        free(rx_can_msg);
+        p_n_sdu->sm.event=kDoCanTpFinishEvent;
         return N_UNEXP_PDU;
     }
 
     /* the retrieved value of RX_DL from the CAN_DL of the FF N_PDU (see 9.5.4 
        for definition of how the receiver determines RX_DL). */
-    g_n_sdu_tbl[sdu_index].RX_DL=CAN_DL;
+    p_n_sdu->RX_DL=CAN_DL;
 
     /* The receiver determines the minimum value of FF_DL (FF_DLmin) from Table 
        14 based on the configured addressing scheme and the retrieved value of 
        RX_DL */
     //Table 14 — Minimum value of FF_DL based on the addressing scheme
     uint8_t FF_DLmin=7;
-    if(g_n_sdu_tbl[sdu_index].RX_DL==8)
+    if(p_n_sdu->RX_DL==8)
     {
         //mixed or extended addressing is used
         if(temp_is_extended||temp_is_remote_diagnostics)
@@ -644,9 +625,9 @@ static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
     {
         //mixed or extended addressing is used
         if(temp_is_extended||temp_is_remote_diagnostics)
-            FF_DLmin=g_n_sdu_tbl[sdu_index].RX_DL-2;
+            FF_DLmin=p_n_sdu->RX_DL-2;
         else// normal addressing is used
-            FF_DLmin=g_n_sdu_tbl[sdu_index].RX_DL-1;
+            FF_DLmin=p_n_sdu->RX_DL-1;
     }
 
     uint8_t ff_dl_offset=0;
@@ -656,15 +637,15 @@ static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
     }
 
     //escape sequence or not
-    uint32_t tmp_ff_dl=(((uint16_t)((rx_can_msg->data[ff_dl_offset+0])&0x0F))<<8)|
-                                    (rx_can_msg->data[ff_dl_offset+1]);
+    uint32_t tmp_ff_dl=(((uint16_t)((rx_msg.data[ff_dl_offset+0])&0x0F))<<8)|
+                                    (rx_msg.data[ff_dl_offset+1]);
     if(tmp_ff_dl==0)
     {
         // escape sequence
-        tmp_ff_dl=(((uint32_t)(rx_can_msg->data[ff_dl_offset+0]))<<24)|
-                  (((uint32_t)(rx_can_msg->data[ff_dl_offset+1]))<<16)|
-                  (((uint32_t)(rx_can_msg->data[ff_dl_offset+2]))<<8)|
-                  (((uint32_t)(rx_can_msg->data[ff_dl_offset+3]))<<0);
+        tmp_ff_dl=(((uint32_t)(rx_msg.data[ff_dl_offset+0]))<<24)|
+                  (((uint32_t)(rx_msg.data[ff_dl_offset+1]))<<16)|
+                  (((uint32_t)(rx_msg.data[ff_dl_offset+2]))<<8)|
+                  (((uint32_t)(rx_msg.data[ff_dl_offset+3]))<<0);
 
         /*If a FirstFrame is received with the escape sequence (where all bits of 
         the lower nibble of PCI byte 1 and all bits of PCI byte 2 are set to 0’s) 
@@ -672,8 +653,7 @@ static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
         and not transmit an FC N_PDU.*/
         if(tmp_ff_dl<=4095)
         {
-            gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-            free(rx_can_msg);
+            p_n_sdu->sm.event=kDoCanTpFinishEvent;
             return N_UNEXP_PDU;
         }
     }
@@ -682,11 +662,10 @@ static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
       than the available receiver buffer size, then this shall be considered as
       an error condition. The network layer shall abort the message reception 
       and send an FC N_PDU with the parameter FlowStatus = Overflow.*/
-    if(tmp_ff_dl>sizeof(Transport2SessionBuf))
+    if(tmp_ff_dl>p_n_sdu->msg_buf_max_size)
     {
-        gs_docan_tp_sm.event=kDoCanTpSendFcEvent;
-        g_n_sdu_tbl[sdu_index].FlowStatus=kFsOVFLW;
-        free(rx_can_msg);
+        p_n_sdu->sm.event=kDoCanTpSendFcEvent;
+        p_n_sdu->FlowStatus=kFsOVFLW;
         return N_BUFFER_OVFLW;
     }
 
@@ -695,8 +674,7 @@ static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
       not transmit a FC N_PDU.*/
     if(tmp_ff_dl<FF_DLmin)
     {
-        gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-        free(rx_can_msg);
+        p_n_sdu->sm.event=kDoCanTpFinishEvent;
         return N_UNEXP_PDU;
     }
 
@@ -727,15 +705,15 @@ static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
     }
     uint8_t copy_len=CAN_DL-payload_offset;
     //复制首帧中的上层数据到 uds app buf
-    memcpy(Transport2SessionBuf,&rx_can_msg->data[payload_offset],copy_len);
-    g_n_sdu_tbl[sdu_index].sdu_index+=copy_len;
-    gs_docan_tp_sm.event=kDoCanTpSendFcEvent;
-    g_n_sdu_tbl[sdu_index].FlowStatus=kFsCTS;
-    g_n_sdu_tbl[sdu_index].Length=FF_DL;
-    g_n_sdu_tbl[sdu_index].SequenceNumber++;
+    memcpy(p_n_sdu->MessageData,&rx_msg.data[payload_offset],copy_len);
+    p_n_sdu->msg_index+=copy_len;
+    p_n_sdu->sm.event=kDoCanTpSendFcEvent;
+    p_n_sdu->FlowStatus=kFsCTS;
+    p_n_sdu->Length=FF_DL;
+    p_n_sdu->SequenceNumber++;
     N_UserExtStruct N_UserExt={
-        .can_id=rx_can_msg->id,
-        .ide=rx_can_msg->ide,
+        .can_id=rx_msg.id,
+        .ide=rx_msg.ide,
         .is_extended=temp_is_extended,
     };
 
@@ -744,26 +722,31 @@ static N_ResultEnum _DelRxFf(struct rt_canx_msg* rx_can_msg){
     N_USData_FF.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
                            FF_DL,
                            N_UserExt);
-    free(rx_can_msg);
-
+    p_n_sdu->sm.event=kDoCanTpSendFcEvent;
     return N_OK;
 }
 
-static N_ResultEnum _DelRxFc(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu){
 
-    //根据PDU的ID查SDU tbl
-    size_t sdu_index = 0;
-    _SearchSduIndex(rx_can_msg,&sdu_index);
+    //发完首帧或者bs最后一个续帧才会有发送流控的步骤，要判断是不是有东西来了
+    if(p_n_sdu->l_recv_ind==false)//当前对话确实状态机在等待流控，但是由于流控帧还没发过来，进来也没用
+        return N_OK;//出现这种情况应该是状态机设计有问题
 
     //本函数内的临时变量，降低代码长度
-    MtypeEnum       temp_Mtype                  =g_n_sdu_tbl[sdu_index].Mtype;
-    uint8_t         temp_N_SA                   =g_n_sdu_tbl[sdu_index].N_AI.N_SA;
-    uint8_t         temp_N_TA                   =g_n_sdu_tbl[sdu_index].N_AI.N_TA;
-    N_TAtypeEnum    temp_N_TAtype               =g_n_sdu_tbl[sdu_index].N_AI.N_TAtype;
-    uint8_t         temp_N_AE                   =g_n_sdu_tbl[sdu_index].N_AI.N_AE;
-    bool            temp_is_extended            =g_n_sdu_tbl[sdu_index].is_extended;
-    bool            temp_is_padding             =g_n_sdu_tbl[sdu_index].is_padding;
+    MtypeEnum       temp_Mtype                  =p_n_sdu->Mtype;
+    uint8_t         temp_N_SA                   =p_n_sdu->N_AI.N_SA;
+    uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
+    N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
+    uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
+    bool            temp_is_extended            =p_n_sdu->is_extended;
+    bool            temp_is_padding             =p_n_sdu->is_padding;
     bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
+
+    //从rb读取can帧
+    struct rt_canx_msg rx_msg;
+    rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
+    //将头+data[dlc]的整个包读出来
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
 
     //9.6.5.2 FlowStatus (FS) error handling
 
@@ -776,15 +759,14 @@ static N_ResultEnum _DelRxFc(struct rt_canx_msg* rx_can_msg){
     {
         fs_offset=1;
     }
-    FlowStatusEnum temp_fs=rx_can_msg->data[fs_offset]&0x0F;
+    FlowStatusEnum temp_fs=rx_msg.data[fs_offset]&0x0F;
 
     if(temp_fs>kFsOVFLW)
     {
-        gs_docan_tp_sm.event=kDoCanTpFinishEvent;
-        free(rx_can_msg);
+        p_n_sdu->sm.event=kDoCanTpFinishEvent;
         N_UserExtStruct N_UserExt={
-            .can_id=rx_can_msg->id,
-            .ide=rx_can_msg->ide,
+            .can_id=rx_msg.id,
+            .ide=rx_msg.ide,
             .is_extended=temp_is_extended,
         };
         N_USData.confirm(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,N_INVALID_FS,N_UserExt);
@@ -797,7 +779,7 @@ static N_ResultEnum _DelRxFc(struct rt_canx_msg* rx_can_msg){
     {
         bs_offset=2;
     }
-    uint8_t temp_BS=rx_can_msg->data[bs_offset];
+    uint8_t temp_BS=rx_msg.data[bs_offset];
 
     //9.6.5.4 SeparationTime minimum (STmin) parameter definition
     uint8_t stmin_offset=2;
@@ -805,7 +787,7 @@ static N_ResultEnum _DelRxFc(struct rt_canx_msg* rx_can_msg){
     {
         stmin_offset=3;
     }
-    uint8_t temp_STmin=rx_can_msg->data[stmin_offset];
+    uint8_t temp_STmin=rx_msg.data[stmin_offset];
 
     //9.6.5.5 SeparationTime minimum (STmin) error handling
 
@@ -841,23 +823,37 @@ static N_ResultEnum _DelRxFc(struct rt_canx_msg* rx_can_msg){
        and STmin in subsequent FC (CTS) frames of the same segmented message. */
     //这一段丢到Tx_FC
 
-    /* If the client is the sender of a segmented data transmission (i.e. the 
-       receiver of the FlowControl frame), it shall adjust to the values of BS 
-       and STmin from each FC (CTS) received during the same segmented data 
-       transmission. */
-    //只有CTS的时候才需要更新BS和STmin
+    
 
-    if(temp_fs==kFsCTS)
+    p_n_sdu->FlowStatus=temp_fs;
+
+    switch (temp_fs)
     {
-        g_n_sdu_tbl[sdu_index].STmin=temp_STmin;
-        g_n_sdu_tbl[sdu_index].BS=temp_BS;
+    case kFsCTS:
+        /* If the client is the sender of a segmented data transmission (i.e. 
+           the receiver of the FlowControl frame), it shall adjust to the 
+           values of BS and STmin from each FC (CTS) received during the same 
+           segmented data transmission. */
+        //只有CTS的时候才需要更新BS和STmin
+        p_n_sdu->STmin=temp_STmin;
+        p_n_sdu->BS=temp_BS;
+        p_n_sdu->sm.event=kDoCanTpSendCfEvent;//发送续帧
+        break;
+    case kFsWAIT:
+        p_n_sdu->sm.event=kDoCanTpRecvFcEvent;//继续接收流控帧
+        break;
+    case kFsOVFLW:
+        //返回会话层
+        break;
+    default:
+        while(1);//不可能出现
+        break;
     }
-    g_n_sdu_tbl[sdu_index].FlowStatus=temp_fs;
 
     return N_OK;
 }
 
-static N_ResultEnum _DelRxCf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
 
     //根据PDU的ID查SDU tbl
     size_t sdu_index=0;
@@ -885,7 +881,7 @@ static N_ResultEnum _DelRxCf(struct rt_canx_msg* rx_can_msg){
         {
             if((g_n_sdu_tbl[sdu_index].Mtype==kRemoteDiagnostics)||g_n_sdu_tbl[sdu_index].is_extended)
             {
-                size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].sdu_index);
+                size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].msg_index);
                 if(remaining_length<=(8-2))//剩余长度<=6
                 {
                     if(DLCtoBytes[rx_can_msg->dlc]!=remaining_length+2)
@@ -899,7 +895,7 @@ static N_ResultEnum _DelRxCf(struct rt_canx_msg* rx_can_msg){
             }
             else//normal addressing
             {
-                size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].sdu_index);
+                size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].msg_index);
                 if(remaining_length<=(8-1))//剩余长度<=7
                 {
                     if(DLCtoBytes[rx_can_msg->dlc]!=remaining_length+1)
@@ -950,14 +946,14 @@ static N_ResultEnum _DelRxCf(struct rt_canx_msg* rx_can_msg){
     return N_OK;
 }
 
-static N_ResultEnum _DelTxSf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
 
     // L_Data.request()
     //starts the N_As timer
     return N_OK;
 }
 
-static N_ResultEnum _DelTxFf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelTxFf(N_SDU* p_n_sdu){
 
     /* Sender L_Data.req: the transport/network layer transmits the FirstFrame 
        to the data link layer and starts the N_As timer */
@@ -966,7 +962,7 @@ static N_ResultEnum _DelTxFf(struct rt_canx_msg* rx_can_msg){
     return N_OK;
 }
 
-static N_ResultEnum _DelTxFc(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelTxFc(N_SDU* p_n_sdu){
 
     // 9.8.4 Wait frame error handling
     /* If the receiver has transmitted N_WFTmax FlowControl wait network 
@@ -1010,7 +1006,7 @@ static N_ResultEnum _DelTxFc(struct rt_canx_msg* rx_can_msg){
     }
 }
 
-static N_ResultEnum _DelTxCf(struct rt_canx_msg* rx_can_msg){
+static N_ResultEnum _DelTxCf(N_SDU* p_n_sdu){
     /* Sender L_Data.req: the transport/network layer transmits the first 
        ConsecutiveFrame to the data link layer and starts the N_As timer */
     //start N_As timer
@@ -1042,7 +1038,7 @@ static N_ResultEnum _DelTxCf(struct rt_canx_msg* rx_can_msg){
    completion of the segmented message */
 //应该在某个函数内调用N_USData_con
 
-static N_ResultEnum _DelError(struct rt_canx_msg* rx_can_msg){}
+static N_ResultEnum _DelError(N_SDU* p_n_sdu){}
 
 static bool _NetworkLayerParamCheck(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE,
                                     N_UserExtStruct N_UserExt,size_t* index)
@@ -1091,6 +1087,8 @@ static void N_USData_request(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAty
         while(1);
         return;
     }
+    g_n_sdu_tbl[sdu_index].Length=Length;
+    g_n_sdu_tbl[sdu_index].MessageData=MessageData;
     g_n_sdu_tbl[sdu_index].n_send_req=true;
 }
 
@@ -1152,8 +1150,9 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
             g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=true;
             break;
         case kNPciCF://发送连续帧
+        {
             //判断是否为最后一个续帧或者本次块传输的最后一个block
-            size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].sdu_index);
+            size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].msg_index);
             uint8_t tmp_rx_payload_len=g_n_sdu_tbl[sdu_index].TX_DL-1;//工程配置的续帧和首帧长度
             if(temp_is_remote_diagnostics||temp_is_extended)//带N_AE或者N_TA在第一字节的can帧
                 tmp_rx_payload_len-=1;
@@ -1197,7 +1196,9 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
                 g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=true;
             }
             break;
+        }
         case kNPciFC://发送流控帧
+        {
             //流控增加判断FS
             FlowStatusEnum flow_status=tx_can_msg->data[N_PCI_bytes_offset]&0x0F;
             switch(flow_status)
@@ -1235,6 +1236,7 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
                     break;
             }
             break;
+        }
         default:
             while(1);
             break;
@@ -1271,20 +1273,19 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
             /* Receiver L_Data.ind: the data link layer issues to the 
                transport/network layer the reception of the CAN frame */
             while(g_n_sdu_tbl[sdu_index].l_recv_ind);//单帧来的太快了
-            g_n_sdu_tbl[sdu_index].l_recv_ind=true;
             break;
         case kNPciFF://接收到首帧
             /* Receiver L_Data.ind: the data link layer issues to the 
                transport/network layer the reception of the CAN frame; the 
                receiver starts the N_Br timer */
             while(g_n_sdu_tbl[sdu_index].l_recv_ind);//理论上不会出现多次接收到首帧的情况
-            g_n_sdu_tbl[sdu_index].l_recv_ind=true;
             g_n_sdu_tbl[sdu_index].N_Br_timing_enable=true;
             break;
         case kNPciCF://接收到续帧
+        {
             //续帧增加判断是否最后一个续帧
             //最后一个续帧必停N_Cr，而且最后一个续帧有可能是本次块传输的最后一块，所以先校验
-            size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].sdu_index);
+            size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].msg_index);
             //不判断真实的dlc长度，这个放在tp_task里判断
             //接收到一个帧，就认为长度和首帧长度是一致的
             uint8_t tmp_rx_payload_len=g_n_sdu_tbl[sdu_index].RX_DL-1;//减去续帧的N_PCI bytes长度
@@ -1319,7 +1320,9 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
             else
                 g_n_sdu_tbl[sdu_index].N_Cr=0;//bs未耗尽，重置N_Cr
             break;
+        }
         case kNPciFC://接收到流控帧
+        {
             //流控增加判断FS
             FlowStatusEnum flow_status=rx_can_msg->data[N_PCI_bytes_offset]&0x0F;
             switch (flow_status)
@@ -1351,8 +1354,9 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
                 break;
             }
             break;
+        }
         default:
             break;
     }
-
+    g_n_sdu_tbl[sdu_index].l_recv_ind=true;
 }
