@@ -22,6 +22,7 @@ extern "C" {
 #include <stdint.h>
 #include <time.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "rtdevice.h"//引入rt_canx_msg类型
 

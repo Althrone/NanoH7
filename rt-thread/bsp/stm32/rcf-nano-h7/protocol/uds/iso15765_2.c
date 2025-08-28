@@ -1019,28 +1019,36 @@ static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
             tx_msg.data[0]=p_n_sdu->N_AI.N_AE;
         if(temp_sf_dl<=6)
         {
+            tx_msg.data[1]=temp_sf_dl;
+            memcpy(&tx_msg.data[2],p_n_sdu->MessageData,temp_sf_dl);
             if(temp_is_padding)
             {
-                tx_msg.dlc=8;
                 //发送8字节的单帧
+                tx_msg.dlc=8;
+                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,8-2-temp_sf_dl);
             }
             else
             {
-                tx_msg.dlc=temp_sf_dl+2;//一字节N_TA或者N_AE 一字节
                 //发送temp_sf_dl+2的单帧
+                tx_msg.dlc=temp_sf_dl+2;//一字节N_TA或者N_AE 一字节pci
             }
         }
         else//temp_sf_dl>6
         {
+            tx_msg.data[1]=0;
+            tx_msg.data[2]=temp_sf_dl;
+            memcpy(&tx_msg.data[3],p_n_sdu->MessageData,temp_sf_dl);
             if(temp_is_padding)
             {
-                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
                 //填充到tx_DL的长度发送单帧
+                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,p_n_sdu->TX_DL-3-temp_sf_dl);
             }
             else
             {
-                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+3);//一字节N_TA或者N_AE 半字节帧类型 一个半字节SF_DL转义
                 //强制填充到tx_dl以内支持的最小的可容纳此帧的dlc的长度发送单帧
+                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+3);//一字节N_TA或者N_AE 半字节帧类型 一个半字节SF_DL转义
+                memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-3-temp_sf_dl);
             }
         }
     }
