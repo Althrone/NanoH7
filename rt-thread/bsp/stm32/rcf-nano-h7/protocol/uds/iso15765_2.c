@@ -97,7 +97,7 @@ static N_ResultEnum _DelError(N_SDU* p_n_sdu);
 
 // docan tp层有限状态机状态转移表
 const static N_Result_pfun_p_n_sdu kgs_docan_tp_fsm_tbl[10][9]={
-    /* Current State    Idle    RxSf        RxFf        RxCf        RxFc        TxSf        TxFf        TxCf        TxFc        Error */
+    /* Current State    Idle    RxSf        RxFf        RxCf        RxFc        TxSf        TxFf        TxCf        TxFc        WaitTxOk    Error */
     /* Event  */
     /*  Wait  */    {_DelIdle,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
     /* RecvSf */    {_DelRxSf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
@@ -112,6 +112,28 @@ const static N_Result_pfun_p_n_sdu kgs_docan_tp_fsm_tbl[10][9]={
 };
 
 static const uint8_t DLCtoBytes[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+
+uint8_t Bytes2ShortestDLC(uint8_t bytes)
+{
+    if(bytes<=8)
+        return bytes;
+    else if(bytes<=12)
+        return 9;
+    else if(bytes<=16)
+        return 10;
+    else if(bytes<=20)
+        return 11;
+    else if(bytes<=24)
+        return 12;
+    else if(bytes<=32)
+        return 13;
+    else if(bytes<=48)
+        return 14;
+    else if(bytes<=64)
+        return 15;
+    else
+        return 0;
+}
 
 /******************************************************************************
  * private functions declaration
@@ -943,6 +965,114 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
 }
 
 static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
+
+    MtypeEnum temp_Mtype=p_n_sdu->Mtype;
+    bool temp_is_extended=p_n_sdu->is_extended;
+    bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
+    bool temp_is_padding=p_n_sdu->is_padding;
+    size_t temp_sf_dl=p_n_sdu->Length;
+    N_TAtypeEnum temp_n_tatype=p_n_sdu->N_AI.N_TAtype;
+
+    struct rt_canx_msg tx_msg;
+    tx_msg.id=p_n_sdu->can_id;
+    tx_msg.rtr=0;//不使用
+    switch (temp_n_tatype)
+    {
+    //普通11位can
+    case kPhyCanBaseFmt:
+    case kFuncCanBaseFmt:
+        tx_msg.ide=0;
+        tx_msg.fdf=0;
+        break;
+    //11位canfd
+    case kPhyCanFdBaseFmt:
+    case kFuncCanFdBaseFmt:
+        tx_msg.ide=0;
+        tx_msg.fdf=1;
+        break;
+    //29位can
+    case kPhyCanExtFmt:
+    case kFuncCanExtFmt:
+        tx_msg.ide=1;
+        tx_msg.fdf=0;
+        break;
+    //29位canfd
+    case kPhyCanFdExtFmt:
+    case kFuncCanFdExtFmt:
+        tx_msg.ide=1;
+        tx_msg.fdf=1;
+        break;
+    default:
+        while(1);
+        break;
+    }
+    
+    tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
+    // tx_msg.esi=不配置
+    // tx_msg.dlc=下面决定
+
+    if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
+    {
+        if(temp_is_extended)
+            tx_msg.data[0]=p_n_sdu->N_AI.N_TA;
+        if(temp_is_remote_diagnostics)
+            tx_msg.data[0]=p_n_sdu->N_AI.N_AE;
+        if(temp_sf_dl<=6)
+        {
+            if(temp_is_padding)
+            {
+                tx_msg.dlc=8;
+                //发送8字节的单帧
+            }
+            else
+            {
+                tx_msg.dlc=temp_sf_dl+2;//一字节N_TA或者N_AE 一字节
+                //发送temp_sf_dl+2的单帧
+            }
+        }
+        else//temp_sf_dl>6
+        {
+            if(temp_is_padding)
+            {
+                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                //填充到tx_DL的长度发送单帧
+            }
+            else
+            {
+                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+3);//一字节N_TA或者N_AE 半字节帧类型 一个半字节SF_DL转义
+                //强制填充到tx_dl以内支持的最小的可容纳此帧的dlc的长度发送单帧
+            }
+        }
+    }
+    else//normal addr
+    {
+        if(temp_sf_dl<=7)
+        {
+            if(temp_is_padding)
+            {
+                tx_msg.dlc=8;
+                //发送8字节的单帧
+            }
+            else
+            {
+                tx_msg.dlc=temp_sf_dl+1;
+                //发送temp_sf_dl+1的单帧
+            }
+        }
+        else//temp_sf_dl>7
+        {
+            if(temp_is_padding)
+            {
+                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                //填充到tx_DL的长度发送单帧
+            }
+            else
+            {
+                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+2);//半字节帧类型 一个半字节SF_DL转义
+                //强制填充到最小的dlc的长度发送单帧
+            }
+        }
+    }
 
     // L_Data.request()
     //starts the N_As timer
