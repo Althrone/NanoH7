@@ -1015,7 +1015,7 @@ static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
     {
         if(temp_is_extended)
             tx_msg.data[0]=p_n_sdu->N_AI.N_TA;
-        if(temp_is_remote_diagnostics)
+        else if(temp_is_remote_diagnostics)
             tx_msg.data[0]=p_n_sdu->N_AI.N_AE;
         if(temp_sf_dl<=6)
         {
@@ -1056,43 +1056,148 @@ static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
     {
         if(temp_sf_dl<=7)
         {
+            tx_msg.data[0]=temp_sf_dl;
+            memcpy(&tx_msg.data[1],p_n_sdu->MessageData,temp_sf_dl);
             if(temp_is_padding)
             {
-                tx_msg.dlc=8;
                 //发送8字节的单帧
+                tx_msg.dlc=8;
+                memset(&tx_msg.data[1+temp_sf_dl],p_n_sdu->padding_val,8-1-temp_sf_dl);
             }
             else
             {
-                tx_msg.dlc=temp_sf_dl+1;
                 //发送temp_sf_dl+1的单帧
+                tx_msg.dlc=temp_sf_dl+1;
             }
         }
         else//temp_sf_dl>7
         {
+            tx_msg.data[0]=0;
+            tx_msg.data[1]=temp_sf_dl;
+            memcpy(&tx_msg.data[2],p_n_sdu->MessageData,temp_sf_dl);
             if(temp_is_padding)
             {
-                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
                 //填充到tx_DL的长度发送单帧
+                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,p_n_sdu->TX_DL-2-temp_sf_dl);
             }
             else
             {
-                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+2);//半字节帧类型 一个半字节SF_DL转义
                 //强制填充到最小的dlc的长度发送单帧
+                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+2);//半字节帧类型 一个半字节SF_DL转义
+                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-2-temp_sf_dl);
             }
         }
     }
 
-    // L_Data.request()
-    //starts the N_As timer
+    /* Sender L_Data.req: the transport/network layer transmits the SingleFrame
+       to the data link layer and starts the N_As timer */
+    L_Data.request(&tx_msg);
+    //新增一个事件，等待单帧发送完成
     return N_OK;
 }
 
 static N_ResultEnum _DelTxFf(N_SDU* p_n_sdu){
 
+    MtypeEnum temp_Mtype=p_n_sdu->Mtype;
+    bool temp_is_extended=p_n_sdu->is_extended;
+    bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
+    bool temp_is_padding=p_n_sdu->is_padding;
+    size_t temp_ff_dl=p_n_sdu->Length;
+    N_TAtypeEnum temp_n_tatype=p_n_sdu->N_AI.N_TAtype;
+
+    struct rt_canx_msg tx_msg;
+    tx_msg.id=p_n_sdu->can_id;
+    tx_msg.rtr=0;//不使用
+    switch (temp_n_tatype)
+    {
+    //普通11位can
+    case kPhyCanBaseFmt:
+    case kFuncCanBaseFmt:
+        tx_msg.ide=0;
+        tx_msg.fdf=0;
+        break;
+    //11位canfd
+    case kPhyCanFdBaseFmt:
+    case kFuncCanFdBaseFmt:
+        tx_msg.ide=0;
+        tx_msg.fdf=1;
+        break;
+    //29位can
+    case kPhyCanExtFmt:
+    case kFuncCanExtFmt:
+        tx_msg.ide=1;
+        tx_msg.fdf=0;
+        break;
+    //29位canfd
+    case kPhyCanFdExtFmt:
+    case kFuncCanFdExtFmt:
+        tx_msg.ide=1;
+        tx_msg.fdf=1;
+        break;
+    default:
+        while(1);
+        break;
+    }
+    
+    tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
+    // tx_msg.esi=不配置
+    tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+
+    if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
+    {
+        if(temp_is_extended)
+            tx_msg.data[0]=p_n_sdu->N_AI.N_TA;
+        else if(temp_is_remote_diagnostics)
+            tx_msg.data[0]=p_n_sdu->N_AI.N_AE;
+        if(temp_ff_dl<=0xFFF)
+        {
+            tx_msg.data[1]=0x10|(temp_ff_dl>>8);
+            tx_msg.data[2]=temp_ff_dl&0xFF;
+            //填充到tx_DL的长度
+            memcpy(&tx_msg.data[3],p_n_sdu->MessageData,p_n_sdu->TX_DL-3);
+            p_n_sdu->msg_index=p_n_sdu->TX_DL-3;
+        }
+        else//超过0xFFF
+        {
+            tx_msg.data[1]=0x10;
+            tx_msg.data[2]=0x00;
+            tx_msg.data[3]=temp_ff_dl>>24;
+            tx_msg.data[4]=temp_ff_dl>>16;
+            tx_msg.data[5]=temp_ff_dl>>8;
+            tx_msg.data[6]=temp_ff_dl&0xFF;
+            //填充到tx_DL的长度
+            memcpy(&tx_msg.data[7],p_n_sdu->MessageData,p_n_sdu->TX_DL-7);
+            p_n_sdu->msg_index=p_n_sdu->TX_DL-7;
+        }
+    }
+    else//normal address
+    {
+        if(temp_ff_dl<=0xFFF)
+        {
+            tx_msg.data[0]=0x10|(temp_ff_dl>>8);
+            tx_msg.data[1]=temp_ff_dl&0xFF;
+            //填充到tx_DL的长度
+            memcpy(&tx_msg.data[2],p_n_sdu->MessageData,p_n_sdu->TX_DL-2);
+            p_n_sdu->msg_index=p_n_sdu->TX_DL-2;
+        }
+        else//超过0xFFF
+        {
+            tx_msg.data[0]=0x10;
+            tx_msg.data[1]=0x00;
+            tx_msg.data[2]=temp_ff_dl>>24;
+            tx_msg.data[3]=temp_ff_dl>>16;
+            tx_msg.data[4]=temp_ff_dl>>8;
+            tx_msg.data[5]=temp_ff_dl&0xFF;
+            //填充到tx_DL的长度
+            memcpy(&tx_msg.data[6],p_n_sdu->MessageData,p_n_sdu->TX_DL-6);
+            p_n_sdu->msg_index=p_n_sdu->TX_DL-6;
+        }
+    }
+
     /* Sender L_Data.req: the transport/network layer transmits the FirstFrame 
        to the data link layer and starts the N_As timer */
-    // L_Data.request()
-    //starts the N_As timer
+    L_Data.request(&tx_msg);
     return N_OK;
 }
 
