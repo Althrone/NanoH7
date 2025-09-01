@@ -85,9 +85,13 @@ static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu);
 static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu);
 static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu);
 static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu);
+static N_ResultEnum _WaitSfOk(N_SDU* p_n_sdu);
 static N_ResultEnum _DelTxFf(N_SDU* p_n_sdu);
-static N_ResultEnum _DelTxFc(N_SDU* p_n_sdu);
+static N_ResultEnum _WaitFfOk(N_SDU* p_n_sdu);
 static N_ResultEnum _DelTxCf(N_SDU* p_n_sdu);
+static N_ResultEnum _WaitCfOk(N_SDU* p_n_sdu);
+static N_ResultEnum _DelTxFc(N_SDU* p_n_sdu);
+static N_ResultEnum _WaitFcOk(N_SDU* p_n_sdu);
 static N_ResultEnum _DelError(N_SDU* p_n_sdu);
 
 // static DoCanTpSM gs_docan_tp_sm={
@@ -96,19 +100,19 @@ static N_ResultEnum _DelError(N_SDU* p_n_sdu);
 // };
 
 // docan tp层有限状态机状态转移表
-const static N_Result_pfun_p_n_sdu kgs_docan_tp_fsm_tbl[10][9]={
-    /* Current State    Idle    RxSf        RxFf        RxCf        RxFc        TxSf        TxFf        TxCf        TxFc        WaitTxOk    Error */
+const static N_Result_pfun_p_n_sdu kgs_docan_tp_fsm_tbl[10][14]={
+    /* Current State    Idle    RxSf        RxFf        RxCf        RxFc        TxSf        WaitSfOk    TxFf        WaitFfOk    TxCf        WaitCfOk    TxFc        WaitFcOk    Error */
     /* Event  */
-    /*  Wait  */    {_DelIdle,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /* RecvSf */    {_DelRxSf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /* RecvFf */    {_DelRxFf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /* RecvCf */    {_DelError, _DelError,  _DelError,  _DelRxCf,   _DelError,  _DelError,  _DelRxCf,   _DelError,  _DelRxCf },
-    /* RecvFc */    {_DelError, _DelError,  _DelError,  _DelError,  _DelRxFc,   _DelError,  _DelError,  _DelRxFc,   _DelError},
-    /* SendSf */    {_DelTxSf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /* SendFf */    {_DelTxFf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /* SendCf */    {_DelError, _DelError,  _DelError,  _DelError,  _DelTxCf,   _DelError,  _DelError,  _DelTxCf,   _DelError},
-    /* SendFc */    {_DelError, _DelError,  _DelTxFc,   _DelTxFc,   _DelError,  _DelError,  _DelError,  _DelError,  _DelTxFc },
-    /* Finish */    {_DelError, _DelIdle,   _DelIdle,   _DelIdle,   _DelIdle,   _DelIdle,   _DelIdle,   _DelIdle,   _DelIdle }
+    /*  Wait  */    {_DelIdle,  _DelError,  _DelError,  _DelError,  _DelError,  _WaitSfOk,  _WaitSfOk,  _WaitFfOk,  _WaitFfOk,  _WaitCfOk,  _WaitCfOk,  _WaitFcOk,  _WaitFcOk},
+    /*  RxSf  */    {_DelRxSf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
+    /*  RxFf  */    {_DelRxFf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
+    /*  RxCf  */    {_DelError, _DelError,  _DelError,  _DelRxCf,   _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelRxCf },
+    /*  RxFc  */    {_DelError, _DelError,  _DelError,  _DelError,  _DelRxFc,   _DelError,  _DelError,  _DelError,  _DelRxFc,   _DelError,  _DelRxFc,   _DelError,  _DelError},
+    /*  TxSf  */    {_DelTxSf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
+    /*  TxFf  */    {_DelTxFf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
+    /*  TxCf  */    {_DelError, _DelError,  _DelError,  _DelError,  _DelTxCf,   _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelTxCf,   _DelError,  _DelError},
+    /*  TxFc  */    {_DelError, _DelError,  _DelTxFc,   _DelTxFc,   _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelTxFc },
+    /* Finish */    {_DelError, _DelIdle,   _DelIdle,   _DelIdle,   _DelIdle,   _DelError,  _DelIdle,   _DelError,  _DelError,  _DelError,  _DelIdle,   _DelError,  _DelError}
 };
 
 static const uint8_t DLCtoBytes[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
@@ -328,11 +332,11 @@ static N_ResultEnum _DelIdle(N_SDU* p_n_sdu){
         switch (n_pci_type)
         {
         case kNPciSF:
-            p_n_sdu->sm.event=kDoCanTpRecvSfEvent;
+            p_n_sdu->sm.event=kRxSfEvent;
             p_n_sdu->l_recv_ind=false;
             break;
         case kNPciFF:
-            p_n_sdu->sm.event=kDoCanTpRecvFfEvent;
+            p_n_sdu->sm.event=kRxFfEvent;
             p_n_sdu->l_recv_ind=false;
             break;
         default:
@@ -368,7 +372,7 @@ static N_ResultEnum _DelIdle(N_SDU* p_n_sdu){
                 // else{//发送temp_sf_dl+2的单帧
                 //     }
                 //都是发送单帧
-                p_n_sdu->sm.event=kDoCanTpSendSfEvent;
+                p_n_sdu->sm.event=kTxSfEvent;
             }
             else//temp_sf_dl>6
             {
@@ -384,7 +388,7 @@ static N_ResultEnum _DelIdle(N_SDU* p_n_sdu){
                 //如果超过tx_DL-3的长度，则发送多帧
                 if(temp_sf_dl>temp_TX_DL-3)
                 {
-                    p_n_sdu->sm.event=kDoCanTpSendFfEvent;
+                    p_n_sdu->sm.event=kTxFfEvent;
                 }
             }
         }
@@ -399,7 +403,7 @@ static N_ResultEnum _DelIdle(N_SDU* p_n_sdu){
                 // else{//发送temp_sf_dl+1的单帧
                 //     }
                 //都是发送单帧
-                p_n_sdu->sm.event=kDoCanTpSendSfEvent;
+                p_n_sdu->sm.event=kTxSfEvent;
             }
             else//temp_sf_dl>7
             {
@@ -414,7 +418,7 @@ static N_ResultEnum _DelIdle(N_SDU* p_n_sdu){
                 //如果超过tx_DL-2的长度，则发送多帧
                 if(temp_sf_dl>temp_TX_DL-2)
                 {
-                    p_n_sdu->sm.event=kDoCanTpSendFfEvent;
+                    p_n_sdu->sm.event=kTxFfEvent;
                 }
             }
         }
@@ -480,7 +484,7 @@ static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu){
           the network layer shall ignore the received SF N_PDU*/
         if(temp_sf_dl==0)
         {
-            p_n_sdu->sm.event=kDoCanTpFinishEvent;
+            p_n_sdu->sm.event=kFinishEvent;
             return N_UNEXP_PDU;
         }
 
@@ -492,7 +496,7 @@ static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu){
         {
             if(temp_sf_dl>(CAN_DL-2))
             {
-                p_n_sdu->sm.event=kDoCanTpFinishEvent;
+                p_n_sdu->sm.event=kFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -500,7 +504,7 @@ static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu){
         {
             if(temp_sf_dl>(CAN_DL-1))
             {
-                p_n_sdu->sm.event=kDoCanTpFinishEvent;
+                p_n_sdu->sm.event=kFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -512,7 +516,7 @@ static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu){
         {
             if(CAN_DL!=8)
             {
-                p_n_sdu->sm.event=kDoCanTpFinishEvent;
+                p_n_sdu->sm.event=kFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -530,7 +534,7 @@ static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu){
 
             if(temp_sf_dl!=table12[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc])
             {
-                p_n_sdu->sm.event=kDoCanTpFinishEvent;
+                p_n_sdu->sm.event=kFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -563,7 +567,7 @@ static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu){
         if(table13[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc-9].SF_DL_min>temp_sf_dl ||
         table13[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc-9].SF_DL_max<temp_sf_dl )
         {
-            p_n_sdu->sm.event=kDoCanTpFinishEvent;
+            p_n_sdu->sm.event=kFinishEvent;
             return N_UNEXP_PDU;
         }
     }
@@ -593,7 +597,7 @@ static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu){
                         p_n_sdu->MessageData,SF_DL,
                         N_OK,
                         N_UserExt);
-    p_n_sdu->sm.event=kDoCanTpFinishEvent;
+    p_n_sdu->sm.event=kFinishEvent;
     return N_OK;
 }
 
@@ -622,7 +626,7 @@ static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu){
     uint8_t CAN_DL=DLCtoBytes[rx_msg.dlc];
     if(CAN_DL<8)
     {
-        p_n_sdu->sm.event=kDoCanTpFinishEvent;
+        p_n_sdu->sm.event=kFinishEvent;
         return N_UNEXP_PDU;
     }
 
@@ -675,7 +679,7 @@ static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu){
         and not transmit an FC N_PDU.*/
         if(tmp_ff_dl<=4095)
         {
-            p_n_sdu->sm.event=kDoCanTpFinishEvent;
+            p_n_sdu->sm.event=kFinishEvent;
             return N_UNEXP_PDU;
         }
     }
@@ -686,7 +690,7 @@ static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu){
       and send an FC N_PDU with the parameter FlowStatus = Overflow.*/
     if(tmp_ff_dl>p_n_sdu->msg_buf_max_size)
     {
-        p_n_sdu->sm.event=kDoCanTpSendFcEvent;
+        p_n_sdu->sm.event=kTxFcEvent;
         p_n_sdu->FlowStatus=kFsOVFLW;
         return N_BUFFER_OVFLW;
     }
@@ -696,7 +700,7 @@ static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu){
       not transmit a FC N_PDU.*/
     if(tmp_ff_dl<FF_DLmin)
     {
-        p_n_sdu->sm.event=kDoCanTpFinishEvent;
+        p_n_sdu->sm.event=kFinishEvent;
         return N_UNEXP_PDU;
     }
 
@@ -729,7 +733,7 @@ static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu){
     //复制首帧中的上层数据到 uds app buf
     memcpy(p_n_sdu->MessageData,&rx_msg.data[payload_offset],copy_len);
     p_n_sdu->msg_index+=copy_len;
-    p_n_sdu->sm.event=kDoCanTpSendFcEvent;
+    p_n_sdu->sm.event=kTxFcEvent;
     p_n_sdu->FlowStatus=kFsCTS;
     p_n_sdu->Length=FF_DL;
     p_n_sdu->SequenceNumber++;
@@ -744,7 +748,7 @@ static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu){
     N_USData_FF.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
                            FF_DL,
                            N_UserExt);
-    p_n_sdu->sm.event=kDoCanTpSendFcEvent;
+    p_n_sdu->sm.event=kTxFcEvent;
     return N_OK;
 }
 
@@ -785,7 +789,7 @@ static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu){
 
     if(temp_fs>kFsOVFLW)
     {
-        p_n_sdu->sm.event=kDoCanTpFinishEvent;
+        p_n_sdu->sm.event=kFinishEvent;
         N_UserExtStruct N_UserExt={
             .can_id=rx_msg.id,
             .ide=rx_msg.ide,
@@ -857,10 +861,10 @@ static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu){
         //只有CTS的时候才需要更新BS和STmin
         p_n_sdu->STmin=temp_STmin;
         p_n_sdu->BS=temp_BS;
-        p_n_sdu->sm.event=kDoCanTpSendCfEvent;//发送续帧
+        p_n_sdu->sm.event=kTxCfEvent;//发送续帧
         break;
     case kFsWAIT:
-        p_n_sdu->sm.event=kDoCanTpRecvFcEvent;//继续接收流控帧
+        p_n_sdu->sm.event=kRxFcEvent;//继续接收流控帧
         break;
     case kFsOVFLW:
         //返回会话层
@@ -895,7 +899,7 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
             if(DLCtoBytes[rx_msg.dlc]!=8)
             {
                 //ignore frame
-                p_n_sdu->sm.event=kDoCanTpFinishEvent;
+                p_n_sdu->sm.event=kFinishEvent;
                 return N_UNEXP_PDU;
             }
         }
@@ -909,7 +913,7 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
                     if(DLCtoBytes[rx_msg.dlc]!=remaining_length+2)
                     {
                         //ignore frame
-                        p_n_sdu->sm.event=kDoCanTpFinishEvent;
+                        p_n_sdu->sm.event=kFinishEvent;
                         return N_UNEXP_PDU;
                     }
                 }
@@ -922,7 +926,7 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
                     if(DLCtoBytes[rx_msg.dlc]!=remaining_length+1)
                     {
                         //ignore frame
-                        p_n_sdu->sm.event=kDoCanTpFinishEvent;
+                        p_n_sdu->sm.event=kFinishEvent;
                         return N_UNEXP_PDU;
                     }
                 }
@@ -934,7 +938,7 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
         if(DLCtoBytes[rx_msg.dlc]!=p_n_sdu->RX_DL)
         {
             //ignore frame
-            p_n_sdu->sm.event=kDoCanTpFinishEvent;
+            p_n_sdu->sm.event=kFinishEvent;
             return N_UNEXP_PDU;
         }
     }
@@ -948,7 +952,7 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
     uint8_t SequenceNumber = rx_msg.data[0+(p_n_sdu->Mtype|p_n_sdu->is_extended)]&0x0F;
     if(SequenceNumber!=p_n_sdu->SequenceNumber)
     {
-        p_n_sdu->sm.event=kDoCanTpFinishEvent;
+        p_n_sdu->sm.event=kFinishEvent;
         return N_WRONG_SN;
     }
 
@@ -964,6 +968,47 @@ static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu){
     return N_OK;
 }
 
+/**
+ * @brief   只负责给can帧添加id，ide，fdf，其他交给发送函数自己添加
+ */
+void _CreatTxHead(N_SDU* p_n_sdu,struct rt_canx_msg* tx_head)
+{
+    N_TAtypeEnum temp_n_tatype=p_n_sdu->N_AI.N_TAtype;
+
+    tx_head->id=p_n_sdu->can_id;
+    tx_head->rtr=0;//不使用
+    switch (temp_n_tatype)
+    {
+    //普通11位can
+    case kPhyCanBaseFmt:
+    case kFuncCanBaseFmt:
+        tx_head->ide=0;
+        tx_head->fdf=0;
+        break;
+    //11位canfd
+    case kPhyCanFdBaseFmt:
+    case kFuncCanFdBaseFmt:
+        tx_head->ide=0;
+        tx_head->fdf=1;
+        break;
+    //29位can
+    case kPhyCanExtFmt:
+    case kFuncCanExtFmt:
+        tx_head->ide=1;
+        tx_head->fdf=0;
+        break;
+    //29位canfd
+    case kPhyCanFdExtFmt:
+    case kFuncCanFdExtFmt:
+        tx_head->ide=1;
+        tx_head->fdf=1;
+        break;
+    default:
+        while(1);
+        break;
+    }
+}
+
 static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
 
     MtypeEnum temp_Mtype=p_n_sdu->Mtype;
@@ -971,41 +1016,9 @@ static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
     bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
     bool temp_is_padding=p_n_sdu->is_padding;
     size_t temp_sf_dl=p_n_sdu->Length;
-    N_TAtypeEnum temp_n_tatype=p_n_sdu->N_AI.N_TAtype;
 
     struct rt_canx_msg tx_msg;
-    tx_msg.id=p_n_sdu->can_id;
-    tx_msg.rtr=0;//不使用
-    switch (temp_n_tatype)
-    {
-    //普通11位can
-    case kPhyCanBaseFmt:
-    case kFuncCanBaseFmt:
-        tx_msg.ide=0;
-        tx_msg.fdf=0;
-        break;
-    //11位canfd
-    case kPhyCanFdBaseFmt:
-    case kFuncCanFdBaseFmt:
-        tx_msg.ide=0;
-        tx_msg.fdf=1;
-        break;
-    //29位can
-    case kPhyCanExtFmt:
-    case kFuncCanExtFmt:
-        tx_msg.ide=1;
-        tx_msg.fdf=0;
-        break;
-    //29位canfd
-    case kPhyCanFdExtFmt:
-    case kFuncCanFdExtFmt:
-        tx_msg.ide=1;
-        tx_msg.fdf=1;
-        break;
-    default:
-        while(1);
-        break;
-    }
+    _CreatTxHead(p_n_sdu,&tx_msg);
     
     tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
     // tx_msg.esi=不配置
@@ -1097,6 +1110,10 @@ static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
     return N_OK;
 }
 
+static N_ResultEnum _WaitSfOk(N_SDU* p_n_sdu){
+    return N_OK;
+}
+
 static N_ResultEnum _DelTxFf(N_SDU* p_n_sdu){
 
     MtypeEnum temp_Mtype=p_n_sdu->Mtype;
@@ -1104,45 +1121,13 @@ static N_ResultEnum _DelTxFf(N_SDU* p_n_sdu){
     bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
     bool temp_is_padding=p_n_sdu->is_padding;
     size_t temp_ff_dl=p_n_sdu->Length;
-    N_TAtypeEnum temp_n_tatype=p_n_sdu->N_AI.N_TAtype;
 
     struct rt_canx_msg tx_msg;
-    tx_msg.id=p_n_sdu->can_id;
-    tx_msg.rtr=0;//不使用
-    switch (temp_n_tatype)
-    {
-    //普通11位can
-    case kPhyCanBaseFmt:
-    case kFuncCanBaseFmt:
-        tx_msg.ide=0;
-        tx_msg.fdf=0;
-        break;
-    //11位canfd
-    case kPhyCanFdBaseFmt:
-    case kFuncCanFdBaseFmt:
-        tx_msg.ide=0;
-        tx_msg.fdf=1;
-        break;
-    //29位can
-    case kPhyCanExtFmt:
-    case kFuncCanExtFmt:
-        tx_msg.ide=1;
-        tx_msg.fdf=0;
-        break;
-    //29位canfd
-    case kPhyCanFdExtFmt:
-    case kFuncCanFdExtFmt:
-        tx_msg.ide=1;
-        tx_msg.fdf=1;
-        break;
-    default:
-        while(1);
-        break;
-    }
+    _CreatTxHead(p_n_sdu,&tx_msg);
     
     tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
     // tx_msg.esi=不配置
-    tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+    tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);//首帧的dlc长度永远是tp层定义的最大发送长度
 
     if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
     {
@@ -1198,6 +1183,125 @@ static N_ResultEnum _DelTxFf(N_SDU* p_n_sdu){
     /* Sender L_Data.req: the transport/network layer transmits the FirstFrame 
        to the data link layer and starts the N_As timer */
     L_Data.request(&tx_msg);
+    //加一个等待发送确认的状态
+    return N_OK;
+}
+
+static N_ResultEnum _WaitFfOk(N_SDU* p_n_sdu){
+    return N_OK;
+}
+
+static N_ResultEnum _DelTxCf(N_SDU* p_n_sdu){
+
+    MtypeEnum temp_Mtype=p_n_sdu->Mtype;
+    bool temp_is_extended=p_n_sdu->is_extended;
+    bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
+    bool temp_is_padding=p_n_sdu->is_padding;
+    size_t temp_ff_dl=p_n_sdu->Length;
+
+    struct rt_canx_msg tx_msg;
+    _CreatTxHead(p_n_sdu,&tx_msg);
+    
+    tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
+    // tx_msg.esi=不配置
+
+    // 从需要剩余的msg长度决定dlc长度
+    size_t remaining_length=p_n_sdu->Length-p_n_sdu->msg_index;
+
+    if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
+    {
+        if(temp_is_extended)
+            tx_msg.data[0]=p_n_sdu->N_AI.N_TA;
+        else if(temp_is_remote_diagnostics)
+            tx_msg.data[0]=p_n_sdu->N_AI.N_AE;
+        tx_msg.data[1]=(kNPciCF<<4)|p_n_sdu->SequenceNumber;
+
+        if(remaining_length>p_n_sdu->TX_DL-2)//还有后续的续帧
+        {
+            tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+            memcpy(&tx_msg.data[2],p_n_sdu->MessageData+p_n_sdu->msg_index,p_n_sdu->TX_DL-2);
+            p_n_sdu->msg_index+=p_n_sdu->TX_DL-2;
+            if(p_n_sdu->BS_cnt==p_n_sdu->BS)
+            {
+                p_n_sdu->BS_cnt=1;//从1开始算
+
+            }
+            else if(p_n_sdu->BS_cnt<p_n_sdu->BS)
+            {
+                p_n_sdu->BS_cnt++;
+
+            }
+            else//倒反天罡，计数值大于设计值
+                while(1);
+        }
+        else//发完这帧就没有续帧了
+        {
+            if(temp_is_padding)
+            {
+                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                memcpy(&tx_msg.data[2],p_n_sdu->MessageData+p_n_sdu->msg_index,remaining_length);
+                memset(&tx_msg.data[2+remaining_length],p_n_sdu->padding_val,p_n_sdu->TX_DL-2-remaining_length);
+            }
+            else
+            {
+                tx_msg.dlc=Bytes2ShortestDLC(remaining_length);
+                memcpy(&tx_msg.data[2],p_n_sdu->MessageData+p_n_sdu->msg_index,remaining_length);
+                //强制填充到支持的最短的帧的长度
+                memset(&tx_msg.data[2+remaining_length],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-2-remaining_length);
+            }
+            
+        }
+    }
+    else//normal address
+    {
+        if(remaining_length>p_n_sdu->TX_DL-1)//还有后续的续帧
+        {
+            //要判断bs
+        }
+        else//发完这帧就没有续帧了
+        {
+
+        }
+    }
+
+    p_n_sdu->N_Cs_timing_enable=false;
+    p_n_sdu->N_Cs=0;
+    p_n_sdu->N_As_timing_enable=true;
+
+    /* Sender L_Data.req: the transport/network layer transmits the first 
+       ConsecutiveFrame to the data link layer and starts the N_As timer */
+    //start N_As timer
+    //stop N_Cs timer
+    //接受完流控的第一个续帧
+    //每次发之前都要检查剩余的长度够不够再发下一个续帧，这决定开不开cs或者bs
+
+    /* Sender L_Data.req: when the N_Cs timer is elapsed (STmin), the 
+       transport/network layer transmits the next ConsecutiveFrame to the data 
+       link layer and starts the N_As timer */
+    //N_Cs到达设定的STmin就继续发续帧（如果有的话）
+    //start N_As timer
+    //stop N_Cs timer
+
+    /* Sender L_Data.req: the transport/network layer transmits the 
+       ConsecutiveFrame to the data link layer and starts the N_As timer */
+    //start N_As timer
+    //stop N_Cs timer
+    //本质上跟上上条一样
+
+    /* Sender L_Data.req: when the N_Cs timer is elapsed (STmin), the 
+       transport/network layer transmits the last ConsecutiveFrame to the data 
+       link layer and starts the N_As timer */
+    //最后一个续帧
+    //N_Cs到达设定的STmin就继续发续帧（如果有的话）
+    //start N_As timer
+    //stop N_Cs timer
+}
+
+/* Sender N_USData.con: the transport/network layer issues to session layer the
+   completion of the segmented message */
+//应该在某个函数内调用N_USData_con
+
+static N_ResultEnum _WaitCfOk(N_SDU* p_n_sdu){
     return N_OK;
 }
 
@@ -1245,37 +1349,9 @@ static N_ResultEnum _DelTxFc(N_SDU* p_n_sdu){
     }
 }
 
-static N_ResultEnum _DelTxCf(N_SDU* p_n_sdu){
-    /* Sender L_Data.req: the transport/network layer transmits the first 
-       ConsecutiveFrame to the data link layer and starts the N_As timer */
-    //start N_As timer
-    //stop N_Cs timer
-
-    /* Sender L_Data.req: when the N_Cs timer is elapsed (STmin), the 
-       transport/network layer transmits the next ConsecutiveFrame to the data 
-       link layer and starts the N_As timer */
-    //N_Cs到达设定的STmin就继续发续帧（如果有的话）
-    //start N_As timer
-    //stop N_Cs timer
-
-    /* Sender L_Data.req: the transport/network layer transmits the 
-       ConsecutiveFrame to the data link layer and starts the N_As timer */
-    //start N_As timer
-    //stop N_Cs timer
-    //本质上跟上上条一样
-
-    /* Sender L_Data.req: when the N_Cs timer is elapsed (STmin), the 
-       transport/network layer transmits the last ConsecutiveFrame to the data 
-       link layer and starts the N_As timer */
-    //最后一个续帧
-    //N_Cs到达设定的STmin就继续发续帧（如果有的话）
-    //start N_As timer
-    //stop N_Cs timer
+static N_ResultEnum _WaitFcOk(N_SDU* p_n_sdu){
+    return N_OK;
 }
-
-/* Sender N_USData.con: the transport/network layer issues to session layer the
-   completion of the segmented message */
-//应该在某个函数内调用N_USData_con
 
 static N_ResultEnum _DelError(N_SDU* p_n_sdu){}
 

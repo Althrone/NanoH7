@@ -157,36 +157,40 @@ typedef enum
 
 typedef enum
 {
-    kDoCanTpIdle,
-    kDoCanTpRxSf,
-    kDoCanTpRxFf,
-    kDoCanTpRxFc,
-    kDoCanTpRxCf,
-    kDoCanTpTxSf,
-    kDoCanTpTxFf,
-    kDoCanTpTxFc,
-    kDoCanTpTxCf,
-    kDoCanTpError,
-}DoCanTpStateEnum;
+    kIdle,
+    kRxSf,
+    kRxFf,
+    kRxFc,
+    kRxCf,
+    kTxSf,
+    kWaitSfOk,
+    kTxFf,
+    kWaitFfOk,
+    kTxCf,
+    kWaitCfOk,
+    kTxFc,
+    kWaitFcOk,
+    kError,
+}TpStateEnum;
 
 typedef enum
 {
-    kDoCanTpWaitEvent,
-    kDoCanTpRecvSfEvent,
-    kDoCanTpRecvFfEvent,
-    kDoCanTpRecvCfEvent,
-    kDoCanTpRecvFcEvent,
-    kDoCanTpSendSfEvent,
-    kDoCanTpSendFfEvent,
-    kDoCanTpSendCfEvent,
-    kDoCanTpSendFcEvent,
-    kDoCanTpFinishEvent,
-}DoCanTpEventEnum;
+    kWaitEvent,
+    kRxSfEvent,
+    kRxFfEvent,
+    kRxCfEvent,
+    kRxFcEvent,
+    kTxSfEvent,
+    kTxFfEvent,
+    kTxCfEvent,
+    kTxFcEvent,
+    kFinishEvent,
+}TpEventEnum;
 
 typedef struct
 {
-    DoCanTpStateEnum state;
-    DoCanTpEventEnum event;
+    TpStateEnum state;
+    TpEventEnum event;
 }DoCanTpSM;
 
 typedef struct
