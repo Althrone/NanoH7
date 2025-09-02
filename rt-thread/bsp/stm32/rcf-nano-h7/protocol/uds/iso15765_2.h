@@ -255,6 +255,7 @@ typedef struct
         bool n_send_req;
         bool l_recv_ind;
     };
+    bool l_send_con;
 
     size_t msg_index;//多帧传输时当前已经接收/发送的字节数
     // size_t sdu_len;//=ff_dl
