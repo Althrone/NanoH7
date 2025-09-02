@@ -159,18 +159,19 @@ typedef enum
 {
     kIdle,
     kRxSf,
-    kRxFf,
-    kRxFc,
-    kRxCf,
     kTxSf,
     kWaitSfOk,
-    kTxFf,
-    kWaitFfOk,
-    kTxCf,
-    kWaitCfOk,
+    kRxFf,
     kTxFc,
     kWaitFcOk,
+    kRxCf,
+    kTxFf,
+    kWaitFfOk,
+    kRxFc,
+    kTxCf,
+    kWaitCfOk,
     kError,
+    kTpStateNum,
 }TpStateEnum;
 
 typedef enum
@@ -185,6 +186,7 @@ typedef enum
     kTxCfEvent,
     kTxFcEvent,
     kFinishEvent,
+    kTpEventNum,
 }TpEventEnum;
 
 typedef struct

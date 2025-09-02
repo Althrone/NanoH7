@@ -60,8 +60,8 @@ N_SDU g_n_sdu_tbl[]={
         .N_Cr_threshold=1000,
 
         //一些状态参数
-        .sm.state=kDoCanTpIdle,
-        .sm.event=kDoCanTpWaitEvent,
+        .sm.state=kIdle,
+        .sm.event=kWaitEvent,
         .FlowStatus=kFsCTS,
         .SequenceNumber=0,
         .l_recv_ind=false,
@@ -115,8 +115,8 @@ N_SDU g_n_sdu_tbl[]={
         .N_Cr_threshold=0,//单帧接收不需要这个参数
 
         //一些状态参数
-        .sm.state=kDoCanTpIdle,
-        .sm.event=kDoCanTpWaitEvent,
+        .sm.state=kIdle,
+        .sm.event=kWaitEvent,
         .FlowStatus=0,//单帧没有这玩意
         .SequenceNumber=0,//单帧没有这玩意
         .l_recv_ind=false,
@@ -170,8 +170,8 @@ N_SDU g_n_sdu_tbl[]={
         .N_Cr_threshold=1000,
 
         //一些状态参数
-        .sm.state=kDoCanTpIdle,
-        .sm.event=kDoCanTpWaitEvent,
+        .sm.state=kIdle,
+        .sm.event=kWaitEvent,
         .FlowStatus=kFsCTS,
         .SequenceNumber=0,
         .n_send_req=false,

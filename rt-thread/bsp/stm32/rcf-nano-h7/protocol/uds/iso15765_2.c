@@ -79,40 +79,49 @@ typedef N_ResultEnum (*N_Result_pfun_p_n_sdu)(N_SDU* p_n_sdu); /* pointer to fun
 
 DoCanTpStat gs_docan_tp_stat;
 
-static N_ResultEnum _DelIdle(N_SDU* p_n_sdu);
-static N_ResultEnum _DelRxSf(N_SDU* p_n_sdu);
-static N_ResultEnum _DelRxFf(N_SDU* p_n_sdu);
-static N_ResultEnum _DelRxFc(N_SDU* p_n_sdu);
-static N_ResultEnum _DelRxCf(N_SDU* p_n_sdu);
-static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu);
+static N_ResultEnum _Idle(N_SDU* p_n_sdu);
+static N_ResultEnum _RxSf(N_SDU* p_n_sdu);
+static N_ResultEnum _RxFf(N_SDU* p_n_sdu);
+static N_ResultEnum _RxFc(N_SDU* p_n_sdu);
+static N_ResultEnum _RxCf(N_SDU* p_n_sdu);
+static N_ResultEnum _TxSf(N_SDU* p_n_sdu);
 static N_ResultEnum _WaitSfOk(N_SDU* p_n_sdu);
-static N_ResultEnum _DelTxFf(N_SDU* p_n_sdu);
+static N_ResultEnum _TxFf(N_SDU* p_n_sdu);
 static N_ResultEnum _WaitFfOk(N_SDU* p_n_sdu);
-static N_ResultEnum _DelTxCf(N_SDU* p_n_sdu);
+static N_ResultEnum _TxCf(N_SDU* p_n_sdu);
 static N_ResultEnum _WaitCfOk(N_SDU* p_n_sdu);
-static N_ResultEnum _DelTxFc(N_SDU* p_n_sdu);
+static N_ResultEnum _TxFc(N_SDU* p_n_sdu);
 static N_ResultEnum _WaitFcOk(N_SDU* p_n_sdu);
-static N_ResultEnum _DelError(N_SDU* p_n_sdu);
-
-// static DoCanTpSM gs_docan_tp_sm={
-//     .state=kDoCanTpIdle,
-//     .event=kDoCanTpWaitEvent,
-// };
+static N_ResultEnum _Error(N_SDU* p_n_sdu);
 
 // docan tp层有限状态机状态转移表
-const static N_Result_pfun_p_n_sdu kgs_docan_tp_fsm_tbl[10][14]={
-    /* Current State    Idle    RxSf        RxFf        RxCf        RxFc        TxSf        WaitSfOk    TxFf        WaitFfOk    TxCf        WaitCfOk    TxFc        WaitFcOk    Error */
+const static TpStateEnum kgs_docan_tp_state_tbl[kTpEventNum][kTpStateNum]={
+    /* Current State    Idle    RxSf    TxSf        WaitSfOk        RxFf    TxFc        WaitFcOk    RxCf        TxFf        WaitFfOk    RxFc    TxCf        WaitCfOk  Error */
     /* Event  */
-    /*  Wait  */    {_DelIdle,  _DelError,  _DelError,  _DelError,  _DelError,  _WaitSfOk,  _WaitSfOk,  _WaitFfOk,  _WaitFfOk,  _WaitCfOk,  _WaitCfOk,  _WaitFcOk,  _WaitFcOk},
-    /*  RxSf  */    {_DelRxSf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /*  RxFf  */    {_DelRxFf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /*  RxCf  */    {_DelError, _DelError,  _DelError,  _DelRxCf,   _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelRxCf },
-    /*  RxFc  */    {_DelError, _DelError,  _DelError,  _DelError,  _DelRxFc,   _DelError,  _DelError,  _DelError,  _DelRxFc,   _DelError,  _DelRxFc,   _DelError,  _DelError},
-    /*  TxSf  */    {_DelTxSf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /*  TxFf  */    {_DelTxFf,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError},
-    /*  TxCf  */    {_DelError, _DelError,  _DelError,  _DelError,  _DelTxCf,   _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelTxCf,   _DelError,  _DelError},
-    /*  TxFc  */    {_DelError, _DelError,  _DelTxFc,   _DelTxFc,   _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelError,  _DelTxFc },
-    /* Finish */    {_DelError, _DelIdle,   _DelIdle,   _DelIdle,   _DelIdle,   _DelError,  _DelIdle,   _DelError,  _DelError,  _DelError,  _DelIdle,   _DelError,  _DelError}
+    /*  Wait  */    {   kIdle,  kError, kWaitSfOk,  kWaitSfOk, /**/ kError, kWaitFcOk,  kWaitFcOk,  kError,/**/ kWaitFfOk,  kWaitFfOk,  kError, kWaitCfOk,  kWaitCfOk,},
+    /*  RxSf  */    {   kRxSf,  kError, kError,     kError,    /**/ kError, kError,     kError,     kError,/**/ kError,     kError,     kError, kError,     kError,   },
+    /*  RxFf  */    {   kRxFf,  kError, kError,     kError,    /**/ kError, kError,     kError,     kError,/**/ kError,     kError,     kError, kError,     kError,   },
+    /*  RxCf  */    {   kError, kError, kError,     kError,    /**/ kError, kError,     kRxCf,      kRxCf, /**/ kError,     kError,     kError, kError,     kError,   },
+    /*  RxFc  */    {   kError, kError, kError,     kError,    /**/ kError, kError,     kError,     kError,/**/ kError,     kRxFc,      kRxFc,  kError,     kRxFc,    },
+    /*  TxSf  */    {   kTxSf,  kError, kError,     kError,    /**/ kError, kError,     kError,     kError,/**/ kError,     kError,     kError, kError,     kError,   },
+    /*  TxFf  */    {   kTxFf,  kError, kError,     kError,    /**/ kError, kError,     kError,     kError,/**/ kError,     kError,     kError, kError,     kError,   },
+    /*  TxCf  */    {   kError, kError, kError,     kError,    /**/ kError, kError,     kError,     kError,/**/ kError,     kError,     kTxCf,  kError,     kTxCf,    },
+    /*  TxFc  */    {   kError, kError, kError,     kError,    /**/ kTxFc,  kError,     kTxFc,      kTxFc, /**/ kError,     kError,     kError, kError,     kError,   },
+    /* Finish */    {   kError, kIdle,  kError,     kIdle,     /**/ kIdle,  kError,     kError,     kIdle, /**/ kError,     kError,     kIdle,  kError,     kIdle,    }
+};
+const static N_Result_pfun_p_n_sdu kgs_docan_tp_fsm_tbl[10][14]={
+    /* Current State    Idle    RxSf    RxFf    RxCf    RxFc    TxSf        WaitSfOk    TxFf        WaitFfOk    TxCf        WaitCfOk    TxFc        WaitFcOk    Error */
+    /* Event  */
+    /*  Wait  */    {   _Idle,  _Error, _Error, _Error, _Error, _WaitSfOk,  _WaitSfOk,  _WaitFfOk,  _WaitFfOk,  _WaitCfOk,  _WaitCfOk,  _WaitFcOk,  _WaitFcOk},
+    /*  RxSf  */    {   _RxSf,  _Error, _Error, _Error, _Error, _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error},
+    /*  RxFf  */    {   _RxFf,  _Error, _Error, _Error, _Error, _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error},
+    /*  RxCf  */    {   _Error, _Error, _Error, _RxCf,  _Error, _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _RxCf },
+    /*  RxFc  */    {   _Error, _Error, _Error, _Error, _RxFc,  _Error,     _Error,     _Error,     _RxFc,      _Error,     _RxFc,      _Error,     _Error},
+    /*  TxSf  */    {   _TxSf,  _Error, _Error, _Error, _Error, _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error},
+    /*  TxFf  */    {   _TxFf,  _Error, _Error, _Error, _Error, _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error},
+    /*  TxCf  */    {   _Error, _Error, _Error, _Error, _TxCf,  _Error,     _Error,     _Error,     _Error,     _Error,     _TxCf,      _Error,     _Error},
+    /*  TxFc  */    {   _Error, _Error, _TxFc,  _TxFc,  _Error, _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _Error,     _TxFc },
+    /* Finish */    {   _Error, _Idle,  _Idle,  _Idle,  _Idle,  _Error,     _Idle,      _Error,     _Error,     _Error,     _Idle,      _Error,     _Error}
 };
 
 static const uint8_t DLCtoBytes[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
@@ -1107,6 +1116,8 @@ static N_ResultEnum _DelTxSf(N_SDU* p_n_sdu){
        to the data link layer and starts the N_As timer */
     L_Data.request(&tx_msg);
     //新增一个事件，等待单帧发送完成
+    p_n_sdu->sm.state=kWaitSfOk;
+    p_n_sdu->sm.event=kWaitEvent;
     return N_OK;
 }
 
