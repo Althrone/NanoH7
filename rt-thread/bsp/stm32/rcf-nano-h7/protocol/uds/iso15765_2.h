@@ -284,7 +284,7 @@ typedef struct
 typedef struct
 {
     uint32_t can_id;
-    bool ide;
+    // bool ide;这个条件隐含在N_AI.N_TAtype中
     bool is_extended;//设置此参数时N_TA有效,与Mtype互斥
 }N_UserExtStruct;
 
@@ -313,7 +313,7 @@ typedef enum
 
 struct L_DataOps
 {
-    void (*request)(struct rt_canx_msg* tx_can_msg);
+    void (*request)(struct rt_canx_msg* tx_can_msg, N_PCItype UserExtPciType);
     void (*confirm)(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status);
     void (*indication)(struct rt_canx_msg* rx_can_msg);
 };

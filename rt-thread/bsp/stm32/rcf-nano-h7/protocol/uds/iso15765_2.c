@@ -49,7 +49,7 @@ const struct N_ChangeParameterOps N_ChangeParameter={
     .confirm=N_ChangeParameter_confirm,
 };
 
-static void L_Data_request(struct rt_canx_msg* tx_can_msg);
+static void L_Data_request(struct rt_canx_msg* tx_can_msg, N_PCItype UserExtPciType);
 static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status);
 static void L_Data_indication(struct rt_canx_msg* rx_can_msg);
 
@@ -78,6 +78,8 @@ typedef N_ResultEnum (*N_Result_pfun_p_n_sdu)(N_SDU* p_n_sdu); /* pointer to fun
  *****************************************************************************/
 
 DoCanTpStat gs_docan_tp_stat;
+
+bool is_wait=false;
 
 static N_ResultEnum _Idle(N_SDU* p_n_sdu);
 static N_ResultEnum _RxSf(N_SDU* p_n_sdu);
@@ -281,6 +283,7 @@ void DoCanTpTask(void)
         //先根据事件更新状态
         g_n_sdu_tbl[i].sm.state=kgs_docan_tp_state_tbl[g_n_sdu_tbl[i].sm.event][g_n_sdu_tbl[i].sm.state];
         //执行对应的动作
+        //N_Result不应该在这里更新
         g_n_sdu_tbl[i].N_Result=kgs_docan_tp_fsm_tbl[g_n_sdu_tbl[i].sm.event][g_n_sdu_tbl[i].sm.state](&g_n_sdu_tbl[i]);
     }
 }
@@ -318,6 +321,47 @@ static bool _SearchSduIndex(struct rt_canx_msg* rx_can_msg,size_t* sdu_index){
     
     *sdu_index=i;
     return data_matches;
+}
+
+/**
+ * @brief   只负责给can帧添加id，ide，fdf，其他交给发送函数自己添加
+ */
+static void _CreatTxHead(N_SDU* p_n_sdu,struct rt_canx_msg* tx_head)
+{
+    N_TAtypeEnum temp_n_tatype=p_n_sdu->N_AI.N_TAtype;
+
+    tx_head->id=p_n_sdu->can_id;
+    tx_head->rtr=0;//不使用
+    switch (temp_n_tatype)
+    {
+    //普通11位can
+    case kPhyCanBaseFmt:
+    case kFuncCanBaseFmt:
+        tx_head->ide=0;
+        tx_head->fdf=0;
+        break;
+    //11位canfd
+    case kPhyCanFdBaseFmt:
+    case kFuncCanFdBaseFmt:
+        tx_head->ide=0;
+        tx_head->fdf=1;
+        break;
+    //29位can
+    case kPhyCanExtFmt:
+    case kFuncCanExtFmt:
+        tx_head->ide=1;
+        tx_head->fdf=0;
+        break;
+    //29位canfd
+    case kPhyCanFdExtFmt:
+    case kFuncCanFdExtFmt:
+        tx_head->ide=1;
+        tx_head->fdf=1;
+        break;
+    default:
+        while(1);
+        break;
+    }
 }
 
 static N_ResultEnum _Idle(N_SDU* p_n_sdu){
@@ -440,6 +484,8 @@ static N_ResultEnum _Idle(N_SDU* p_n_sdu){
 
     return N_OK;//既没有接收到新的帧，也没有发送请求
 }
+
+///////////////////////////////////////////////////////////////////////////////
 
 static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
 
@@ -601,17 +647,152 @@ static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
     memcpy(p_n_sdu->MessageData,&rx_msg.data[payload_offset],SF_DL);
     N_UserExtStruct N_UserExt={
         .can_id=rx_msg.id,
-        .ide=rx_msg.ide,
         .is_extended=temp_is_extended,
     };
     // can rx中断应调用L_Data.indication()
+    /* Receiver N_USData.ind: the transport/network layer issues to the session
+       layer the completion of the unsegmented message */
     N_USData.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
                         p_n_sdu->MessageData,SF_DL,
                         N_OK,
                         N_UserExt);
     p_n_sdu->sm.event=kFinishEvent;
+    //p_n_sdu的参数该清零清零
     return N_OK;
 }
+
+static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
+
+    MtypeEnum temp_Mtype=p_n_sdu->Mtype;
+    bool temp_is_extended=p_n_sdu->is_extended;
+    bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
+    bool temp_is_padding=p_n_sdu->is_padding;
+    size_t temp_sf_dl=p_n_sdu->Length;
+
+    struct rt_canx_msg tx_msg;
+    _CreatTxHead(p_n_sdu,&tx_msg);
+    
+    tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
+    // tx_msg.esi=不配置
+    // tx_msg.dlc=下面决定
+
+    if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
+    {
+        if(temp_is_extended)
+            tx_msg.data[0]=p_n_sdu->N_AI.N_TA;
+        else if(temp_is_remote_diagnostics)
+            tx_msg.data[0]=p_n_sdu->N_AI.N_AE;
+        if(temp_sf_dl<=6)
+        {
+            tx_msg.data[1]=temp_sf_dl;
+            memcpy(&tx_msg.data[2],p_n_sdu->MessageData,temp_sf_dl);
+            if(temp_is_padding)
+            {
+                //发送8字节的单帧
+                tx_msg.dlc=8;
+                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,8-2-temp_sf_dl);
+            }
+            else
+            {
+                //发送temp_sf_dl+2的单帧
+                tx_msg.dlc=temp_sf_dl+2;//一字节N_TA或者N_AE 一字节pci
+            }
+        }
+        else//temp_sf_dl>6
+        {
+            tx_msg.data[1]=0;
+            tx_msg.data[2]=temp_sf_dl;
+            memcpy(&tx_msg.data[3],p_n_sdu->MessageData,temp_sf_dl);
+            if(temp_is_padding)
+            {
+                //填充到tx_DL的长度发送单帧
+                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,p_n_sdu->TX_DL-3-temp_sf_dl);
+            }
+            else
+            {
+                //强制填充到tx_dl以内支持的最小的可容纳此帧的dlc的长度发送单帧
+                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+3);//一字节N_TA或者N_AE 半字节帧类型 一个半字节SF_DL转义
+                memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-3-temp_sf_dl);
+            }
+        }
+    }
+    else//normal addr
+    {
+        if(temp_sf_dl<=7)
+        {
+            tx_msg.data[0]=temp_sf_dl;
+            memcpy(&tx_msg.data[1],p_n_sdu->MessageData,temp_sf_dl);
+            if(temp_is_padding)
+            {
+                //发送8字节的单帧
+                tx_msg.dlc=8;
+                memset(&tx_msg.data[1+temp_sf_dl],p_n_sdu->padding_val,8-1-temp_sf_dl);
+            }
+            else
+            {
+                //发送temp_sf_dl+1的单帧
+                tx_msg.dlc=temp_sf_dl+1;
+            }
+        }
+        else//temp_sf_dl>7
+        {
+            tx_msg.data[0]=0;
+            tx_msg.data[1]=temp_sf_dl;
+            memcpy(&tx_msg.data[2],p_n_sdu->MessageData,temp_sf_dl);
+            if(temp_is_padding)
+            {
+                //填充到tx_DL的长度发送单帧
+                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,p_n_sdu->TX_DL-2-temp_sf_dl);
+            }
+            else
+            {
+                //强制填充到最小的dlc的长度发送单帧
+                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+2);//半字节帧类型 一个半字节SF_DL转义
+                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-2-temp_sf_dl);
+            }
+        }
+    }
+
+    /* Sender L_Data.req: the transport/network layer transmits the SingleFrame
+       to the data link layer and starts the N_As timer */
+    L_Data.request(&tx_msg,kNPciSF);
+
+    p_n_sdu->sm.event=kWaitEvent;
+
+    return N_OK;
+}
+
+static N_ResultEnum _WaitSfOk(N_SDU* p_n_sdu){
+
+    if(p_n_sdu->l_send_con)
+    {
+        p_n_sdu->sm.event=kFinishEvent;//如果有send.con就是完成
+        p_n_sdu->l_send_con=false;
+
+        MtypeEnum       temp_Mtype                  =p_n_sdu->Mtype;
+        uint8_t         temp_N_SA                   =p_n_sdu->N_AI.N_SA;
+        uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
+        N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
+        uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
+        bool            temp_is_extended            =p_n_sdu->is_extended;
+        N_UserExtStruct N_UserExt={
+            .can_id=p_n_sdu->can_id,
+            .is_extended=temp_is_extended,
+        };
+    
+        /* Sender N_USData.con: the transport/network layer issues to the 
+           session layer the completion of the unsegmented message */
+        N_USData.confirm(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,N_OK,N_UserExt);
+        //p_n_sdu的参数该清零清零
+    }
+    else
+        p_n_sdu->sm.event=kWaitEvent;
+    return N_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 static N_ResultEnum _RxFf(N_SDU* p_n_sdu){
 
@@ -751,7 +932,6 @@ static N_ResultEnum _RxFf(N_SDU* p_n_sdu){
     p_n_sdu->SequenceNumber++;
     N_UserExtStruct N_UserExt={
         .can_id=rx_msg.id,
-        .ide=rx_msg.ide,
         .is_extended=temp_is_extended,
     };
 
@@ -764,11 +944,7 @@ static N_ResultEnum _RxFf(N_SDU* p_n_sdu){
     return N_OK;
 }
 
-static N_ResultEnum _RxFc(N_SDU* p_n_sdu){
-
-    //发完首帧或者bs最后一个续帧才会有发送流控的步骤，要判断是不是有东西来了
-    if(p_n_sdu->l_recv_ind==false)//当前对话确实状态机在等待流控，但是由于流控帧还没发过来，进来也没用
-        return N_OK;//出现这种情况应该是状态机设计有问题
+static N_ResultEnum _TxFc(N_SDU* p_n_sdu){
 
     //本函数内的临时变量，降低代码长度
     MtypeEnum       temp_Mtype                  =p_n_sdu->Mtype;
@@ -780,113 +956,85 @@ static N_ResultEnum _RxFc(N_SDU* p_n_sdu){
     bool            temp_is_padding             =p_n_sdu->is_padding;
     bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
 
-    //从rb读取can帧
-    struct rt_canx_msg rx_msg;
-    rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
-    //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
+    struct rt_canx_msg tx_msg;
+    _CreatTxHead(p_n_sdu,&tx_msg);
 
-    //9.6.5.2 FlowStatus (FS) error handling
-
-    /* If an FC N_PDU message is received with an invalid (reserved) FS 
-       parameter value, the message transmission shall be aborted and the 
-       network layer shall make an N_USData.confirm service call with the 
-       parameter <N_Result> = N_INVALID_FS to the adjacent upper layer */
-    uint8_t fs_offset=0;
-    if(temp_is_extended||temp_is_remote_diagnostics)
+    //这个应该丢去 _WaitFcOk执行
+    // 9.8.4 Wait frame error handling
+    /* If the receiver has transmitted N_WFTmax FlowControl wait network 
+       protocol data units (FC N_PDU WAIT) in a row and, following this, it 
+       cannot meet the performance requirement for the transmission of a 
+       FlowControl ContinueToSend network protocol data unit (FC N_PDU CTS), 
+       then the receiver side shall abort the message reception and issue an 
+       N_USData.indication with <N_Result> set to N_WFT_OVRN to the higher 
+       layer. */
+    if(p_n_sdu->N_WFTcnt>=p_n_sdu->N_WFTmax)
     {
-        fs_offset=1;
-    }
-    FlowStatusEnum temp_fs=rx_msg.data[fs_offset]&0x0F;
-
-    if(temp_fs>kFsOVFLW)
-    {
-        p_n_sdu->sm.event=kFinishEvent;
         N_UserExtStruct N_UserExt={
-            .can_id=rx_msg.id,
-            .ide=rx_msg.ide,
+            .can_id=tx_msg.id,
             .is_extended=temp_is_extended,
         };
-        N_USData.confirm(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,N_INVALID_FS,N_UserExt);
-        return N_INVALID_FS;
+        N_USData.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
+                            NULL,0,
+                            N_WTF_OVRN,
+                            N_UserExt);
+        p_n_sdu->N_WFTcnt=0;//清零
     }
 
-    // 9.6.5.3 BlockSize (BS) parameter definition
-    uint8_t bs_offset=1;
-    if(temp_is_extended||temp_is_remote_diagnostics)
+    uint8_t data_offset=0;
+    if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
     {
-        bs_offset=2;
-    }
-    uint8_t temp_BS=rx_msg.data[bs_offset];
+        if(temp_is_extended)
+            tx_msg.data[0]=temp_N_TA;
+        else if(temp_is_remote_diagnostics)
+            tx_msg.data[0]=temp_N_AE;
 
-    //9.6.5.4 SeparationTime minimum (STmin) parameter definition
-    uint8_t stmin_offset=2;
-    if(temp_is_extended||temp_is_remote_diagnostics)
+        data_offset++;
+    }
+
+    tx_msg.data[data_offset+0]=kNPciFC<<4;
+
+    /* Receiver L_Data.req: the transport/network layer transmits the 
+       FlowControl (Wait) to the data link layer and starts the N_Ar timer */
+    //某些条件不满足，发送wait
+    if(is_wait)
     {
-        stmin_offset=3;
+        tx_msg.data[data_offset+0]|=kFsWAIT;
+        /*  If FlowStatus is set to Wait, the values of BS (BlockSize) and 
+            STmin (SeparationTime minimum) in the FlowControl message are not 
+            relevant and shall be ignored. */
+        //写不写也没什么屌用
+        tx_msg.data[data_offset+1]=p_n_sdu->BS;
+        tx_msg.data[data_offset+2]=p_n_sdu->STmin;
+        //可能要填充
+        //dlc要动
+        //直接发出去，然后在con那边wait++
+        L_Data.request(&tx_msg,kNPciFC);
+        return ;//下面的不跑了
     }
-    uint8_t temp_STmin=rx_msg.data[stmin_offset];
+    
+    //3 11
+    /* Receiver L_Data.req: the transport/network layer transmits the 
+       FlowControl (ContinueToSend and BlockSize value = 2d) to the data link 
+       layer and starts the N_Ar timer */
+    //我们是client，bs不能变
 
-    //9.6.5.5 SeparationTime minimum (STmin) error handling
+    /* Receiver L_Data.req: the transport/network layer transmits the 
+       FlowControl (ContinueToSend) to the data link layer and starts the N_Ar 
+       timer */
+    //跟上一条很类似
+    tx_msg.data[data_offset+0]|=kFsCTS;
+    tx_msg.data[data_offset+1]|=p_n_sdu->BS;
+    tx_msg.data[data_offset+2]|=p_n_sdu->STmin;
+    //可能要填充
+    //dlc要动
+    L_Data.request(&tx_msg,kNPciFC);
 
-    /* If an FC N_PDU message is received with a reserved STmin parameter 
-       value, then the sending network entity shall use the longest STmin value
-       specified by this part of ISO 15765 (7F16 = 127 ms) instead of the value
-       received from the receiving network entity for the duration of the 
-       on-going segmented message transmission. */
-    if(((temp_STmin>=0x80)&&(temp_STmin<=0xF0))||
-       ((temp_STmin>=0xFA)&&(temp_STmin<=0xFF)))//0x80 – 0xF0 ro 0xFA – 0xFF
-    {
-        temp_STmin=0x7F;
-    }
+    p_n_sdu->sm.event=kWaitEvent;
+    
+}
 
-    /* If the time between two subsequent CFs of a segmented data transmission 
-       (N_As + N_Cs) is smaller than the value commanded by the receiver via 
-       STmin, there is no guarantee that the receiver of the segmented data 
-       transmission will correctly receive and process all frames. In any case,
-       the receiver of the segmented data transmission is not required to 
-       monitor adherence to the STmin value. */
-    //意思就是不用管
-
-    // 9.6.5.6 Dynamic BS/STmin values in subsequent FlowControl frames
-    /* If the server is the receiver of a segmented message transfer (i.e. the 
-       sender of the FlowControl frame), it may choose either to use the same 
-       values for BS and STmin in subsequent FC (CTS) frames of the same 
-       segmented message or to vary these values from FC to FC frame. */
-    //我们是client，不用管
-
-    /* If the client, connected to an ISO 15765-compliant in-vehicle diagnostic
-       network, is the receiver of a segmented message transfer (i.e. the 
-       sender of the FlowControl frame), it shall use the same values for BS 
-       and STmin in subsequent FC (CTS) frames of the same segmented message. */
-    //这一段丢到Tx_FC
-
-    p_n_sdu->FlowStatus=temp_fs;
-
-    switch (temp_fs)
-    {
-    case kFsCTS:
-        /* If the client is the sender of a segmented data transmission (i.e. 
-           the receiver of the FlowControl frame), it shall adjust to the 
-           values of BS and STmin from each FC (CTS) received during the same 
-           segmented data transmission. */
-        //只有CTS的时候才需要更新BS和STmin
-        p_n_sdu->STmin=temp_STmin;
-        p_n_sdu->BS=temp_BS;
-        p_n_sdu->sm.event=kTxCfEvent;//发送续帧
-        break;
-    case kFsWAIT:
-        p_n_sdu->sm.event=kRxFcEvent;//继续接收流控帧
-        break;
-    case kFsOVFLW:
-        //返回会话层
-        ///////////////////////////////////////////
-        break;
-    default:
-        while(1);//不可能出现
-        break;
-    }
-
+static N_ResultEnum _WaitFcOk(N_SDU* p_n_sdu){
     return N_OK;
 }
 
@@ -980,161 +1128,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
     return N_OK;
 }
 
-/**
- * @brief   只负责给can帧添加id，ide，fdf，其他交给发送函数自己添加
- */
-void _CreatTxHead(N_SDU* p_n_sdu,struct rt_canx_msg* tx_head)
-{
-    N_TAtypeEnum temp_n_tatype=p_n_sdu->N_AI.N_TAtype;
-
-    tx_head->id=p_n_sdu->can_id;
-    tx_head->rtr=0;//不使用
-    switch (temp_n_tatype)
-    {
-    //普通11位can
-    case kPhyCanBaseFmt:
-    case kFuncCanBaseFmt:
-        tx_head->ide=0;
-        tx_head->fdf=0;
-        break;
-    //11位canfd
-    case kPhyCanFdBaseFmt:
-    case kFuncCanFdBaseFmt:
-        tx_head->ide=0;
-        tx_head->fdf=1;
-        break;
-    //29位can
-    case kPhyCanExtFmt:
-    case kFuncCanExtFmt:
-        tx_head->ide=1;
-        tx_head->fdf=0;
-        break;
-    //29位canfd
-    case kPhyCanFdExtFmt:
-    case kFuncCanFdExtFmt:
-        tx_head->ide=1;
-        tx_head->fdf=1;
-        break;
-    default:
-        while(1);
-        break;
-    }
-}
-
-static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
-
-    MtypeEnum temp_Mtype=p_n_sdu->Mtype;
-    bool temp_is_extended=p_n_sdu->is_extended;
-    bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
-    bool temp_is_padding=p_n_sdu->is_padding;
-    size_t temp_sf_dl=p_n_sdu->Length;
-
-    struct rt_canx_msg tx_msg;
-    _CreatTxHead(p_n_sdu,&tx_msg);
-    
-    tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
-    // tx_msg.esi=不配置
-    // tx_msg.dlc=下面决定
-
-    if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
-    {
-        if(temp_is_extended)
-            tx_msg.data[0]=p_n_sdu->N_AI.N_TA;
-        else if(temp_is_remote_diagnostics)
-            tx_msg.data[0]=p_n_sdu->N_AI.N_AE;
-        if(temp_sf_dl<=6)
-        {
-            tx_msg.data[1]=temp_sf_dl;
-            memcpy(&tx_msg.data[2],p_n_sdu->MessageData,temp_sf_dl);
-            if(temp_is_padding)
-            {
-                //发送8字节的单帧
-                tx_msg.dlc=8;
-                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,8-2-temp_sf_dl);
-            }
-            else
-            {
-                //发送temp_sf_dl+2的单帧
-                tx_msg.dlc=temp_sf_dl+2;//一字节N_TA或者N_AE 一字节pci
-            }
-        }
-        else//temp_sf_dl>6
-        {
-            tx_msg.data[1]=0;
-            tx_msg.data[2]=temp_sf_dl;
-            memcpy(&tx_msg.data[3],p_n_sdu->MessageData,temp_sf_dl);
-            if(temp_is_padding)
-            {
-                //填充到tx_DL的长度发送单帧
-                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
-                memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,p_n_sdu->TX_DL-3-temp_sf_dl);
-            }
-            else
-            {
-                //强制填充到tx_dl以内支持的最小的可容纳此帧的dlc的长度发送单帧
-                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+3);//一字节N_TA或者N_AE 半字节帧类型 一个半字节SF_DL转义
-                memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-3-temp_sf_dl);
-            }
-        }
-    }
-    else//normal addr
-    {
-        if(temp_sf_dl<=7)
-        {
-            tx_msg.data[0]=temp_sf_dl;
-            memcpy(&tx_msg.data[1],p_n_sdu->MessageData,temp_sf_dl);
-            if(temp_is_padding)
-            {
-                //发送8字节的单帧
-                tx_msg.dlc=8;
-                memset(&tx_msg.data[1+temp_sf_dl],p_n_sdu->padding_val,8-1-temp_sf_dl);
-            }
-            else
-            {
-                //发送temp_sf_dl+1的单帧
-                tx_msg.dlc=temp_sf_dl+1;
-            }
-        }
-        else//temp_sf_dl>7
-        {
-            tx_msg.data[0]=0;
-            tx_msg.data[1]=temp_sf_dl;
-            memcpy(&tx_msg.data[2],p_n_sdu->MessageData,temp_sf_dl);
-            if(temp_is_padding)
-            {
-                //填充到tx_DL的长度发送单帧
-                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
-                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,p_n_sdu->TX_DL-2-temp_sf_dl);
-            }
-            else
-            {
-                //强制填充到最小的dlc的长度发送单帧
-                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+2);//半字节帧类型 一个半字节SF_DL转义
-                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-2-temp_sf_dl);
-            }
-        }
-    }
-
-    /* Sender L_Data.req: the transport/network layer transmits the SingleFrame
-       to the data link layer and starts the N_As timer */
-    L_Data.request(&tx_msg);
-
-    p_n_sdu->sm.event=kWaitEvent;
-
-    return N_OK;
-}
-
-static N_ResultEnum _WaitSfOk(N_SDU* p_n_sdu){
-
-    if(p_n_sdu->l_send_con)
-    {
-        p_n_sdu->sm.event=kFinishEvent;//如果有send.con就是完成
-        p_n_sdu->l_send_con=false;
-    }
-    else
-        p_n_sdu->sm.event=kWaitEvent;
-    return N_OK;
-}
+///////////////////////////////////////////////////////////////////////////////
 
 static N_ResultEnum _TxFf(N_SDU* p_n_sdu){
 
@@ -1205,11 +1199,146 @@ static N_ResultEnum _TxFf(N_SDU* p_n_sdu){
     /* Sender L_Data.req: the transport/network layer transmits the FirstFrame 
        to the data link layer and starts the N_As timer */
     L_Data.request(&tx_msg);
-    //加一个等待发送确认的状态
+
+    p_n_sdu->sm.event=kWaitEvent;
+
     return N_OK;
 }
 
 static N_ResultEnum _WaitFfOk(N_SDU* p_n_sdu){
+    
+    if(p_n_sdu->l_send_con)
+    {
+        p_n_sdu->sm.event=kFinishEvent;//如果有send.con就是完成
+        p_n_sdu->l_send_con=false;
+    }
+    else
+        p_n_sdu->sm.event=kRxFcEvent;
+    return N_OK;
+}
+
+static N_ResultEnum _RxFc(N_SDU* p_n_sdu){
+
+    //发完首帧或者bs最后一个续帧才会有发送流控的步骤，要判断是不是有东西来了
+    if(p_n_sdu->l_recv_ind==false)//当前对话确实状态机在等待流控，但是由于流控帧还没发过来，进来也没用
+        return N_OK;//出现这种情况应该是状态机设计有问题
+
+    //本函数内的临时变量，降低代码长度
+    MtypeEnum       temp_Mtype                  =p_n_sdu->Mtype;
+    uint8_t         temp_N_SA                   =p_n_sdu->N_AI.N_SA;
+    uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
+    N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
+    uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
+    bool            temp_is_extended            =p_n_sdu->is_extended;
+    bool            temp_is_padding             =p_n_sdu->is_padding;
+    bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
+
+    //从rb读取can帧
+    struct rt_canx_msg rx_msg;
+    rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
+    //将头+data[dlc]的整个包读出来
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
+
+    //9.6.5.2 FlowStatus (FS) error handling
+
+    /* If an FC N_PDU message is received with an invalid (reserved) FS 
+       parameter value, the message transmission shall be aborted and the 
+       network layer shall make an N_USData.confirm service call with the 
+       parameter <N_Result> = N_INVALID_FS to the adjacent upper layer */
+    uint8_t fs_offset=0;
+    if(temp_is_extended||temp_is_remote_diagnostics)
+    {
+        fs_offset=1;
+    }
+    FlowStatusEnum temp_fs=rx_msg.data[fs_offset]&0x0F;
+
+    if(temp_fs>kFsOVFLW)
+    {
+        p_n_sdu->sm.event=kFinishEvent;
+        N_UserExtStruct N_UserExt={
+            .can_id=rx_msg.id,
+            .is_extended=temp_is_extended,
+        };
+        N_USData.confirm(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,N_INVALID_FS,N_UserExt);
+        return N_INVALID_FS;
+    }
+
+    // 9.6.5.3 BlockSize (BS) parameter definition
+    uint8_t bs_offset=1;
+    if(temp_is_extended||temp_is_remote_diagnostics)
+    {
+        bs_offset=2;
+    }
+    uint8_t temp_BS=rx_msg.data[bs_offset];
+
+    //9.6.5.4 SeparationTime minimum (STmin) parameter definition
+    uint8_t stmin_offset=2;
+    if(temp_is_extended||temp_is_remote_diagnostics)
+    {
+        stmin_offset=3;
+    }
+    uint8_t temp_STmin=rx_msg.data[stmin_offset];
+
+    //9.6.5.5 SeparationTime minimum (STmin) error handling
+
+    /* If an FC N_PDU message is received with a reserved STmin parameter 
+       value, then the sending network entity shall use the longest STmin value
+       specified by this part of ISO 15765 (7F16 = 127 ms) instead of the value
+       received from the receiving network entity for the duration of the 
+       on-going segmented message transmission. */
+    if(((temp_STmin>=0x80)&&(temp_STmin<=0xF0))||
+       ((temp_STmin>=0xFA)&&(temp_STmin<=0xFF)))//0x80 – 0xF0 ro 0xFA – 0xFF
+    {
+        temp_STmin=0x7F;
+    }
+
+    /* If the time between two subsequent CFs of a segmented data transmission 
+       (N_As + N_Cs) is smaller than the value commanded by the receiver via 
+       STmin, there is no guarantee that the receiver of the segmented data 
+       transmission will correctly receive and process all frames. In any case,
+       the receiver of the segmented data transmission is not required to 
+       monitor adherence to the STmin value. */
+    //意思就是不用管
+
+    // 9.6.5.6 Dynamic BS/STmin values in subsequent FlowControl frames
+    /* If the server is the receiver of a segmented message transfer (i.e. the 
+       sender of the FlowControl frame), it may choose either to use the same 
+       values for BS and STmin in subsequent FC (CTS) frames of the same 
+       segmented message or to vary these values from FC to FC frame. */
+    //我们是client，不用管
+
+    /* If the client, connected to an ISO 15765-compliant in-vehicle diagnostic
+       network, is the receiver of a segmented message transfer (i.e. the 
+       sender of the FlowControl frame), it shall use the same values for BS 
+       and STmin in subsequent FC (CTS) frames of the same segmented message. */
+    //这一段丢到Tx_FC
+
+    p_n_sdu->FlowStatus=temp_fs;
+
+    switch (temp_fs)
+    {
+    case kFsCTS:
+        /* If the client is the sender of a segmented data transmission (i.e. 
+           the receiver of the FlowControl frame), it shall adjust to the 
+           values of BS and STmin from each FC (CTS) received during the same 
+           segmented data transmission. */
+        //只有CTS的时候才需要更新BS和STmin
+        p_n_sdu->STmin=temp_STmin;
+        p_n_sdu->BS=temp_BS;
+        p_n_sdu->sm.event=kTxCfEvent;//发送续帧
+        break;
+    case kFsWAIT:
+        p_n_sdu->sm.event=kRxFcEvent;//继续接收流控帧
+        break;
+    case kFsOVFLW:
+        //返回会话层
+        ///////////////////////////////////////////
+        break;
+    default:
+        while(1);//不可能出现
+        break;
+    }
+
     return N_OK;
 }
 
@@ -1327,55 +1456,9 @@ static N_ResultEnum _WaitCfOk(N_SDU* p_n_sdu){
     return N_OK;
 }
 
-static N_ResultEnum _TxFc(N_SDU* p_n_sdu){
-
-    // 9.8.4 Wait frame error handling
-    /* If the receiver has transmitted N_WFTmax FlowControl wait network 
-       protocol data units (FC N_PDU WAIT) in a row and, following this, it 
-       cannot meet the performance requirement for the transmission of a 
-       FlowControl ContinueToSend network protocol data unit (FC N_PDU CTS), 
-       then the receiver side shall abort the message reception and issue an 
-       N_USData.indication with <N_Result> set to N_WFT_OVRN to the higher 
-       layer. */
-    //N_USData.indication()
-    // N_WFTmax
-    //N_WFT_OVRN
-
-    /* Receiver L_Data.req: the transport/network layer transmits the 
-       FlowControl (ContinueToSend and BlockSize value = 2d) to the data link 
-       layer and starts the N_Ar timer */
-    //我们是client，bs不能变
-    //start N_Ar timer
-    //stop N_Br timer
-
-    /* Receiver L_Data.req: the transport/network layer transmits the 
-       FlowControl (Wait) to the data link layer and starts the N_Ar timer */
-    //某些条件不满足，发送wait
-    //start N_Ar timer
-    //stop N_Br timer
-
-    /* Receiver L_Data.req: the transport/network layer transmits the 
-       FlowControl (ContinueToSend) to the data link layer and starts the N_Ar 
-       timer */
-    //发送cts
-    //start N_Ar timer
-    //stop N_Br timer
-    //跟上上条很类似
-
-    //tx_buf填充N_PCI和FS
-    // rx_can_msg->data[0]=(kNPciFC<<4)|gs_docan_tp_stat.FlowStatus;
-    //BS
-    if(gs_docan_tp_stat.FlowStatus==kFsCTS)
-    {
-        // rx_can_msg->data[1]=
-    }
-}
-
-static N_ResultEnum _WaitFcOk(N_SDU* p_n_sdu){
-    return N_OK;
-}
-
 static N_ResultEnum _Error(N_SDU* p_n_sdu){}
+
+///////////////////////////////////////////////////////////////////////////////
 
 static bool _NetworkLayerParamCheck(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE,
                                     N_UserExtStruct N_UserExt,size_t* index)
@@ -1413,9 +1496,9 @@ static bool _NetworkLayerParamCheck(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA,
     return data_matches;
 }
 
-static void N_USData_request(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, 
-                             uint8_t* MessageData, size_t Length, 
-                             N_UserExtStruct N_UserExt)
+static void N_USData_request            (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, 
+                                         uint8_t* MessageData, size_t Length, 
+                                         N_UserExtStruct N_UserExt)
 {
     size_t sdu_index=0;
     if(false==_NetworkLayerParamCheck(Mtype, N_SA, N_TA, N_TAtype, N_AE, N_UserExt,&sdu_index))
@@ -1429,35 +1512,54 @@ static void N_USData_request(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAty
     g_n_sdu_tbl[sdu_index].n_send_req=true;
 }
 
-static void N_USData_confirm        (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_ResultEnum N_Result, N_UserExtStruct N_UserExt){}
-static void N_USData_indication     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_ResultEnum N_Result, N_UserExtStruct N_UserExt){}
-static void N_USData_FF_indication  (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, size_t Length, N_UserExtStruct N_UserExt){}
-static void N_ChangeParameter_request(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, uint8_t Parameter_Value, N_UserExtStruct N_UserExt){}
-static void N_ChangeParameter_confirm(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t Parameter, Result_ChangeParameterEnum Result_ChangeParameter, N_UserExtStruct N_UserExt){}
+static void N_USData_confirm            (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, 
+                                         N_ResultEnum N_Result, 
+                                         N_UserExtStruct N_UserExt){}
+static void N_USData_indication         (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, 
+                                         uint8_t* MessageData, size_t Length, N_ResultEnum N_Result, 
+                                         N_UserExtStruct N_UserExt){}
+static void N_USData_FF_indication      (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, 
+                                         size_t Length, 
+                                         N_UserExtStruct N_UserExt){}
+static void N_ChangeParameter_request   (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, 
+                                         uint8_t Parameter, uint8_t Parameter_Value, 
+                                         N_UserExtStruct N_UserExt){}
+static void N_ChangeParameter_confirm   (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, 
+                                         uint8_t Parameter, Result_ChangeParameterEnum Result_ChangeParameter, 
+                                         N_UserExtStruct N_UserExt){}
 
-static void L_Data_request(struct rt_canx_msg* tx_can_msg){
+///////////////////////////////////////////////////////////////////////////////
 
-    //根据PDU的ID查SDU tbl
-    size_t sdu_index=0;
-    if(_SearchSduIndex(tx_can_msg,&sdu_index)==false)
-        return ;
+static void L_Data_request(struct rt_canx_msg* tx_can_msg, N_PCItype UserExtPciType){
 
-    //又tm要判断帧头了
+    //can发送函数
 
-    //发一个单帧 首帧 续帧
-    g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
-    // 只有发续帧才关N_Cs
-    g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=false;
-    g_n_sdu_tbl[sdu_index].N_Cs=0;
-
-    // 发流控帧
-    g_n_sdu_tbl[sdu_index].N_Br_timing_enable=false;
-    g_n_sdu_tbl[sdu_index].N_Br=0;
-    g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=true;
+    switch (UserExtPciType)
+    {
+    case kNPciSF://发一个单帧
+        g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
+        break;
+    case kNPciFF://发一个首帧
+        g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
+        break;
+    case kNPciCF://发一个续帧
+        g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=false;
+        g_n_sdu_tbl[sdu_index].N_Cs=0;
+        g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
+        break;
+    case kNPciFC://发一个流控帧
+        g_n_sdu_tbl[sdu_index].N_Br_timing_enable=false;
+        g_n_sdu_tbl[sdu_index].N_Br=0;
+        g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=true;
+        break;
+    default:
+        while(1);
+        break;
+    }
 }
 
-static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status){
-
+static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status)
+{
     //其实不太可能传输不成功，这个确认函数放在tx_complete_callback里
     if(Transfer_Status!=kComplete){
         while(1);
@@ -1490,8 +1592,6 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
                acknowledged; the sender stops the N_As timer */
             g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
             g_n_sdu_tbl[sdu_index].N_As=0;
-            /* Sender N_USData.con: the transport/network layer issues to the 
-               session layer the completion of the unsegmented message */
             break;
         case kNPciFF://发送首帧
             /* Sender L_Data.con: the data link layer confirms to the 
