@@ -26,6 +26,9 @@ extern const size_t kg_num_of_sdu;
 
 extern const struct L_DataOps L_Data;
 
+extern const CanIdLutStruct g_n_canid_lut_tbl[];
+extern const size_t kg_num_of_canid_lut;
+
 
 static void N_USData_request            (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
 static void N_USData_confirm            (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, N_ResultEnum N_Result, N_UserExtStruct N_UserExt);
@@ -255,25 +258,71 @@ rt_size_t rt_ringbuffer_peekchar(struct rt_ringbuffer *rb, rt_uint8_t *ch)
  * pubilc functions definition
  *****************************************************************************/
 
-void DoCanTpInit(void)
-{
-    // g_docan_tp_rx_rb=rt_ringbuffer_create(DOCAN_TP_FF_DL);
-    // g_docan_tp_tx_rb=rt_ringbuffer_create(DOCAN_TP_FF_DL);
-    // #if(DOCAN_TP_FF_DL<=4095)
-
-    // #else
-    // #endif
-}
-
 /**
  * @brief   网络层定时器任务
  */
 void NetworkLayerTimingTask(uint16_t ms)
 {
-    // if(N_As_timing_enable&&(N_As<N_AS_TIMEOUT_MS))
-    // {
-    //     N_As+=ms;
-    // }
+    for (size_t i = 0; i < kg_num_of_sdu; i++)
+    {
+        MtypeEnum       temp_Mtype      =g_n_sdu_tbl[i].Mtype;
+        uint8_t         temp_N_SA       =g_n_sdu_tbl[i].N_AI.N_SA;
+        uint8_t         temp_N_TA       =g_n_sdu_tbl[i].N_AI.N_TA;
+        N_TAtypeEnum    temp_N_TAtype   =g_n_sdu_tbl[i].N_AI.N_TAtype;
+        uint8_t         temp_N_AE       =g_n_sdu_tbl[i].N_AI.N_AE;
+        N_UserExtStruct temp_N_UserExt  ={
+            .is_extended=g_n_sdu_tbl[i].N_UserExt.is_extended,
+            .is_fixed=g_n_sdu_tbl[i].N_UserExt.is_fixed,
+        };
+        
+        if(g_n_sdu_tbl[i].N_As_timing_enable)
+        {
+            g_n_sdu_tbl[i].N_As+=ms;
+        }
+        if( g_n_sdu_tbl[i].N_As>g_n_sdu_tbl[i].N_As_threshold)
+        {
+            /* Abort message transmission and issue N_USData.confirm with
+               <N_Result> = N_TIMEOUT_A */
+            N_USData.confirm(temp_Mtype, temp_N_SA, temp_N_TA, temp_N_TAtype, temp_N_AE, N_TIMEOUT_A, temp_N_UserExt);
+        }
+
+        if(g_n_sdu_tbl[i].N_Bs_timing_enable)
+        {
+            g_n_sdu_tbl[i].N_Bs+=ms;
+        }
+        if( g_n_sdu_tbl[i].N_Bs>g_n_sdu_tbl[i].N_Bs_threshold)
+        {
+            /* Abort message transmission and issue N_USData.confirm with
+               <N_Result> = N_TIMEOUT_Bs */
+            N_USData.confirm(temp_Mtype, temp_N_SA, temp_N_TA, temp_N_TAtype, temp_N_AE, N_TIMEOUT_Bs, temp_N_UserExt);
+        }
+
+        if(g_n_sdu_tbl[i].N_Ar_timing_enable)
+        {
+            g_n_sdu_tbl[i].N_Ar+=ms;
+        }
+        if( g_n_sdu_tbl[i].N_Ar>g_n_sdu_tbl[i].N_Ar_threshold)
+        {
+            /* Abort message transmission and issue N_USData.indication with
+               <N_Result> = N_TIMEOUT_A */
+            N_USData.indication(temp_Mtype, temp_N_SA, temp_N_TA, temp_N_TAtype, temp_N_AE,
+                                NULL, 0,
+                                N_TIMEOUT_A, temp_N_UserExt);
+        }
+
+        if(g_n_sdu_tbl[i].N_Cr_timing_enable)
+        {
+            g_n_sdu_tbl[i].N_Cr+=ms;
+        }
+        if( g_n_sdu_tbl[i].N_Cr>g_n_sdu_tbl[i].N_Cr_threshold)
+        {
+            /* Abort message transmission and issue N_USData.confirm with
+               <N_Result> = N_TIMEOUT_Cr */
+            N_USData.indication(temp_Mtype, temp_N_SA, temp_N_TA, temp_N_TAtype, temp_N_AE,
+                                NULL, 0,
+                                N_TIMEOUT_Cr, temp_N_UserExt);
+        }
+    }
 }
 
 void DoCanTpTask(void)
@@ -292,19 +341,51 @@ void DoCanTpTask(void)
  * private functions definition
  *****************************************************************************/
 static bool _SearchSduIndex(struct rt_canx_msg* rx_can_msg,size_t* sdu_index){
+
+    //先从查找表找到caiid对应的N_SA和N_TA
+    size_t j = 0;
+    for (; j < kg_num_of_canid_lut; j++)
+    {
+        if(rx_can_msg->id == g_n_canid_lut_tbl[j].can_id)
+        {
+            N_TAtypeEnum temp_ta_type=(rx_can_msg->ide<<2)|(rx_can_msg->fdf<<1)+1;
+            if((temp_ta_type==g_n_canid_lut_tbl[j].N_AI.N_TAtype)||
+               (temp_ta_type+1==g_n_canid_lut_tbl[j].N_AI.N_TAtype))
+            {
+                break;
+            }
+        }
+    }
+    if(j == kg_num_of_canid_lut)
+    {
+        return false;
+    }
+
+    //通过查找表的N_AI找到对应的SDU
     size_t i = 0;
     bool data_matches = false;
     for (; i < kg_num_of_sdu; i++)
-    {
-        if (rx_can_msg->id != g_n_sdu_tbl[i].can_id) {
+    {   
+        //看一下N_AI的成员是否完全相同
+        if ((g_n_canid_lut_tbl[j].Mtype                 != g_n_sdu_tbl[i].Mtype)|| 
+            (g_n_canid_lut_tbl[j].N_AI.N_SA             != g_n_sdu_tbl[i].N_AI.N_SA)||
+            (g_n_canid_lut_tbl[j].N_AI.N_TA             != g_n_sdu_tbl[i].N_AI.N_TA)||
+            (g_n_canid_lut_tbl[j].N_AI.N_TAtype         != g_n_sdu_tbl[i].N_AI.N_TAtype)||
+            (g_n_canid_lut_tbl[j].N_AI.N_AE             != g_n_sdu_tbl[i].N_AI.N_AE)||
+            (g_n_canid_lut_tbl[j].N_UserExt.is_extended != g_n_sdu_tbl[i].N_UserExt.is_extended)||
+            (g_n_canid_lut_tbl[j].N_UserExt.is_fixed    != g_n_sdu_tbl[i].N_UserExt.is_fixed))
+        {
             continue;  // ID不匹配，继续下一个
         }
 
         // ID匹配，根据类型检查数据
-        if (g_n_sdu_tbl[i].Mtype == kRemoteDiagnostics) {
+        if (g_n_sdu_tbl[i].Mtype == kRemoteDiagnostics) {//is_mixed Mixed addressing
             data_matches = (rx_can_msg->data[0] == g_n_sdu_tbl[i].N_AI.N_AE);
-        } else if (g_n_sdu_tbl[i].is_extended) {
+            //理论上还要对29位canid进行匹配，这里暂时不做
+        } else if (g_n_sdu_tbl[i].N_UserExt.is_extended) {//10.3.4 Extended addressing
             data_matches = (rx_can_msg->data[0] == g_n_sdu_tbl[i].N_AI.N_TA);
+        //10.3.3	 Normal fixed addressing
+        //理论上还要
         } else {
             data_matches = true;
         }
@@ -323,6 +404,34 @@ static bool _SearchSduIndex(struct rt_canx_msg* rx_can_msg,size_t* sdu_index){
     return data_matches;
 }
 
+static bool _SearchCanIdFromSdu(N_SDU* p_n_sdu,uint32_t* canid)
+{
+    size_t i = 0;
+    bool id_matches = false;
+    for (i = 0; i < kg_num_of_canid_lut; i++)
+    {
+        if ((g_n_canid_lut_tbl[i].Mtype                 != p_n_sdu->Mtype)|| 
+            (g_n_canid_lut_tbl[i].N_AI.N_SA             != p_n_sdu->N_AI.N_SA)||
+            (g_n_canid_lut_tbl[i].N_AI.N_TA             != p_n_sdu->N_AI.N_TA)||
+            (g_n_canid_lut_tbl[i].N_AI.N_TAtype         != p_n_sdu->N_AI.N_TAtype)||
+            (g_n_canid_lut_tbl[i].N_AI.N_AE             != p_n_sdu->N_AI.N_AE)||
+            (g_n_canid_lut_tbl[i].N_UserExt.is_extended != p_n_sdu->N_UserExt.is_extended)||
+            (g_n_canid_lut_tbl[i].N_UserExt.is_fixed    != p_n_sdu->N_UserExt.is_fixed))
+        {
+            continue;  // ID不匹配，继续下一个
+        }
+
+        id_matches = true;
+    }
+
+    if(id_matches)
+    {
+        *canid=g_n_canid_lut_tbl[i].can_id;
+    }
+
+    return id_matches;
+}
+
 /**
  * @brief   只负责给can帧添加id，ide，fdf，其他交给发送函数自己添加
  */
@@ -330,7 +439,10 @@ static void _CreatTxHead(N_SDU* p_n_sdu,struct rt_canx_msg* tx_head)
 {
     N_TAtypeEnum temp_n_tatype=p_n_sdu->N_AI.N_TAtype;
 
-    tx_head->id=p_n_sdu->can_id;
+    uint32_t temp_can_id=0;
+    if(!_SearchCanIdFromSdu(p_n_sdu,&temp_can_id))
+        return;
+    tx_head->id=temp_can_id;
     tx_head->rtr=0;//不使用
     switch (temp_n_tatype)
     {
@@ -383,7 +495,7 @@ static N_ResultEnum _Idle(N_SDU* p_n_sdu){
         rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8+DLCtoBytes[peek_rx_msg.dlc]);
 
         //N_PCItype is the high nibble of N_PCI byte (Byte #1)
-        uint8_t n_pci_type=peek_rx_msg.data[0+(p_n_sdu->Mtype|p_n_sdu->is_extended)]>>4;
+        uint8_t n_pci_type=peek_rx_msg.data[0+(p_n_sdu->Mtype|p_n_sdu->N_UserExt.is_extended)]>>4;
 
         switch (n_pci_type)
         {
@@ -409,7 +521,7 @@ static N_ResultEnum _Idle(N_SDU* p_n_sdu){
     if(p_n_sdu->n_send_req)
     {
         MtypeEnum temp_Mtype=p_n_sdu->Mtype;
-        bool temp_is_extended=p_n_sdu->is_extended;
+        bool temp_is_extended=p_n_sdu->N_UserExt.is_extended;
         bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
         bool temp_is_padding=p_n_sdu->is_padding;
         uint8_t temp_TX_DL=p_n_sdu->TX_DL;
@@ -495,7 +607,7 @@ static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
     uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
     N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
     uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
-    bool            temp_is_extended            =p_n_sdu->is_extended;
+    bool            temp_is_extended            =p_n_sdu->N_UserExt.is_extended;
     bool            temp_is_padding             =p_n_sdu->is_padding;
     bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
 
@@ -646,7 +758,7 @@ static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
     //copy len=sf_dl data to Transport2SessionBuf
     memcpy(p_n_sdu->MessageData,&rx_msg.data[payload_offset],SF_DL);
     N_UserExtStruct N_UserExt={
-        .can_id=rx_msg.id,
+        // .can_id=rx_msg.id,
         .is_extended=temp_is_extended,
     };
     // can rx中断应调用L_Data.indication()
@@ -664,7 +776,7 @@ static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
 static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
 
     MtypeEnum temp_Mtype=p_n_sdu->Mtype;
-    bool temp_is_extended=p_n_sdu->is_extended;
+    bool temp_is_extended=p_n_sdu->N_UserExt.is_extended;
     bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
     bool temp_is_padding=p_n_sdu->is_padding;
     size_t temp_sf_dl=p_n_sdu->Length;
@@ -776,9 +888,9 @@ static N_ResultEnum _WaitSfOk(N_SDU* p_n_sdu){
         uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
         N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
         uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
-        bool            temp_is_extended            =p_n_sdu->is_extended;
+        bool            temp_is_extended            =p_n_sdu->N_UserExt.is_extended;
         N_UserExtStruct N_UserExt={
-            .can_id=p_n_sdu->can_id,
+            // .can_id=p_n_sdu->can_id,
             .is_extended=temp_is_extended,
         };
     
@@ -802,7 +914,7 @@ static N_ResultEnum _RxFf(N_SDU* p_n_sdu){
     uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
     N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
     uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
-    bool            temp_is_extended            =p_n_sdu->is_extended;
+    bool            temp_is_extended            =p_n_sdu->N_UserExt.is_extended;
     bool            temp_is_padding             =p_n_sdu->is_padding;
     bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
 
@@ -931,7 +1043,7 @@ static N_ResultEnum _RxFf(N_SDU* p_n_sdu){
     p_n_sdu->Length=FF_DL;
     p_n_sdu->SequenceNumber++;
     N_UserExtStruct N_UserExt={
-        .can_id=rx_msg.id,
+        // .can_id=rx_msg.id,
         .is_extended=temp_is_extended,
     };
 
@@ -952,7 +1064,7 @@ static N_ResultEnum _TxFc(N_SDU* p_n_sdu){
     uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
     N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
     uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
-    bool            temp_is_extended            =p_n_sdu->is_extended;
+    bool            temp_is_extended            =p_n_sdu->N_UserExt.is_extended;
     bool            temp_is_padding             =p_n_sdu->is_padding;
     bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
 
@@ -971,7 +1083,7 @@ static N_ResultEnum _TxFc(N_SDU* p_n_sdu){
     if(p_n_sdu->N_WFTcnt>=p_n_sdu->N_WFTmax)
     {
         N_UserExtStruct N_UserExt={
-            .can_id=tx_msg.id,
+            // .can_id=tx_msg.id,
             .is_extended=temp_is_extended,
         };
         N_USData.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
@@ -1065,7 +1177,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
         }
         else//变长模式
         {
-            if((p_n_sdu->Mtype==kRemoteDiagnostics)||p_n_sdu->is_extended)
+            if((p_n_sdu->Mtype==kRemoteDiagnostics)||p_n_sdu->N_UserExt.is_extended)
             {
                 size_t remaining_length=p_n_sdu->Length-p_n_sdu->msg_index;
                 if(remaining_length<=(8-2))//剩余长度<=6
@@ -1109,7 +1221,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
        shall be aborted and the network layer shall make an N_USData.indication
        service call with the parameter <N_Result> = N_WRONG_SN to the adjacent 
        upper layer. */
-    uint8_t SequenceNumber = rx_msg.data[0+(p_n_sdu->Mtype|p_n_sdu->is_extended)]&0x0F;
+    uint8_t SequenceNumber = rx_msg.data[0+(p_n_sdu->Mtype|p_n_sdu->N_UserExt.is_extended)]&0x0F;
     if(SequenceNumber!=p_n_sdu->SequenceNumber)
     {
         p_n_sdu->sm.event=kFinishEvent;
@@ -1133,7 +1245,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
 static N_ResultEnum _TxFf(N_SDU* p_n_sdu){
 
     MtypeEnum temp_Mtype=p_n_sdu->Mtype;
-    bool temp_is_extended=p_n_sdu->is_extended;
+    bool temp_is_extended=p_n_sdu->N_UserExt.is_extended;
     bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
     bool temp_is_padding=p_n_sdu->is_padding;
     size_t temp_ff_dl=p_n_sdu->Length;
@@ -1198,7 +1310,7 @@ static N_ResultEnum _TxFf(N_SDU* p_n_sdu){
 
     /* Sender L_Data.req: the transport/network layer transmits the FirstFrame 
        to the data link layer and starts the N_As timer */
-    L_Data.request(&tx_msg);
+    L_Data.request(&tx_msg,kNPciFF);
 
     p_n_sdu->sm.event=kWaitEvent;
 
@@ -1229,7 +1341,7 @@ static N_ResultEnum _RxFc(N_SDU* p_n_sdu){
     uint8_t         temp_N_TA                   =p_n_sdu->N_AI.N_TA;
     N_TAtypeEnum    temp_N_TAtype               =p_n_sdu->N_AI.N_TAtype;
     uint8_t         temp_N_AE                   =p_n_sdu->N_AI.N_AE;
-    bool            temp_is_extended            =p_n_sdu->is_extended;
+    bool            temp_is_extended            =p_n_sdu->N_UserExt.is_extended;
     bool            temp_is_padding             =p_n_sdu->is_padding;
     bool            temp_is_remote_diagnostics  =(temp_Mtype==kRemoteDiagnostics);
 
@@ -1256,7 +1368,7 @@ static N_ResultEnum _RxFc(N_SDU* p_n_sdu){
     {
         p_n_sdu->sm.event=kFinishEvent;
         N_UserExtStruct N_UserExt={
-            .can_id=rx_msg.id,
+            // .can_id=rx_msg.id,
             .is_extended=temp_is_extended,
         };
         N_USData.confirm(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,N_INVALID_FS,N_UserExt);
@@ -1345,7 +1457,7 @@ static N_ResultEnum _RxFc(N_SDU* p_n_sdu){
 static N_ResultEnum _TxCf(N_SDU* p_n_sdu){
 
     MtypeEnum temp_Mtype=p_n_sdu->Mtype;
-    bool temp_is_extended=p_n_sdu->is_extended;
+    bool temp_is_extended=p_n_sdu->N_UserExt.is_extended;
     bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
     bool temp_is_padding=p_n_sdu->is_padding;
     size_t temp_ff_dl=p_n_sdu->Length;
@@ -1468,8 +1580,8 @@ static bool _NetworkLayerParamCheck(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA,
     bool data_matches = false;
     for (; i < kg_num_of_sdu; i++)
     {
-        if (N_UserExt.can_id != g_n_sdu_tbl[i].can_id)//id不一致直接跳过
-            continue;
+        // if (N_UserExt.can_id != g_n_sdu_tbl[i].can_id)//id不一致直接跳过
+        //     continue;
         // if(N_UserExt.ide!= g_n_sdu_tbl[i].ide)//有可能id一样，但是一个是11位一个是27位
         //     continue;包含在N_AI.N_TAtype中
         if(N_TAtype!=g_n_sdu_tbl[i].N_AI.N_TAtype)
@@ -1478,7 +1590,7 @@ static bool _NetworkLayerParamCheck(MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA,
             continue;
         if(N_AE!=g_n_sdu_tbl[i].N_AI.N_AE)
             continue;
-        if(N_UserExt.is_extended!=g_n_sdu_tbl[i].is_extended)
+        if(N_UserExt.is_extended!=g_n_sdu_tbl[i].N_UserExt.is_extended)
             continue;
         if(N_TA!=g_n_sdu_tbl[i].N_AI.N_TA)
             continue;
@@ -1532,7 +1644,12 @@ static void N_ChangeParameter_confirm   (MtypeEnum Mtype, uint8_t N_SA, uint8_t 
 
 static void L_Data_request(struct rt_canx_msg* tx_can_msg, N_PCItype UserExtPciType){
 
-    //can发送函数
+    // 调用一个can发送函数
+    // HAL_FDCAN_AddMessageToTxBuffer
+
+    size_t sdu_index=0;
+    if(_SearchSduIndex(tx_can_msg,&sdu_index)==false)
+        return ;
 
     switch (UserExtPciType)
     {
@@ -1571,7 +1688,7 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
     if(_SearchSduIndex(tx_can_msg,&sdu_index)==false)
         return ;
 
-    bool temp_is_extended=g_n_sdu_tbl[sdu_index].is_extended;
+    bool temp_is_extended=g_n_sdu_tbl[sdu_index].N_UserExt.is_extended;
     MtypeEnum temp_Mtype=g_n_sdu_tbl[sdu_index].Mtype;
     bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
 
@@ -1708,7 +1825,7 @@ static void L_Data_indication(struct rt_canx_msg* rx_can_msg){
         return ;
 
     //kimi建议实现的时候将地址格式判断丢到can接收中断来判断N_PCI的偏移地址
-    bool temp_is_extended=g_n_sdu_tbl[sdu_index].is_extended;
+    bool temp_is_extended=g_n_sdu_tbl[sdu_index].N_UserExt.is_extended;
     MtypeEnum temp_Mtype=g_n_sdu_tbl[sdu_index].Mtype;
     bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
 

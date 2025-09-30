@@ -32,8 +32,6 @@ struct rt_ringbuffer gs_resp_tp2datalink_rb;
 N_SDU g_n_sdu_tbl[]={
     {//物理地址 can接收的
         //地址相关配置参数
-        .can_id=0x700,
-        .is_extended=false,
         .Mtype = kDiagnostics,//无N_AE
         .N_AI = {
             .N_TAtype = kPhyCanBaseFmt,//限定为11位classical can 物理地址
@@ -87,8 +85,6 @@ N_SDU g_n_sdu_tbl[]={
     },
     {//功能地址 can接收的
         //地址相关配置参数
-        .can_id=0x7df,
-        .is_extended=false,
         .Mtype = kDiagnostics,//无N_AE
         .N_AI = {
             .N_TAtype = kFuncCanBaseFmt,//限定为11位classical can 功能地址
@@ -142,8 +138,6 @@ N_SDU g_n_sdu_tbl[]={
     },
     {//响应地址 我们发送的
         //地址相关配置参数
-        .can_id=0x701,
-        .is_extended=false,
         .Mtype = kDiagnostics,//无N_AE
         .N_AI = {
             .N_TAtype = kFuncCanBaseFmt,//限定为11位classical can 功能地址
@@ -206,6 +200,15 @@ N_SDU g_n_sdu_tbl[]={
 };
 
 const size_t kg_num_of_sdu=sizeof(g_n_sdu_tbl)/sizeof(N_SDU);
+
+#define Z(Mtype,N_SA,N_TA,N_TAtype,N_AE,is_extended,is_fixed,canid) \
+    {Mtype,{N_SA,N_TA,N_TAtype,N_AE},{is_extended,is_fixed},canid},
+const CanIdLutStruct g_n_canid_lut_tbl[]={
+    TP2PHY_MAP_TBL
+};
+#undef Z
+
+const size_t kg_num_of_canid_lut=sizeof(g_n_canid_lut_tbl)/sizeof(CanIdLutStruct);
 
 /******************************************************************************
  * private types

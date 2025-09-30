@@ -132,7 +132,7 @@ typedef struct
 {
     uint8_t N_TA;
     uint8_t N_SA;
-    N_TAtypeEnum N_TAtype;
+    N_TAtypeEnum N_TAtype;//定义了ide fdf 功能或者物理地址
     uint8_t N_AE;
 }N_AIStruct;
 
@@ -197,7 +197,15 @@ typedef struct
 
 typedef struct
 {
-    MtypeEnum Mtype;
+    // uint32_t can_id;//通过查找表找到canid
+    // bool ide;这个条件隐含在N_AI.N_TAtype中
+    bool is_extended;//设置此参数时N_TA放第一字节,与Mtype互斥
+    bool is_fixed;//ide=1时有效，可以与Mtype共存，与is_extended互斥
+}N_UserExtStruct;
+
+typedef struct
+{
+    MtypeEnum Mtype;//remote情况AE放第一字节，与is_extended互斥
     N_AIStruct N_AI;
     
     size_t Length;
@@ -223,9 +231,7 @@ typedef struct
     Result_ChangeParameterEnum Result_ChangeParameter;
 
     //非iso参数
-    uint32_t can_id;
-    // bool ide;这个条件隐含在N_AI.N_TAtype中
-    bool is_extended;//设置此参数时N_TA有效,与Mtype互斥
+    N_UserExtStruct N_UserExt;
 
     SduRoleEnum role;//客户端还是服务端
     SduDirEnum dir;//发送还是接收
@@ -283,10 +289,11 @@ typedef struct
 
 typedef struct
 {
+    MtypeEnum Mtype;
+    N_AIStruct N_AI;
+    N_UserExtStruct N_UserExt;
     uint32_t can_id;
-    // bool ide;这个条件隐含在N_AI.N_TAtype中
-    bool is_extended;//设置此参数时N_TA有效,与Mtype互斥
-}N_UserExtStruct;
+}CanIdLutStruct;
 
 struct N_USDataOps
 {

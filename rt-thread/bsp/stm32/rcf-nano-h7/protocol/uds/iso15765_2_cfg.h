@@ -24,6 +24,14 @@ extern "C" {
 /******************************************************************************
  * macros
  *****************************************************************************/
+    //is_mixed
+    //Mtype         N_SA    N_TA    N_TAtype        N_AE    is_extended is_fixed    canid 
+#define TP2PHY_MAP_TBL \
+    Z(kDiagnostics, 0xF1,   0,      kFuncCanBaseFmt,0,      false,      false,      0x7DF)\
+    Z(kDiagnostics, 0xF1,   0x00,   kPhyCanBaseFmt, 0,      false,      false,      0x7E0)\
+    Z(kDiagnostics, 0x00,   0xF1,   kPhyCanBaseFmt, 0,      false,      false,      0x7E8)\
+    Z(kDiagnostics, 0xF1,   0x01,   kPhyCanBaseFmt, 0,      false,      false,      0x7E1)\
+    Z(kDiagnostics, 0x01,   0xF1,   kPhyCanBaseFmt, 0,      false,      false,      0x7E9)\
 
 #define DOCAN_TP_FF_DL      4095
 
@@ -90,14 +98,6 @@ extern "C" {
     #error
 #endif
 #endif
-
-//定时参数
-#define N_AS_TIMEOUT_MS 1000
-#define N_AR_TIMEOUT_MS 1000
-#define N_BS_TIMEOUT_MS 1000
-#define N_BR_TIMEOUT_MS 1000
-#define N_CS_TIMEOUT_MS 1000
-#define N_CR_TIMEOUT_MS 1000
 
 //以下为自动处理部分
 
