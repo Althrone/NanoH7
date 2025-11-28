@@ -44,8 +44,8 @@ N_SDU g_n_sdu_tbl[]={
         .STmin = 10,//10ms
         .BS = 8,//8帧
 
-        .role=kSduClient,
-        .dir=kSduRecv,
+        // .role=kSduClient,
+        // .dir=kSduRecv,
         .is_padding=true,
         .padding_val=0xCC,//发出的帧的填充值
         .RX_DL = 8,//默认为8，获取首帧的时候根据首帧长度改变
@@ -97,8 +97,8 @@ N_SDU g_n_sdu_tbl[]={
         .STmin = 10,//10ms
         .BS = 8,//8帧
 
-        .role=kSduClient,
-        .dir=kSduRecv,
+        // .role=kSduClient,
+        // .dir=kSduRecv,
         .is_padding=true,
         .padding_val=0xCC,//发出的帧的填充值
         .RX_DL = 8,//默认为8，获取首帧的时候根据首帧长度改变
@@ -150,8 +150,8 @@ N_SDU g_n_sdu_tbl[]={
         .STmin = 10,//10
         .BS = 8,//8帧
 
-        .role=kSduClient,
-        .dir=kSduSend,
+        // .role=kSduClient,
+        // .dir=kSduSend,
         .is_padding=true,
         .padding_val=0xCC,//发出的帧的填充值
         .TX_DL=8,//发送一帧的长度，配置了不能改

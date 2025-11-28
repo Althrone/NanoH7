@@ -233,8 +233,8 @@ typedef struct
     //非iso参数
     N_UserExtStruct N_UserExt;
 
-    SduRoleEnum role;//客户端还是服务端
-    SduDirEnum dir;//发送还是接收
+    // SduRoleEnum role;//客户端还是服务端
+    // SduDirEnum dir;//发送还是接收
 
     bool is_padding;//仅dlc<=8时有效
     uint8_t padding_val;//填充值，接收方无效
@@ -295,6 +295,16 @@ typedef struct
     uint32_t can_id;
 }CanIdLutStruct;
 
+typedef enum
+{
+    N_As,
+    N_Ar,
+    N_Bs,
+    N_Br,
+    N_Cs,
+    N_Cr,
+}NetworkLayerTimingParamEnum;
+
 struct N_USDataOps
 {
     void (*request)     (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
@@ -320,8 +330,8 @@ typedef enum
 
 struct L_DataOps
 {
-    void (*request)(struct rt_canx_msg* tx_can_msg, N_PCItype UserExtPciType);
-    void (*confirm)(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status);
+    void (*request)(struct rt_canx_msg* tx_can_msg);
+    void (*confirm)(uint32_t Identifier, Transfer_StatusEnum Transfer_Status);
     void (*indication)(struct rt_canx_msg* rx_can_msg);
 };
 

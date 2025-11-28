@@ -91,7 +91,8 @@
         "nmstack_types.h": "c",
         "drv_fdcan.h": "c",
         "can_matrix.h": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "rthw.h": "c"
     },
     "Codegeex.GenerationPreference": "automatic",
     "Codegeex.CompletionDelay": 0.5

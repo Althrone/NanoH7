@@ -480,6 +480,7 @@ static const struct rt_can_ops _can_ops =
     _inline_can_recvmsg,
 };
 
+#if 0
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
 	if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
@@ -590,7 +591,7 @@ void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
 #endif /*BSP_USING_FDCAN2*/
 	}
 }
-
+#endif
 #ifdef BSP_USING_FDCAN1
 
 void FDCAN1_IT0_IRQHandler(void)             /* FDCAN2 interrupt line 0      */

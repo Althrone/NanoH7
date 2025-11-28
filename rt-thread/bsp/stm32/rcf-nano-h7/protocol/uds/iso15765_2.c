@@ -52,8 +52,8 @@ const struct N_ChangeParameterOps N_ChangeParameter={
     .confirm=N_ChangeParameter_confirm,
 };
 
-static void L_Data_request(struct rt_canx_msg* tx_can_msg, N_PCItype UserExtPciType);
-static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status);
+static void L_Data_request(struct rt_canx_msg* tx_can_msg);
+static void L_Data_confirm(uint32_t Identifier, Transfer_StatusEnum Transfer_Status);
 static void L_Data_indication(struct rt_canx_msg* rx_can_msg);
 
 const struct L_DataOps L_Data=
@@ -252,6 +252,76 @@ rt_size_t rt_ringbuffer_peekchar(struct rt_ringbuffer *rb, rt_uint8_t *ch)
 
     rt_hw_interrupt_enable(level);
     return ret;
+}
+
+static void NetworkLayer_Timing_Start(N_SDU* p_n_sdu, NetworkLayerTimingParamEnum n_xy)
+{
+    switch(n_xy)
+    {
+        case N_As:
+            p_n_sdu->N_As_timing_enable=true;
+            break;
+        case N_Ar:
+            p_n_sdu->N_Ar_timing_enable=true;
+            break;
+        case N_Bs:
+            p_n_sdu->N_Bs_timing_enable=true;
+            break;
+        case N_Br:
+            p_n_sdu->N_Br_timing_enable=true;
+            break;
+        case N_Cs:
+            p_n_sdu->N_Cs_timing_enable=true;
+            break;
+        case N_Cr:
+            p_n_sdu->N_Cr_timing_enable=true;
+            break;
+        default:
+            break;
+    }
+}
+
+static void NetworkLayer_Timing_Stop(N_SDU* p_n_sdu, NetworkLayerTimingParamEnum n_xy)
+{
+    switch(n_xy)
+    {
+        case N_As:
+            p_n_sdu->N_As_timing_enable=false;
+            p_n_sdu->N_As=0;
+            break;
+        case N_Ar:
+            p_n_sdu->N_Ar_timing_enable=false;
+            p_n_sdu->N_Ar=0;
+            break;
+        case N_Bs:
+            p_n_sdu->N_Bs_timing_enable=false;
+            p_n_sdu->N_Bs=0;
+            break;
+        case N_Br:
+            p_n_sdu->N_Br_timing_enable=false;
+            p_n_sdu->N_Br=0;
+            break;
+        case N_Cs:
+            p_n_sdu->N_Cs_timing_enable=false;
+            p_n_sdu->N_Cs=0;
+            break;
+        case N_Cr:
+            p_n_sdu->N_Cr_timing_enable=false;
+            p_n_sdu->N_Cr=0;
+            break;
+        default:
+            break;
+    }
+}
+
+static void NetworkLayer_Timing_Param_Init(N_SDU* p_n_sdu)
+{
+    NetworkLayer_Timing_Stop(p_n_sdu, N_As);
+    NetworkLayer_Timing_Stop(p_n_sdu, N_Ar);
+    NetworkLayer_Timing_Stop(p_n_sdu, N_Bs);
+    NetworkLayer_Timing_Stop(p_n_sdu, N_Br);
+    NetworkLayer_Timing_Stop(p_n_sdu, N_Cs);
+    NetworkLayer_Timing_Stop(p_n_sdu, N_Cr);
 }
 
 /******************************************************************************
@@ -869,7 +939,8 @@ static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
 
     /* Sender L_Data.req: the transport/network layer transmits the SingleFrame
        to the data link layer and starts the N_As timer */
-    L_Data.request(&tx_msg,kNPciSF);
+    L_Data.request(&tx_msg);
+    NetworkLayer_Timing_Start(p_n_sdu,N_As);//启动N_As定时器
 
     p_n_sdu->sm.event=kWaitEvent;
 
@@ -896,8 +967,11 @@ static N_ResultEnum _WaitSfOk(N_SDU* p_n_sdu){
     
         /* Sender N_USData.con: the transport/network layer issues to the 
            session layer the completion of the unsegmented message */
-        N_USData.confirm(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,N_OK,N_UserExt);
+        N_USData.confirm(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
+                         N_OK,
+                         N_UserExt);
         //p_n_sdu的参数该清零清零
+        NetworkLayer_Timing_Param_Init(p_n_sdu);
     }
     else
         p_n_sdu->sm.event=kWaitEvent;
@@ -1052,6 +1126,7 @@ static N_ResultEnum _RxFf(N_SDU* p_n_sdu){
     N_USData_FF.indication(temp_Mtype,temp_N_SA,temp_N_TA,temp_N_TAtype,temp_N_AE,
                            FF_DL,
                            N_UserExt);
+    NetworkLayer_Timing_Start(p_n_sdu,N_Br);
     p_n_sdu->sm.event=kTxFcEvent;
     return N_OK;
 }
@@ -1121,7 +1196,7 @@ static N_ResultEnum _TxFc(N_SDU* p_n_sdu){
         //可能要填充
         //dlc要动
         //直接发出去，然后在con那边wait++
-        L_Data.request(&tx_msg,kNPciFC);
+        L_Data.request(&tx_msg);
         return ;//下面的不跑了
     }
     
@@ -1140,7 +1215,7 @@ static N_ResultEnum _TxFc(N_SDU* p_n_sdu){
     tx_msg.data[data_offset+2]|=p_n_sdu->STmin;
     //可能要填充
     //dlc要动
-    L_Data.request(&tx_msg,kNPciFC);
+    L_Data.request(&tx_msg);
 
     p_n_sdu->sm.event=kWaitEvent;
     
@@ -1310,7 +1385,8 @@ static N_ResultEnum _TxFf(N_SDU* p_n_sdu){
 
     /* Sender L_Data.req: the transport/network layer transmits the FirstFrame 
        to the data link layer and starts the N_As timer */
-    L_Data.request(&tx_msg,kNPciFF);
+    L_Data.request(&tx_msg);
+    p_n_sdu->N_As_timing_enable=true;
 
     p_n_sdu->sm.event=kWaitEvent;
 
@@ -1642,7 +1718,7 @@ static void N_ChangeParameter_confirm   (MtypeEnum Mtype, uint8_t N_SA, uint8_t 
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void L_Data_request(struct rt_canx_msg* tx_can_msg, N_PCItype UserExtPciType){
+static void L_Data_request(struct rt_canx_msg* tx_can_msg){
 
     // 调用一个can发送函数
     // HAL_FDCAN_AddMessageToTxBuffer
@@ -1651,31 +1727,32 @@ static void L_Data_request(struct rt_canx_msg* tx_can_msg, N_PCItype UserExtPciT
     if(_SearchSduIndex(tx_can_msg,&sdu_index)==false)
         return ;
 
-    switch (UserExtPciType)
-    {
-    case kNPciSF://发一个单帧
-        g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
-        break;
-    case kNPciFF://发一个首帧
-        g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
-        break;
-    case kNPciCF://发一个续帧
-        g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=false;
-        g_n_sdu_tbl[sdu_index].N_Cs=0;
-        g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
-        break;
-    case kNPciFC://发一个流控帧
-        g_n_sdu_tbl[sdu_index].N_Br_timing_enable=false;
-        g_n_sdu_tbl[sdu_index].N_Br=0;
-        g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=true;
-        break;
-    default:
-        while(1);
-        break;
-    }
+    //时间参数放这里不太好
+    // switch (UserExtPciType)
+    // {
+    // case kNPciSF://发一个单帧
+    //     g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
+    //     break;
+    // case kNPciFF://发一个首帧
+    //     g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
+    //     break;
+    // case kNPciCF://发一个续帧
+    //     g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=false;
+    //     g_n_sdu_tbl[sdu_index].N_Cs=0;
+    //     g_n_sdu_tbl[sdu_index].N_As_timing_enable=true;
+    //     break;
+    // case kNPciFC://发一个流控帧
+    //     g_n_sdu_tbl[sdu_index].N_Br_timing_enable=false;
+    //     g_n_sdu_tbl[sdu_index].N_Br=0;
+    //     g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=true;
+    //     break;
+    // default:
+    //     while(1);
+    //     break;
+    // }
 }
 
-static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum Transfer_Status)
+static void L_Data_confirm(uint32_t Identifier, Transfer_StatusEnum Transfer_Status)
 {
     //其实不太可能传输不成功，这个确认函数放在tx_complete_callback里
     if(Transfer_Status!=kComplete){
@@ -1684,136 +1761,136 @@ static void L_Data_confirm(struct rt_canx_msg* tx_can_msg, Transfer_StatusEnum T
     }
 
     //根据PDU的ID查SDU tbl
-    size_t sdu_index=0;
-    if(_SearchSduIndex(tx_can_msg,&sdu_index)==false)
-        return ;
+    // size_t sdu_index=0;
+    // if(_SearchSduIndex(tx_can_msg,&sdu_index)==false)
+    //     return ;
 
-    bool temp_is_extended=g_n_sdu_tbl[sdu_index].N_UserExt.is_extended;
-    MtypeEnum temp_Mtype=g_n_sdu_tbl[sdu_index].Mtype;
-    bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
+    // bool temp_is_extended=g_n_sdu_tbl[sdu_index].N_UserExt.is_extended;
+    // MtypeEnum temp_Mtype=g_n_sdu_tbl[sdu_index].Mtype;
+    // bool temp_is_remote_diagnostics=(temp_Mtype==kRemoteDiagnostics);
 
-    uint8_t N_PCI_bytes_offset=0;
-    if(temp_is_remote_diagnostics||temp_is_extended)//带N_AE或者N_TA在第一字节的can帧
-    {
-        N_PCI_bytes_offset=1;
-    }
+    // uint8_t N_PCI_bytes_offset=0;
+    // if(temp_is_remote_diagnostics||temp_is_extended)//带N_AE或者N_TA在第一字节的can帧
+    // {
+    //     N_PCI_bytes_offset=1;
+    // }
 
-    //N_PCItype is the high nibble of N_PCI byte (Byte #1)
-    N_PCItype n_pci_type=tx_can_msg->data[N_PCI_bytes_offset]>>4;
+    // //N_PCItype is the high nibble of N_PCI byte (Byte #1)
+    // N_PCItype n_pci_type=tx_can_msg->data[N_PCI_bytes_offset]>>4;
 
-    switch(n_pci_type){
+    // switch(n_pci_type){
         
-        case kNPciSF://发送单帧
-            /* Sender L_Data.con: the data link layer confirms to the 
-               transport/network layer that the CAN frame has been 
-               acknowledged; the sender stops the N_As timer */
-            g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
-            g_n_sdu_tbl[sdu_index].N_As=0;
-            break;
-        case kNPciFF://发送首帧
-            /* Sender L_Data.con: the data link layer confirms to the 
-               transport/network layer that the CAN frame has been 
-               acknowledged; the sender stops the N_As timer and starts the 
-               N_Bs timer */
-            //can发送完成中断中调用L_Data.con以停止N_As timer 开启N_Bs timer
-            g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
-            g_n_sdu_tbl[sdu_index].N_As=0;
-            g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=true;
-            break;
-        case kNPciCF://发送连续帧
-        {
-            //判断是否为最后一个续帧或者本次块传输的最后一个block
-            size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].msg_index);
-            uint8_t tmp_rx_payload_len=g_n_sdu_tbl[sdu_index].TX_DL-1;//工程配置的续帧和首帧长度
-            if(temp_is_remote_diagnostics||temp_is_extended)//带N_AE或者N_TA在第一字节的can帧
-                tmp_rx_payload_len-=1;
+    //     case kNPciSF://发送单帧
+    //         /* Sender L_Data.con: the data link layer confirms to the 
+    //            transport/network layer that the CAN frame has been 
+    //            acknowledged; the sender stops the N_As timer */
+    //         g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+    //         g_n_sdu_tbl[sdu_index].N_As=0;
+    //         break;
+    //     case kNPciFF://发送首帧
+    //         /* Sender L_Data.con: the data link layer confirms to the 
+    //            transport/network layer that the CAN frame has been 
+    //            acknowledged; the sender stops the N_As timer and starts the 
+    //            N_Bs timer */
+    //         //can发送完成中断中调用L_Data.con以停止N_As timer 开启N_Bs timer
+    //         g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+    //         g_n_sdu_tbl[sdu_index].N_As=0;
+    //         g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=true;
+    //         break;
+    //     case kNPciCF://发送连续帧
+    //     {
+    //         //判断是否为最后一个续帧或者本次块传输的最后一个block
+    //         size_t remaining_length=g_n_sdu_tbl[sdu_index].Length-(g_n_sdu_tbl[sdu_index].msg_index);
+    //         uint8_t tmp_rx_payload_len=g_n_sdu_tbl[sdu_index].TX_DL-1;//工程配置的续帧和首帧长度
+    //         if(temp_is_remote_diagnostics||temp_is_extended)//带N_AE或者N_TA在第一字节的can帧
+    //             tmp_rx_payload_len-=1;
             
-            /* Sender L_Data.con: the data link layer confirms to the 
-               transport/network layer that the CAN frame has been 
-               acknowledged; the sender stops the N_As timer */
-            if(remaining_length<=tmp_rx_payload_len)
-            {
-                g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
-                g_n_sdu_tbl[sdu_index].N_As=0;
-                break;
-            }
+    //         /* Sender L_Data.con: the data link layer confirms to the 
+    //            transport/network layer that the CAN frame has been 
+    //            acknowledged; the sender stops the N_As timer */
+    //         if(remaining_length<=tmp_rx_payload_len)
+    //         {
+    //             g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+    //             g_n_sdu_tbl[sdu_index].N_As=0;
+    //             break;
+    //         }
 
-            /* Sender L_Data.con: the data link layer confirms to the 
-               transport/network layer that the CAN frame has been 
-               acknowledged; the sender stops the N_As timer and starts the 
-               N_Bs timer; the sender is waiting for the next FlowControl. */
-            //bs耗尽，等待发流控
-            //stop N_As timer
-            //start N_Bs timer
-            if(g_n_sdu_tbl[sdu_index].BS_cnt==g_n_sdu_tbl[sdu_index].BS-1)
-            {
-                g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
-                g_n_sdu_tbl[sdu_index].N_As=0;
-                g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=true;
-            }
-            //6 14
-            /* Sender L_Data.con: the data link layer confirms to the 
-               transport/network layer that the CAN frame has been 
-               acknowledged; the sender stops the N_As timer and starts the 
-               N_Cs timer according to the separation time value (STmin) of the
-               previous FlowControl */
-            //can tx ok中断要调用L_Data.con
-            //stop N_As timer
-            //start N_Cs timer
-            else
-            {
-                g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
-                g_n_sdu_tbl[sdu_index].N_As=0;
-                g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=true;
-            }
-            break;
-        }
-        case kNPciFC://发送流控帧
-        {
-            //流控增加判断FS
-            FlowStatusEnum flow_status=tx_can_msg->data[N_PCI_bytes_offset]&0x0F;
-            switch(flow_status)
-            {
-                //4 12
-                /* Receiver L_Data.con: the data link layer confirms to the 
-                   transport/network layer that the CAN frame has been 
-                   acknowledged; the receiver stops the N_Ar timer and starts 
-                   the N_Cr timer */
-                //stop N_Ar timer
-                //start N_Cr timer
-                case kFsCTS:
-                    g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=false;
-                    g_n_sdu_tbl[sdu_index].N_Ar=0;
-                    g_n_sdu_tbl[sdu_index].N_Cr_timing_enable=true;
-                    break;
-                /* Receiver L_Data.con: the data link layer confirms to the 
-                   transport/network layer that the CAN frame has been 
-                   acknowledged; the receiver stops the N_Ar timer and starts 
-                   the N_Br timer */
-                //发完等待流控的中断
-                //stop N_Ar timer
-                //start N_Br timer
-                case kFsWAIT:
-                    g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=false;
-                    g_n_sdu_tbl[sdu_index].N_Ar=0;
-                    g_n_sdu_tbl[sdu_index].N_Br_timing_enable=true;
-                    break;
-                case kFsOVFLW:
-                    //发出的帧发送完成了
-                    while(1);//还不知道怎么处理
-                    break;
-                default:
-                    //进这里相当于这个程序发出去的东西有问题
-                    while(1);
-                    break;
-            }
-            break;
-        }
-        default:
-            while(1);
-            break;
-    }
-    g_n_sdu_tbl[sdu_index].l_send_con=true;
+    //         /* Sender L_Data.con: the data link layer confirms to the 
+    //            transport/network layer that the CAN frame has been 
+    //            acknowledged; the sender stops the N_As timer and starts the 
+    //            N_Bs timer; the sender is waiting for the next FlowControl. */
+    //         //bs耗尽，等待发流控
+    //         //stop N_As timer
+    //         //start N_Bs timer
+    //         if(g_n_sdu_tbl[sdu_index].BS_cnt==g_n_sdu_tbl[sdu_index].BS-1)
+    //         {
+    //             g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+    //             g_n_sdu_tbl[sdu_index].N_As=0;
+    //             g_n_sdu_tbl[sdu_index].N_Bs_timing_enable=true;
+    //         }
+    //         //6 14
+    //         /* Sender L_Data.con: the data link layer confirms to the 
+    //            transport/network layer that the CAN frame has been 
+    //            acknowledged; the sender stops the N_As timer and starts the 
+    //            N_Cs timer according to the separation time value (STmin) of the
+    //            previous FlowControl */
+    //         //can tx ok中断要调用L_Data.con
+    //         //stop N_As timer
+    //         //start N_Cs timer
+    //         else
+    //         {
+    //             g_n_sdu_tbl[sdu_index].N_As_timing_enable=false;
+    //             g_n_sdu_tbl[sdu_index].N_As=0;
+    //             g_n_sdu_tbl[sdu_index].N_Cs_timing_enable=true;
+    //         }
+    //         break;
+    //     }
+    //     case kNPciFC://发送流控帧
+    //     {
+    //         //流控增加判断FS
+    //         FlowStatusEnum flow_status=tx_can_msg->data[N_PCI_bytes_offset]&0x0F;
+    //         switch(flow_status)
+    //         {
+    //             //4 12
+    //             /* Receiver L_Data.con: the data link layer confirms to the 
+    //                transport/network layer that the CAN frame has been 
+    //                acknowledged; the receiver stops the N_Ar timer and starts 
+    //                the N_Cr timer */
+    //             //stop N_Ar timer
+    //             //start N_Cr timer
+    //             case kFsCTS:
+    //                 g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=false;
+    //                 g_n_sdu_tbl[sdu_index].N_Ar=0;
+    //                 g_n_sdu_tbl[sdu_index].N_Cr_timing_enable=true;
+    //                 break;
+    //             /* Receiver L_Data.con: the data link layer confirms to the 
+    //                transport/network layer that the CAN frame has been 
+    //                acknowledged; the receiver stops the N_Ar timer and starts 
+    //                the N_Br timer */
+    //             //发完等待流控的中断
+    //             //stop N_Ar timer
+    //             //start N_Br timer
+    //             case kFsWAIT:
+    //                 g_n_sdu_tbl[sdu_index].N_Ar_timing_enable=false;
+    //                 g_n_sdu_tbl[sdu_index].N_Ar=0;
+    //                 g_n_sdu_tbl[sdu_index].N_Br_timing_enable=true;
+    //                 break;
+    //             case kFsOVFLW:
+    //                 //发出的帧发送完成了
+    //                 while(1);//还不知道怎么处理
+    //                 break;
+    //             default:
+    //                 //进这里相当于这个程序发出去的东西有问题
+    //                 while(1);
+    //                 break;
+    //         }
+    //         break;
+    //     }
+    //     default:
+    //         while(1);
+    //         break;
+    // }
+    // g_n_sdu_tbl[sdu_index].l_send_con=true;
 
 }
 

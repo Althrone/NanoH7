@@ -95,41 +95,41 @@ static const struct rt_canx_ops s_mcan_ops=
 };
 
 //发送周期报文数量
-#define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(cycle!=0))?1:0)+
+#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    (((dir==kOpenCanSend)&&(cycle!=0))?1:0)+
     static const rt_uint8_t sk_mcan1_send_cycle_msg_num=CAN_MSG_MATRIX 0;
 #undef Y
 
 //发送事件报文数量
-#define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(cycle==0))?1:0)+
+#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    (((dir==kOpenCanSend)&&(cycle==0))?1:0)+
     static const rt_uint8_t sk_mcan1_send_event_msg_num=CAN_MSG_MATRIX 0;
 #undef Y
 ////////////////////////////////接收/////////////////////////////////
 //标准id周期报文数量
-#define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    (((id_type==kOpenCanStdId)&&\
       (dir==kOpenCanRecv)&&(cycle!=0))?1:0)+
     static const rt_uint8_t sk_mcan1_recv_cycle_stdmsg_num=CAN_MSG_MATRIX 0;
 #undef Y
 
 //扩展id周期报文数量
-#define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
+#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    (((id_type==kOpenCanExtId)&&\
       (dir==kOpenCanRecv)&&(cycle!=0))?1:0)+
     static const rt_uint8_t sk_mcan1_recv_cycle_extmsg_num=CAN_MSG_MATRIX 0;
 #undef Y
 
 //标准id事件报文数量
-#define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    (((id_type==kOpenCanStdId)&&\
       (dir==kOpenCanRecv)&&(cycle==0))?1:0)+
     static const rt_uint8_t sk_mcan1_recv_event_stdmsg_num=CAN_MSG_MATRIX 0;
 #undef Y
 
 //扩展id事件报文数量
-#define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
+#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    (((id_type==kOpenCanExtId)&&\
       (dir==kOpenCanRecv)&&(cycle==0))?1:0)+
     static const rt_uint8_t sk_mcan1_recv_event_extmsg_num=CAN_MSG_MATRIX 0;
 #undef Y
@@ -147,7 +147,7 @@ static rt_err_t _stm32_mcan_filter_cfg(FDCAN_HandleTypeDef* pmcan);
 /******************************************************************************
  * pubilc functions definition
  *****************************************************************************/
-#if 0
+#if 1
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
     struct stm32_mcan *mcan;
@@ -346,30 +346,30 @@ static int _inline_canx_recvmsg(struct rt_canx_device *canx, void *buf, rt_uint3
     }
     else
     {
-        pmsg->id=rx_header.Identifier;
+        pmsg->header.id=rx_header.Identifier;
         if(rx_header.IdType==FDCAN_EXTENDED_ID)
-            pmsg->ide=1;
-        else pmsg->ide=0;
+            pmsg->header.ide=1;
+        else pmsg->header.ide=0;
 
-        pmsg->dlc=rx_header.DataLength>>16;
+        pmsg->header.dlc=rx_header.DataLength>>16;
 
         if(rx_header.FDFormat==FDCAN_FD_CAN)
         {    
-            pmsg->fdf=1;
+            pmsg->header.fdf=1;
             if(rx_header.BitRateSwitch==FDCAN_BRS_ON)
-                pmsg->brs=1;
-            else pmsg->brs=0;
+                pmsg->header.brs=1;
+            else pmsg->header.brs=0;
             if(rx_header.ErrorStateIndicator==FDCAN_ESI_PASSIVE)
-                pmsg->esi=1;//没错误发1？
-            else pmsg->esi=0;
+                pmsg->header.esi=1;//没错误发1？
+            else pmsg->header.esi=0;
             // pmsg->rtr=0;//RRS 除了参与总线总裁外无意义
         }
         else//经典can才判断是否为远程帧
         {
-            pmsg->fdf=0;
+            pmsg->header.fdf=0;
             if(rx_header.RxFrameType==FDCAN_REMOTE_FRAME)
-                pmsg->rtr=1;
-            else pmsg->rtr=0;
+                pmsg->header.rtr=1;
+            else pmsg->header.rtr=0;
             // brs无意义
             // esi无意义
         }
@@ -390,17 +390,17 @@ static int _inline_canx_sendmsg(struct rt_canx_device *canx, const void *buf, rt
 
     //根据boxnumber决定txheader
     FDCAN_TxHeaderTypeDef TxHeader={0};
-    TxHeader.Identifier=pmsg->id;
-    if(pmsg->ide)
+    TxHeader.Identifier=pmsg->header.id;
+    if(pmsg->header.ide)
         TxHeader.IdType=FDCAN_EXTENDED_ID;
-    if(pmsg->rtr)
+    if(pmsg->header.rtr)
         TxHeader.TxFrameType=FDCAN_REMOTE_FRAME;
-    TxHeader.DataLength=(uint32_t)(pmsg->dlc)<<16;
-    if(pmsg->esi)
+    TxHeader.DataLength=(uint32_t)(pmsg->header.dlc)<<16;
+    if(pmsg->header.esi)
         TxHeader.ErrorStateIndicator=FDCAN_ESI_PASSIVE;
-    if(pmsg->brs)
+    if(pmsg->header.brs)
         TxHeader.BitRateSwitch=FDCAN_BRS_ON;
-    if(pmsg->fdf)
+    if(pmsg->header.fdf)
         TxHeader.FDFormat=FDCAN_FD_CAN;
 
     TxHeader.TxEventFifoControl=FDCAN_NO_TX_EVENTS;
@@ -430,13 +430,13 @@ static rt_err_t _inline_canx_configure(struct rt_canx_device *canx, struct canx_
     pmcan->hmcan.Instance=pmcan->config->Instance;//外设基地址从mcan_config的宏传入
 
     //通过can矩阵来判断是否有canfd帧
-  #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-           (((inst==MCAN1_INDEX)&&(frame_fmt==kOpenCanFd))?1:0)|
+  #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+           (((fdf==kOpenCanFd))?1:0)|
     rt_bool_t is_fd=CAN_MSG_MATRIX 0;
   #undef Y
     //通过can矩阵来判断是否有canfd帧使用BRS
-  #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-           (((inst==MCAN1_INDEX)&&(brs==1))?1:0)|
+  #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+           (((brs==1))?1:0)|
     rt_bool_t is_brs=CAN_MSG_MATRIX 0;
   #undef Y
 
@@ -480,44 +480,44 @@ static rt_err_t _inline_canx_configure(struct rt_canx_device *canx, struct canx_
 rt_uint8_t _mcan1_tx_size(void)
 {
     //计算发送报文的dlc最大值，直接送到TxElmtSize
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(dlc>8))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanSend)&&(dlc>8))?1:0)|
         rt_bool_t dlc_more_than_8=CAN_MSG_MATRIX 0;
         //为0意味着没有比8大的帧，直接设置为8就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(dlc>12))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanSend)&&(dlc>12))?1:0)|
         rt_bool_t dlc_more_than_12=CAN_MSG_MATRIX 0;
         //为0意味着没有比12大的帧，直接设置为12就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(dlc>16))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanSend)&&(dlc>16))?1:0)|
         rt_bool_t dlc_more_than_16=CAN_MSG_MATRIX 0;
         //为0意味着没有比16大的帧，直接设置为16就行
     #undef Y
     
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(dlc>20))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanSend)&&(dlc>20))?1:0)|
         rt_bool_t dlc_more_than_20=CAN_MSG_MATRIX 0;
         //为0意味着没有比20大的帧，直接设置为20就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(dlc>24))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanSend)&&(dlc>24))?1:0)|
         rt_bool_t dlc_more_than_24=CAN_MSG_MATRIX 0;
         //为0意味着没有比24大的帧，直接设置为24就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(dlc>32))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanSend)&&(dlc>32))?1:0)|
         rt_bool_t dlc_more_than_32=CAN_MSG_MATRIX 0;
         //为0意味着没有比32大的帧，直接设置为32就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(dlc>48))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanSend)&&(dlc>48))?1:0)|
         rt_bool_t dlc_more_than_48=CAN_MSG_MATRIX 0;
         //为0意味着没有比48大的帧，直接设置为48就行
     #undef Y
@@ -545,14 +545,14 @@ rt_uint8_t _mcan1_tx_size(void)
 void _mcan1_txbuf_cfg(FDCAN_HandleTypeDef* pmcan)
 {
     //周期报文数量
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(cycle!=0))?1:0)+
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    (((dir==kOpenCanSend)&&(cycle!=0))?1:0)+
         rt_uint8_t num_of_mcan1_send_cyc_frame=CAN_MSG_MATRIX 0;
     #undef Y
 
     //事件报文数量
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    (((inst==MCAN1_INDEX)&&(dir==kOpenCanSend)&&(cycle==0))?1:0)+
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    (((dir==kOpenCanSend)&&(cycle==0))?1:0)+
         rt_uint8_t num_of_mcan1_send_event_frame=CAN_MSG_MATRIX 0;
     #undef Y
 
@@ -583,50 +583,50 @@ rt_uint8_t _mcan1_rxbuf_size(void)
 {
     //计算发送报文的dlc最大值，直接送到RxBufferSize
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>48))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>48))?1:0)|
         rt_bool_t dlc_more_than_48=CAN_MSG_MATRIX 0;
         if(dlc_more_than_48)
             return FDCAN_DATA_BYTES_64;
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>32))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>32))?1:0)|
         rt_bool_t dlc_more_than_32=CAN_MSG_MATRIX 0;
         if(dlc_more_than_32)
             return FDCAN_DATA_BYTES_48;
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>24))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>24))?1:0)|
         rt_bool_t dlc_more_than_24=CAN_MSG_MATRIX 0;
         if(dlc_more_than_24)
             return FDCAN_DATA_BYTES_32;
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>20))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>20))?1:0)|
         rt_bool_t dlc_more_than_20=CAN_MSG_MATRIX 0;
         if(dlc_more_than_20)
             return FDCAN_DATA_BYTES_24;
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>16))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>16))?1:0)|
         rt_bool_t dlc_more_than_16=CAN_MSG_MATRIX 0;
         if(dlc_more_than_16)
             return FDCAN_DATA_BYTES_20;
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>12))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>12))?1:0)|
         rt_bool_t dlc_more_than_12=CAN_MSG_MATRIX 0;
         if(dlc_more_than_12)
             return FDCAN_DATA_BYTES_16;
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>8))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((dir==kOpenCanRecv)&&(cycle!=0)&&(dlc>8))?1:0)|
         rt_bool_t dlc_more_than_8=CAN_MSG_MATRIX 0;
         if(dlc_more_than_8)
             return FDCAN_DATA_BYTES_12;
@@ -638,44 +638,44 @@ rt_uint8_t _mcan1_rxbuf_size(void)
 rt_uint8_t _mcan1_rx_std_event_msg_size(void)
 {
     //计算发送报文的dlc最大值，直接送到TxElmtSize
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>8))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>8))?1:0)|
         rt_bool_t dlc_more_than_8=CAN_MSG_MATRIX 0;
         //为0意味着没有比8大的帧，直接设置为8就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>12))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>12))?1:0)|
         rt_bool_t dlc_more_than_12=CAN_MSG_MATRIX 0;
         //为0意味着没有比12大的帧，直接设置为12就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>16))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>16))?1:0)|
         rt_bool_t dlc_more_than_16=CAN_MSG_MATRIX 0;
         //为0意味着没有比16大的帧，直接设置为16就行
     #undef Y
     
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>20))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>20))?1:0)|
         rt_bool_t dlc_more_than_20=CAN_MSG_MATRIX 0;
         //为0意味着没有比20大的帧，直接设置为20就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>24))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>24))?1:0)|
         rt_bool_t dlc_more_than_24=CAN_MSG_MATRIX 0;
         //为0意味着没有比24大的帧，直接设置为24就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>32))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>32))?1:0)|
         rt_bool_t dlc_more_than_32=CAN_MSG_MATRIX 0;
         //为0意味着没有比32大的帧，直接设置为32就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>48))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>48))?1:0)|
         rt_bool_t dlc_more_than_48=CAN_MSG_MATRIX 0;
         //为0意味着没有比48大的帧，直接设置为48就行
     #undef Y
@@ -700,44 +700,44 @@ rt_uint8_t _mcan1_rx_std_event_msg_size(void)
 rt_uint8_t _mcan1_rx_ext_event_msg_size(void)
 {
     //计算发送报文的dlc最大值，直接送到TxElmtSize
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>8))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>8))?1:0)|
         rt_bool_t dlc_more_than_8=CAN_MSG_MATRIX 0;
         //为0意味着没有比8大的帧，直接设置为8就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>12))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>12))?1:0)|
         rt_bool_t dlc_more_than_12=CAN_MSG_MATRIX 0;
         //为0意味着没有比12大的帧，直接设置为12就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>16))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>16))?1:0)|
         rt_bool_t dlc_more_than_16=CAN_MSG_MATRIX 0;
         //为0意味着没有比16大的帧，直接设置为16就行
     #undef Y
     
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>20))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>20))?1:0)|
         rt_bool_t dlc_more_than_20=CAN_MSG_MATRIX 0;
         //为0意味着没有比20大的帧，直接设置为20就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>24))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>24))?1:0)|
         rt_bool_t dlc_more_than_24=CAN_MSG_MATRIX 0;
         //为0意味着没有比24大的帧，直接设置为24就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>32))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>32))?1:0)|
         rt_bool_t dlc_more_than_32=CAN_MSG_MATRIX 0;
         //为0意味着没有比32大的帧，直接设置为32就行
     #undef Y
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-        (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>48))?1:0)|
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+        (((id_type==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0)&&(dlc>48))?1:0)|
         rt_bool_t dlc_more_than_48=CAN_MSG_MATRIX 0;
         //为0意味着没有比48大的帧，直接设置为48就行
     #undef Y
@@ -762,23 +762,23 @@ rt_uint8_t _mcan1_rx_ext_event_msg_size(void)
 static void _mcan1_get_std_event_msg_classic_filter(uint32_t* id1_filter,uint32_t* id2_mask)
 {
     //先找到符合的id中都是1的位
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+             (((id_type==kOpenCanStdId)&&\
                (dir==kOpenCanRecv)&&(cycle==0))?id:0x7FF)&
         uint32_t bit1_mask=CAN_MSG_MATRIX 0x7FF;
     #undef Y
 
     //查找符合的id中都是0的位
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+             (((id_type==kOpenCanStdId)&&\
                (dir==kOpenCanRecv)&&(cycle==0))?(~id):0x7FF)&
         uint32_t bit0_mask=CAN_MSG_MATRIX 0x7FF;
     #undef Y
 
     uint32_t mask_bit=bit1_mask|bit0_mask;//其中为1的位，对应的filter_bit的0或者1要匹配
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-             ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+             ((id_type==kOpenCanStdId)&&\
               (dir==kOpenCanRecv)&&(cycle==0))?(id):
         uint32_t filter_bit=CAN_MSG_MATRIX 0;
     #undef Y
@@ -790,23 +790,23 @@ static void _mcan1_get_std_event_msg_classic_filter(uint32_t* id1_filter,uint32_
 static void _mcan1_get_ext_event_msg_classic_filter(uint32_t* id1_filter,uint32_t* id2_mask)
 {
     //先找到符合的id中都是1的位
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+             (((id_type==kOpenCanExtId)&&\
                (dir==kOpenCanRecv)&&(cycle==0))?id:0x7FF)&
         uint32_t bit1_mask=CAN_MSG_MATRIX 0x7FF;
     #undef Y
 
     //查找符合的id中都是0的位
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+             (((id_type==kOpenCanExtId)&&\
                (dir==kOpenCanRecv)&&(cycle==0))?(~id):0x7FF)&
         uint32_t bit0_mask=CAN_MSG_MATRIX 0x7FF;
     #undef Y
 
     uint32_t mask_bit=bit1_mask|bit0_mask;//其中为1的位，对应的filter_bit的0或者1要匹配
 
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-             ((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+             ((id_type==kOpenCanExtId)&&\
               (dir==kOpenCanRecv)&&(cycle==0))?(id):
         uint32_t filter_bit=CAN_MSG_MATRIX 0;
     #undef Y
@@ -828,13 +828,13 @@ void _mcan_msg_ram_auto_cfg(void)
     //     //如果stdid只有两个周期为0的帧
     //     if(num_of_mcan1_recv_stdid_fifo==2)
     //     {
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //         ((id_type==kOpenCanStdId)&&\
     //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
     //         uint32_t id1=CAN_MSG_MATRIX 0;
     //         #undef Y
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&(id!=id1)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //         ((id_type==kOpenCanStdId)&&(id!=id1)&&\
     //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
     //         uint32_t id2=CAN_MSG_MATRIX 0;
     //         #undef Y
@@ -855,23 +855,23 @@ void _mcan_msg_ram_auto_cfg(void)
     //         //range不好实现
 
     //         //先找到符合的id中都是1的位
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //             (((id_type==kOpenCanStdId)&&\
     //               (dir==kOpenCanRecv)&&(cycle==0))?id:0x7FF)&
     //             rt_uint16_t bit1_mask=CAN_MSG_MATRIX 0x7FF;
     //         #undef Y
 
     //         //查找符合的id中都是0的位
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //             (((id_type==kOpenCanStdId)&&\
     //               (dir==kOpenCanRecv)&&(cycle==0))?(~id):0x7FF)&
     //             rt_uint16_t bit0_mask=CAN_MSG_MATRIX 0x7FF;
     //         #undef Y
 
     //         rt_uint16_t mask_bit=bit1_mask|bit0_mask;//其中为1的位，对应的filter_bit的0或者1要匹配
 
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //         ((id_type==kOpenCanStdId)&&\
     //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
     //         uint32_t filter_bit=CAN_MSG_MATRIX 0;
     //         #undef Y
@@ -891,13 +891,13 @@ void _mcan_msg_ram_auto_cfg(void)
     //     //如果extid只有两个周期为0的帧
     //     if(num_of_mcan1_recv_extid_fifo==2)
     //     {
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //         ((id_type==kOpenCanExtId)&&\
     //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
     //         uint32_t id1=CAN_MSG_MATRIX 0;
     //         #undef Y
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&(id!=id1)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //         ((id_type==kOpenCanExtId)&&(id!=id1)&&\
     //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
     //         uint32_t id2=CAN_MSG_MATRIX 0;
     //         #undef Y
@@ -918,23 +918,23 @@ void _mcan_msg_ram_auto_cfg(void)
     //         //range不好实现
 
     //         //先找到符合的id中都是1的位
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //             (((id_type==kOpenCanStdId)&&\
     //               (dir==kOpenCanRecv)&&(cycle==0))?id:0x7FF)&
     //             rt_uint16_t bit1_mask=CAN_MSG_MATRIX 0x7FF;
     //         #undef Y
 
     //         //查找符合的id中都是0的位
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //             (((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //             (((id_type==kOpenCanStdId)&&\
     //               (dir==kOpenCanRecv)&&(cycle==0))?(~id):0x7FF)&
     //             rt_uint16_t bit0_mask=CAN_MSG_MATRIX 0x7FF;
     //         #undef Y
 
     //         rt_uint16_t mask_bit=bit1_mask|bit0_mask;//其中为1的位，对应的filter_bit的0或者1要匹配
 
-    //         #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    //         ((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    //         #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    //         ((id_type==kOpenCanStdId)&&\
     //          (dir==kOpenCanRecv)&&(cycle==0))?(id):
     //         uint32_t filter_bit=CAN_MSG_MATRIX 0;
     //         #undef Y
@@ -1072,8 +1072,8 @@ static rt_err_t _stm32_mcan_filter_cfg(FDCAN_HandleTypeDef* pmcan)
     //处理周期报文
 
     //配置rx stdid buf
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    if((inst==MCAN1_INDEX)&&(id_type==kOpenCanStdId)&&\
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    if((id_type==kOpenCanStdId)&&\
         (dir==kOpenCanRecv)&&(cycle!=0)){\
         sFilterConfig[i].IdType=FDCAN_STANDARD_ID;\
         sFilterConfig[i].FilterIndex=std_filt_index;\
@@ -1107,8 +1107,8 @@ static rt_err_t _stm32_mcan_filter_cfg(FDCAN_HandleTypeDef* pmcan)
     rx_buf_index++;
 
     //配置rx extid buf
-    #define Y(inst,frame_fmt,brs,id_type,id,dir,dlc,cycle) \
-    if((inst==MCAN1_INDEX)&&(id_type==kOpenCanExtId)&&\
+    #define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+    if((id_type==kOpenCanExtId)&&\
         (dir==kOpenCanRecv)&&(cycle!=0)){\
         sFilterConfig[i].IdType=FDCAN_STANDARD_ID;\
         sFilterConfig[i].FilterIndex=ext_filt_index;\
@@ -1153,7 +1153,8 @@ int rt_hw_mcan_init(void)
     for (size_t i = 0; i < (sizeof(s_mcan_obj)/sizeof(struct stm32_mcan)); i++)
     {
         s_mcan_obj[i].config=&s_mcan_config[i];//初始化mcan_config.h宏配置，主要是中断号，引脚号
-        s_mcan_obj[i].canx.ops=&s_mcan_ops;
+        //感觉这两个应该丢进去做
+        // s_mcan_obj[i].canx.ops=&s_mcan_ops;
         s_mcan_obj[i].canx.config=config;
         rt_hw_canx_register(&s_mcan_obj[i].canx, s_mcan_obj[i].config->name, &s_mcan_ops, RT_NULL);
     }

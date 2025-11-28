@@ -24,6 +24,63 @@ extern "C" {
  * macros
  *****************************************************************************/
 
+typedef enum
+{
+  kOpenCanSend,
+  kOpenCanRecv,
+}OpenCanMsgDirEnum;
+
+    //fdf brs ide    id      send/recv   dlc cyc 
+#define CAN_MSG_MATRIX \
+    Y(1,  1,  0,  0x083,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x0A2,  kOpenCanRecv, 8,  20  )   \
+    Y(1,  1,  0,  0x0D3,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x0D4,  kOpenCanRecv, 24, 10  )   \
+    Y(1,  1,  0,  0x0FE,  kOpenCanRecv, 8,  20  )   \
+    Y(1,  1,  0,  0x101,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x102,  kOpenCanRecv, 8,  20  )   \
+    Y(1,  1,  0,  0x119,  kOpenCanRecv, 8,  20  )   \
+    Y(1,  1,  0,  0x11D,  kOpenCanRecv, 8,  20  )   \
+    Y(1,  1,  0,  0x121,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x124,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x132,  kOpenCanRecv, 8,  20  )   \
+    Y(1,  1,  0,  0x133,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x142,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x144,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x188,  kOpenCanRecv, 8,  20  )   \
+    Y(1,  1,  0,  0x1B0,  kOpenCanRecv, 16, 20  )   \
+    Y(1,  1,  0,  0x1FB,  kOpenCanRecv, 8,  20  )   \
+    Y(1,  1,  0,  0x30C,  kOpenCanRecv, 8,  100 )   \
+    Y(1,  1,  0,  0x320,  kOpenCanRecv, 8,  100 )   \
+    Y(1,  1,  0,  0x33C,  kOpenCanRecv, 8,  100 )   \
+    Y(1,  1,  0,  0x341,  kOpenCanRecv, 8,  100 )   \
+    Y(1,  1,  0,  0x3DA,  kOpenCanRecv, 8,  100 )   \
+    Y(1,  1,  0,  0x3F2,  kOpenCanRecv, 8,  100 )   \
+    Y(1,  1,  0,  0x443,  kOpenCanSend, 8,  100 )   \
+    Y(1,  1,  0,  0x4DA,  kOpenCanRecv, 8,  1000)   \
+    Y(1,  1,  0,  0x584,  kOpenCanRecv, 8,  500 )   \
+    Y(0,  0,  0,  0x599,  kOpenCanRecv, 8,  500 )   \
+    Y(0,  0,  0,  0x5B5,  kOpenCanSend, 8,  500 )   \
+    Y(0,  0,  0,  0x5B6,  kOpenCanRecv, 8,  500 )   \
+    Y(1,  1,  0,  0x643,  kOpenCanSend, 16, 500 )   \
+    Y(1,  1,  0,  0x741,  kOpenCanRecv, 8,  0   )   \
+    Y(1,  1,  0,  0x749,  kOpenCanSend, 8,  0   )   \
+    Y(1,  1,  0,  0x7DF,  kOpenCanRecv, 8,  0   )
+
+#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+  (((dir==kOpenCanRecv))?1:0)+
+enum { 
+    kRxFifoNum =  CAN_MSG_MATRIX 0
+};
+#undef Y
+
+#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
+  (((dir==kOpenCanSend))?1:0)+
+enum { 
+    kTxFifoNum =  CAN_MSG_MATRIX 0
+};
+#undef Y
+
 #ifdef RT_CANX_USING_FD
   #ifdef RT_CANX_CALC_BITTIMING
     #define RT_CANX_CONFIG_DEFAULT         \
@@ -33,7 +90,11 @@ extern "C" {
         {5*1000*1000,  /* 5Mbps */         \
         8000},          /* 80.00% */        \
         RT_TRUE,\
-        1\
+        1,\
+        kRxFifoNum,\
+        5,\
+        kTxFifoNum,\
+        5\
     }
   #else
     #define RT_CANX_CONFIG_DEFAULT         \
@@ -85,6 +146,11 @@ struct canx_configure
     // rt_bool_t 延迟补偿
   #endif /* RT_CANX_USING_FD */
     canx_res_config termination_resistor;
+    rt_size_t num_of_rx_buf;
+    rt_uint8_t rx_event_fifo_coef;
+
+    rt_size_t num_of_tx_buf;
+    rt_uint8_t tx_event_fifo_coef;
 };
 
 typedef enum
@@ -93,11 +159,7 @@ typedef enum
   kOpenCanFd,
 }OpenCanFrameFmt;
 
-typedef enum
-{
-  kOpenCanSend,
-  kOpenCanRecv,
-}OpenCanMsgDirEnum;
+
 
 typedef enum
 {
@@ -110,10 +172,13 @@ struct rt_canx_device
     struct rt_device  parent;
     const struct rt_canx_ops *ops;
     struct canx_configure config;
+
+    void *canx_rx;
+    void *canx_tx;
 };
 typedef struct rt_canx_device* rt_canx_t;
 
-struct rt_canx_msg
+struct rt_canx_header
 {
     rt_uint32_t id  : 29;
     rt_uint32_t rtr:1;//远程帧标志，canfd取消
@@ -128,7 +193,32 @@ struct rt_canx_msg
     rt_uint32_t ovr:1;//用户没有读数据，中断直接重写buf了
 
     rt_uint32_t :24;//可以用来放user data
-    rt_uint8_t data[64];//灵活数组
+};
+
+struct rt_canx_msg
+{
+    struct rt_canx_header header;
+    rt_uint8_t data[64];
+};
+
+struct rt_canx_rx_fifo
+{
+    rt_size_t rxrbnum;
+    struct rt_ringbuffer * rxrb[];
+};
+
+struct rt_canx_tx_buf
+{
+    struct rt_canx_header header;//存对比用的id之类的信息
+    struct rt_ringbuffer * txrb;
+    struct rt_completion completion;//发送完成信号
+};
+
+struct rt_canx_tx_fifo
+{
+    rt_size_t txrbnum;
+    struct rt_canx_tx_buf txbuf[];
+    // struct rt_ringbuffer * txrb[];
 };
 
 struct rt_canx_ops
