@@ -26,11 +26,17 @@ extern "C" {
 
 typedef enum
 {
+    kOpenCanStdId,
+    kOpenCanExtId,
+}OpenCanIdType;
+
+typedef enum
+{
   kOpenCanSend,
   kOpenCanRecv,
 }OpenCanMsgDirEnum;
 
-    //fdf brs ide    id      send/recv   dlc cyc 
+    //fdf brs ide    id   send/recv  framelen cyc 
 #define CAN_MSG_MATRIX \
     Y(1,  1,  0,  0x083,  kOpenCanRecv, 8,  10  )   \
     Y(1,  1,  0,  0x0A2,  kOpenCanRecv, 8,  20  )   \
@@ -67,19 +73,43 @@ typedef enum
     Y(1,  1,  0,  0x749,  kOpenCanSend, 8,  0   )   \
     Y(1,  1,  0,  0x7DF,  kOpenCanRecv, 8,  0   )
 
-#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
-  (((dir==kOpenCanRecv))?1:0)+
-enum { 
-    kRxFifoNum =  CAN_MSG_MATRIX 0
-};
-#undef Y
+enum{
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((dir==kOpenCanSend)&&(cycle!=0))?1:0)+
+    kTxCycMsgNum = CAN_MSG_MATRIX 0,//发送周期报文数量
+  #undef Y
 
-#define Y(fdf,brs,id_type,id,dir,dlc,cycle) \
-  (((dir==kOpenCanSend))?1:0)+
-enum { 
-    kTxFifoNum =  CAN_MSG_MATRIX 0
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((dir==kOpenCanSend)&&(cycle==0))?1:0)+
+    kTxEvnMsgNum = CAN_MSG_MATRIX 0,//发送事件报文数量
+  #undef Y
+
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((dir==kOpenCanSend)&&(cycle==0))?1:0)|
+    kIsTxEvnMsg = CAN_MSG_MATRIX 0,//是否有发送事件报文
+  #undef Y
+
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((ide==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle!=0))?1:0)+
+    kRxCycExtMsgNum = CAN_MSG_MATRIX 0,//接收周期扩展报文数量
+  #undef Y
+
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((ide==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0))?1:0)+
+    kRxEvnExtMsgNum  = CAN_MSG_MATRIX 0,//接收事件扩展报文数量
+  #undef Y
+
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((ide==kOpenCanExtId)&&(dir==kOpenCanRecv)&&(cycle==0))?1:0)|
+    kIsRxEvnExtMsg = CAN_MSG_MATRIX 0,//是否有接收周期扩展报文
+  #undef Y
+
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((ide==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle!=0))?1:0)+
+    kRxCycStdMsgNum = CAN_MSG_MATRIX 0,//接收周期标准报文数量
+  #undef Y
+
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((ide==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0))?1:0)+
+    kRxEvnStdMsgNum  = CAN_MSG_MATRIX 0,//接收事件标准报文数量
+  #undef Y
+
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((ide==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0))?1:0)|
+    kIsRxEvnStdMsg = CAN_MSG_MATRIX 0,//是否有接收周期标准报文
+  #undef Y
 };
-#undef Y
 
 #ifdef RT_CANX_USING_FD
   #ifdef RT_CANX_CALC_BITTIMING
@@ -91,9 +121,9 @@ enum {
         8000},          /* 80.00% */        \
         RT_TRUE,\
         1,\
-        kRxFifoNum,\
+        kRxCycExtMsgNum+kRxCycStdMsgNum+kIsRxEvnExtMsg+kIsRxEvnStdMsg,\
         5,\
-        kTxFifoNum,\
+        kTxCycMsgNum+kIsTxEvnMsg,\
         5\
     }
   #else
@@ -152,20 +182,6 @@ struct canx_configure
     rt_size_t num_of_tx_buf;
     rt_uint8_t tx_event_fifo_coef;
 };
-
-typedef enum
-{
-  kOpenCanClassic,
-  kOpenCanFd,
-}OpenCanFrameFmt;
-
-
-
-typedef enum
-{
-    kOpenCanStdId,
-    kOpenCanExtId,
-}OpenCanIdType;
 
 struct rt_canx_device
 {
