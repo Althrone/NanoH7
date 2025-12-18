@@ -199,6 +199,20 @@ RT_WEAK void rt_hw_board_init()
 #endif
 
     #include "SEGGER_RTT.h"
+    for (size_t i = 0; i < sizeof(_SEGGER_RTT); i++)
+    {
+        ((uint8_t*)&_SEGGER_RTT)[i] = 0;
+    }
+    for (size_t i = 0; i < BUFFER_SIZE_UP; i++)
+    {
+        _acUpBuffer[i] = 0;
+    }
+    for (size_t i = 0; i < BUFFER_SIZE_DOWN; i++)
+    {
+        _acDownBuffer[i] = 0;
+    }
+    
+    
     SEGGER_RTT_Init();
 
     // while(1)

@@ -393,6 +393,15 @@
 // #define BSP_USING_USB_TO_USART
 
 /* On-chip Peripheral Drivers */
+#define PKG_USING_SYSTEMVIEW
+#define PKG_SYSVIEW_APP_NAME "RT-Thread Trace"
+#define SYSVIEW_DEVICE_NAME     "Cortex-M7"
+#define RT_VERSION_CHECK(a,b,c) ((a * 10000) + (b * 100) + c)
+#define PKG_SYSVIEW_SYSDESC0       "I#15=SysTick"
+#define PKG_SYSVIEW_SYSDESC1       ""
+#define PKG_SYSVIEW_SYSDESC2       ""
+#define PKG_SYSVIEW_RAM_BASE        (0x20000000)
+#define PKG_SYSVIEW_EVENTID_OFFSET  (32u)
 
 #define BSP_USING_UART1
 #define BSP_USING_UART2

@@ -416,9 +416,9 @@ static bool _SearchSduIndex(struct rt_canx_msg* rx_can_msg,size_t* sdu_index){
     size_t j = 0;
     for (; j < kg_num_of_canid_lut; j++)
     {
-        if(rx_can_msg->id == g_n_canid_lut_tbl[j].can_id)
+        if(rx_can_msg->header.id == g_n_canid_lut_tbl[j].can_id)
         {
-            N_TAtypeEnum temp_ta_type=(rx_can_msg->ide<<2)|(rx_can_msg->fdf<<1)+1;
+            N_TAtypeEnum temp_ta_type=(rx_can_msg->header.ide<<2)|(rx_can_msg->header.fdf<<1)+1;
             if((temp_ta_type==g_n_canid_lut_tbl[j].N_AI.N_TAtype)||
                (temp_ta_type+1==g_n_canid_lut_tbl[j].N_AI.N_TAtype))
             {
@@ -512,33 +512,33 @@ static void _CreatTxHead(N_SDU* p_n_sdu,struct rt_canx_msg* tx_head)
     uint32_t temp_can_id=0;
     if(!_SearchCanIdFromSdu(p_n_sdu,&temp_can_id))
         return;
-    tx_head->id=temp_can_id;
-    tx_head->rtr=0;//不使用
+    tx_head->header.id=temp_can_id;
+    tx_head->header.rtr=0;//不使用
     switch (temp_n_tatype)
     {
     //普通11位can
     case kPhyCanBaseFmt:
     case kFuncCanBaseFmt:
-        tx_head->ide=0;
-        tx_head->fdf=0;
+        tx_head->header.ide=0;
+        tx_head->header.fdf=0;
         break;
     //11位canfd
     case kPhyCanFdBaseFmt:
     case kFuncCanFdBaseFmt:
-        tx_head->ide=0;
-        tx_head->fdf=1;
+        tx_head->header.ide=0;
+        tx_head->header.fdf=1;
         break;
     //29位can
     case kPhyCanExtFmt:
     case kFuncCanExtFmt:
-        tx_head->ide=1;
-        tx_head->fdf=0;
+        tx_head->header.ide=1;
+        tx_head->header.fdf=0;
         break;
     //29位canfd
     case kPhyCanFdExtFmt:
     case kFuncCanFdExtFmt:
-        tx_head->ide=1;
-        tx_head->fdf=1;
+        tx_head->header.ide=1;
+        tx_head->header.fdf=1;
         break;
     default:
         while(1);
@@ -558,11 +558,11 @@ static N_ResultEnum _Idle(N_SDU* p_n_sdu){
         struct rt_canx_msg peek_rx_msg;
         rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8);//获取rt_canx_msg的头
 
-        if(rt_ringbuffer_data_len(p_n_sdu->datalink_rb)<DLCtoBytes[peek_rx_msg.dlc])
+        if(rt_ringbuffer_data_len(p_n_sdu->datalink_rb)<DLCtoBytes[peek_rx_msg.header.dlc])
             while(1);//////////////////////等待？？？一般来说不会出现这种情况
 
         //将头+data[dlc]的整个包读出来
-        rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8+DLCtoBytes[peek_rx_msg.dlc]);
+        rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8+DLCtoBytes[peek_rx_msg.header.dlc]);
 
         //N_PCItype is the high nibble of N_PCI byte (Byte #1)
         uint8_t n_pci_type=peek_rx_msg.data[0+(p_n_sdu->Mtype|p_n_sdu->N_UserExt.is_extended)]>>4;
@@ -579,7 +579,7 @@ static N_ResultEnum _Idle(N_SDU* p_n_sdu){
             break;
         default:
             //丢弃这一段数据
-            rt_ringbuffer_get(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8+DLCtoBytes[peek_rx_msg.dlc]);
+            rt_ringbuffer_get(p_n_sdu->datalink_rb,(uint8_t*)&peek_rx_msg,8+DLCtoBytes[peek_rx_msg.header.dlc]);
             p_n_sdu->l_recv_ind=false;
             return N_UNEXP_PDU;//Ignore Frame
             break;
@@ -685,10 +685,10 @@ static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
     struct rt_canx_msg rx_msg;
     rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
     //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
 
     uint8_t temp_sf_dl=1;//SF_DL最小的有效值
-    uint8_t CAN_DL=DLCtoBytes[rx_msg.dlc];
+    uint8_t CAN_DL=DLCtoBytes[rx_msg.header.dlc];
 
     uint8_t N_PCI_bytes_offset=0;
     if(temp_is_remote_diagnostics||temp_is_extended)//带N_AE或者N_TA在第一字节的can帧
@@ -772,7 +772,7 @@ static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
                 {NULL,NULL,NULL,1,2,3,4,5,6} //Mixed or extended
             };
 
-            if(temp_sf_dl!=table12[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc])
+            if(temp_sf_dl!=table12[temp_is_remote_diagnostics|temp_is_extended][rx_msg.header.dlc])
             {
                 p_n_sdu->sm.event=kFinishEvent;
                 return N_UNEXP_PDU;
@@ -804,8 +804,8 @@ static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
         };
 
         //根据 Mtype is_extended dlc 找到对应的元素，要求SF_DL在元素结构体的范围内
-        if(table13[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc-9].SF_DL_min>temp_sf_dl ||
-        table13[temp_is_remote_diagnostics|temp_is_extended][rx_msg.dlc-9].SF_DL_max<temp_sf_dl )
+        if(table13[temp_is_remote_diagnostics|temp_is_extended][rx_msg.header.dlc-9].SF_DL_min>temp_sf_dl ||
+        table13[temp_is_remote_diagnostics|temp_is_extended][rx_msg.header.dlc-9].SF_DL_max<temp_sf_dl )
         {
             p_n_sdu->sm.event=kFinishEvent;
             return N_UNEXP_PDU;
@@ -854,7 +854,7 @@ static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
     struct rt_canx_msg tx_msg;
     _CreatTxHead(p_n_sdu,&tx_msg);
     
-    tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
+    tx_msg.header.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
     // tx_msg.esi=不配置
     // tx_msg.dlc=下面决定
 
@@ -871,13 +871,13 @@ static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
             if(temp_is_padding)
             {
                 //发送8字节的单帧
-                tx_msg.dlc=8;
+                tx_msg.header.dlc=8;
                 memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,8-2-temp_sf_dl);
             }
             else
             {
                 //发送temp_sf_dl+2的单帧
-                tx_msg.dlc=temp_sf_dl+2;//一字节N_TA或者N_AE 一字节pci
+                tx_msg.header.dlc=temp_sf_dl+2;//一字节N_TA或者N_AE 一字节pci
             }
         }
         else//temp_sf_dl>6
@@ -888,14 +888,14 @@ static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
             if(temp_is_padding)
             {
                 //填充到tx_DL的长度发送单帧
-                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                tx_msg.header.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
                 memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,p_n_sdu->TX_DL-3-temp_sf_dl);
             }
             else
             {
                 //强制填充到tx_dl以内支持的最小的可容纳此帧的dlc的长度发送单帧
-                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+3);//一字节N_TA或者N_AE 半字节帧类型 一个半字节SF_DL转义
-                memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-3-temp_sf_dl);
+                tx_msg.header.dlc=Bytes2ShortestDLC(temp_sf_dl+3);//一字节N_TA或者N_AE 半字节帧类型 一个半字节SF_DL转义
+                memset(&tx_msg.data[3+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.header.dlc]-3-temp_sf_dl);
             }
         }
     }
@@ -908,13 +908,13 @@ static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
             if(temp_is_padding)
             {
                 //发送8字节的单帧
-                tx_msg.dlc=8;
+                tx_msg.header.dlc=8;
                 memset(&tx_msg.data[1+temp_sf_dl],p_n_sdu->padding_val,8-1-temp_sf_dl);
             }
             else
             {
                 //发送temp_sf_dl+1的单帧
-                tx_msg.dlc=temp_sf_dl+1;
+                tx_msg.header.dlc=temp_sf_dl+1;
             }
         }
         else//temp_sf_dl>7
@@ -925,14 +925,14 @@ static N_ResultEnum _TxSf(N_SDU* p_n_sdu){
             if(temp_is_padding)
             {
                 //填充到tx_DL的长度发送单帧
-                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                tx_msg.header.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
                 memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,p_n_sdu->TX_DL-2-temp_sf_dl);
             }
             else
             {
                 //强制填充到最小的dlc的长度发送单帧
-                tx_msg.dlc=Bytes2ShortestDLC(temp_sf_dl+2);//半字节帧类型 一个半字节SF_DL转义
-                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-2-temp_sf_dl);
+                tx_msg.header.dlc=Bytes2ShortestDLC(temp_sf_dl+2);//半字节帧类型 一个半字节SF_DL转义
+                memset(&tx_msg.data[2+temp_sf_dl],p_n_sdu->padding_val,DLCtoBytes[tx_msg.header.dlc]-2-temp_sf_dl);
             }
         }
     }
@@ -996,13 +996,13 @@ static N_ResultEnum _RxFf(N_SDU* p_n_sdu){
     struct rt_canx_msg rx_msg;
     rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
     //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
 
     // 9.6.3.2 FF_DL error handling
 
     /*If the network layer receives an N_PDU indicating a FirstFrame and 
       CAN_DL < 8, then the network layer shall ignore the FF N_PDU*/
-    uint8_t CAN_DL=DLCtoBytes[rx_msg.dlc];
+    uint8_t CAN_DL=DLCtoBytes[rx_msg.header.dlc];
     if(CAN_DL<8)
     {
         p_n_sdu->sm.event=kFinishEvent;
@@ -1231,7 +1231,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
     struct rt_canx_msg rx_msg;
     rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
     //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
 
     /* The payload data length CAN_DL of the received CAN frame has to match 
        the RX_DL value which was determined in the reception process of the 
@@ -1243,7 +1243,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
     {
         if(p_n_sdu->is_padding)//填充模式
         {
-            if(DLCtoBytes[rx_msg.dlc]!=8)
+            if(DLCtoBytes[rx_msg.header.dlc]!=8)
             {
                 //ignore frame
                 p_n_sdu->sm.event=kFinishEvent;
@@ -1257,7 +1257,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
                 size_t remaining_length=p_n_sdu->Length-p_n_sdu->msg_index;
                 if(remaining_length<=(8-2))//剩余长度<=6
                 {
-                    if(DLCtoBytes[rx_msg.dlc]!=remaining_length+2)
+                    if(DLCtoBytes[rx_msg.header.dlc]!=remaining_length+2)
                     {
                         //ignore frame
                         p_n_sdu->sm.event=kFinishEvent;
@@ -1270,7 +1270,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
                 size_t remaining_length=p_n_sdu->Length-p_n_sdu->msg_index;
                 if(remaining_length<=(8-1))//剩余长度<=7
                 {
-                    if(DLCtoBytes[rx_msg.dlc]!=remaining_length+1)
+                    if(DLCtoBytes[rx_msg.header.dlc]!=remaining_length+1)
                     {
                         //ignore frame
                         p_n_sdu->sm.event=kFinishEvent;
@@ -1282,7 +1282,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
     }
     else//can fd only
     {
-        if(DLCtoBytes[rx_msg.dlc]!=p_n_sdu->RX_DL)
+        if(DLCtoBytes[rx_msg.header.dlc]!=p_n_sdu->RX_DL)
         {
             //ignore frame
             p_n_sdu->sm.event=kFinishEvent;
@@ -1328,9 +1328,9 @@ static N_ResultEnum _TxFf(N_SDU* p_n_sdu){
     struct rt_canx_msg tx_msg;
     _CreatTxHead(p_n_sdu,&tx_msg);
     
-    tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
+    tx_msg.header.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
     // tx_msg.esi=不配置
-    tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);//首帧的dlc长度永远是tp层定义的最大发送长度
+    tx_msg.header.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);//首帧的dlc长度永远是tp层定义的最大发送长度
 
     if(temp_is_extended||temp_is_remote_diagnostics)//带N_TA或者N_AE
     {
@@ -1425,7 +1425,7 @@ static N_ResultEnum _RxFc(N_SDU* p_n_sdu){
     struct rt_canx_msg rx_msg;
     rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
     //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.dlc]);
+    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
 
     //9.6.5.2 FlowStatus (FS) error handling
 
@@ -1541,7 +1541,7 @@ static N_ResultEnum _TxCf(N_SDU* p_n_sdu){
     struct rt_canx_msg tx_msg;
     _CreatTxHead(p_n_sdu,&tx_msg);
     
-    tx_msg.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
+    tx_msg.header.brs=1;//从帧配置来决定，一般来说canfd都开了这个东西，can配了也没用
     // tx_msg.esi=不配置
 
     // 从需要剩余的msg长度决定dlc长度
@@ -1557,7 +1557,7 @@ static N_ResultEnum _TxCf(N_SDU* p_n_sdu){
 
         if(remaining_length>p_n_sdu->TX_DL-2)//还有后续的续帧
         {
-            tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+            tx_msg.header.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
             memcpy(&tx_msg.data[2],p_n_sdu->MessageData+p_n_sdu->msg_index,p_n_sdu->TX_DL-2);
             p_n_sdu->msg_index+=p_n_sdu->TX_DL-2;
             if(p_n_sdu->BS_cnt==p_n_sdu->BS)
@@ -1577,16 +1577,16 @@ static N_ResultEnum _TxCf(N_SDU* p_n_sdu){
         {
             if(temp_is_padding)
             {
-                tx_msg.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
+                tx_msg.header.dlc=Bytes2ShortestDLC(p_n_sdu->TX_DL);
                 memcpy(&tx_msg.data[2],p_n_sdu->MessageData+p_n_sdu->msg_index,remaining_length);
                 memset(&tx_msg.data[2+remaining_length],p_n_sdu->padding_val,p_n_sdu->TX_DL-2-remaining_length);
             }
             else
             {
-                tx_msg.dlc=Bytes2ShortestDLC(remaining_length);
+                tx_msg.header.dlc=Bytes2ShortestDLC(remaining_length);
                 memcpy(&tx_msg.data[2],p_n_sdu->MessageData+p_n_sdu->msg_index,remaining_length);
                 //强制填充到支持的最短的帧的长度
-                memset(&tx_msg.data[2+remaining_length],p_n_sdu->padding_val,DLCtoBytes[tx_msg.dlc]-2-remaining_length);
+                memset(&tx_msg.data[2+remaining_length],p_n_sdu->padding_val,DLCtoBytes[tx_msg.header.dlc]-2-remaining_length);
             }
             
         }

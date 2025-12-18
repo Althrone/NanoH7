@@ -112,7 +112,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
     struct stm32_mcan *mcan;
     RT_ASSERT(hfdcan != NULL);
-    mcan = (struct stm32_uart *)hfdcan;
+    mcan = (struct stm32_mcan*)hfdcan;
 
     if(hfdcan->Instance==FDCAN1)
     {
@@ -129,7 +129,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 {
     struct stm32_mcan *mcan;
     RT_ASSERT(hfdcan != NULL);
-    mcan = (struct stm32_uart *)hfdcan;
+    mcan = (struct stm32_mcan*)hfdcan;
 
     if(hfdcan->Instance==FDCAN1)
     {
@@ -146,7 +146,7 @@ void HAL_FDCAN_RxBufferNewMessageCallback(FDCAN_HandleTypeDef *hfdcan)
 {
     struct stm32_mcan *mcan;
     RT_ASSERT(hfdcan != NULL);
-    mcan = (struct stm32_uart *)hfdcan;
+    mcan = (struct stm32_mcan*)hfdcan;
 
     if(hfdcan->Instance==FDCAN1)
     {
@@ -174,7 +174,7 @@ void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorSt
 {
     struct stm32_mcan *mcan;
     RT_ASSERT(hfdcan != NULL);
-    mcan = (struct stm32_uart *)hfdcan;
+    mcan = (struct stm32_mcan*)hfdcan;
 
     if(hfdcan->Instance==FDCAN1)
     {
@@ -199,7 +199,7 @@ void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
 {
     struct stm32_mcan *mcan;
     RT_ASSERT(hfdcan != NULL);
-    mcan = (struct stm32_uart *)hfdcan;
+    mcan = (struct stm32_mcan*)hfdcan;
 
     if(hfdcan->Instance==FDCAN1)
     {
@@ -215,7 +215,7 @@ void HAL_FDCAN_TxBufferCompleteCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t Bu
 {
     struct stm32_mcan *mcan;
     RT_ASSERT(hfdcan != NULL);
-    mcan = (struct stm32_uart *)hfdcan;
+    mcan = (struct stm32_mcan*)hfdcan;
 
     if(hfdcan->Instance==FDCAN1)
     {
@@ -227,7 +227,7 @@ void HAL_FDCAN_TxBufferAbortCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t Buffe
 {
     struct stm32_mcan *mcan;
     RT_ASSERT(hfdcan != NULL);
-    mcan = (struct stm32_uart *)hfdcan;
+    mcan = (struct stm32_mcan*)hfdcan;
 
     if(hfdcan->Instance==FDCAN1)
     {
@@ -307,6 +307,8 @@ static rt_err_t _inline_canx_control(struct rt_canx_device *canx, int cmd, void 
     default:
         break;
     }
+
+    return RT_EOK;
 }
 
 static int _inline_canx_recvmsg(struct rt_canx_device *canx, void *buf, rt_uint32_t boxno)
@@ -948,6 +950,8 @@ int rt_hw_mcan_init(void)
         s_mcan_obj[i].canx.config=config;
         rt_hw_canx_register(&s_mcan_obj[i].canx, s_mcan_obj[i].config->name, &s_mcan_ops, RT_NULL);
     }
+
+    return 0;
 }
 // INIT_BOARD_EXPORT(rt_hw_mcan_init);
 

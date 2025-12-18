@@ -182,7 +182,7 @@ rt_inline int _canx_int_rx(struct rt_canx_device *canx, rt_uint8_t *data, rt_siz
             return 0;
 
         //从ringbuf中取出数据
-        rt_ringbuffer_get(&rx_fifo->rxrb[i], data, DLCtoBytes[peek_msg.header.dlc]);
+        rt_ringbuffer_get(rx_fifo->rxrb[i], data, DLCtoBytes[peek_msg.header.dlc]);
         
         rt_hw_interrupt_enable(level);
 
@@ -240,7 +240,7 @@ static rt_err_t rt_canx_init(struct rt_device *dev)
 
     /* apply configuration */
     if (canx->ops->configure)
-        result = canx->ops->configure(canx, &canx->config);
+        result = canx->ops->configure(canx, &(canx->config));
     else
         result = -RT_ENOSYS;
 

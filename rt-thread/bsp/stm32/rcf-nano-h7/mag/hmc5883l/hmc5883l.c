@@ -22,6 +22,7 @@ rt_size_t hmc5883l_get_raw_data(struct rt_sensor_device *sensor,struct hmc5883l_
 
     struct rt_i2c_bus_device *bus;
     // rt_i2c_master_send();
+    return RT_EOK;
 }
 
 

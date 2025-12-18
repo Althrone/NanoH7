@@ -124,6 +124,7 @@ rt_uint32_t data1[16]={188,94,250,188,94,94,94,94,188,188,188,188,188,188,188};
 int main(void)
 {
     //dsplib测试
+    SEGGER_SYSVIEW_Start();
     float32_t a=arm_sin_f32(PI/2);
 
     HAL_CRC_Init(&hcrc);

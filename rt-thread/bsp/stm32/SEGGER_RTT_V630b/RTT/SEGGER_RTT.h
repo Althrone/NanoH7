@@ -129,6 +129,8 @@ typedef struct {
 **********************************************************************
 */
 extern SEGGER_RTT_CB _SEGGER_RTT;
+extern char _acUpBuffer[];
+extern char _acDownBuffer[];
 
 /*********************************************************************
 *

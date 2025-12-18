@@ -180,6 +180,8 @@ SECTIONS
   .segger_rtt :
   {
     . = ALIGN(4);
+    *(.segger_rtt)
+    *(.segger_rtt*)
     . = ALIGN(4);
   } >DTCMRAM
 

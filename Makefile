@@ -222,6 +222,7 @@ link:
 	-f target/$(OCD_CHIP_FILE) \
 	-c init \
 	-c "rtt server start 8765 0" \
+	-c "rtt server start 19111 1" \
 	-c "rtt setup 0x20000000 0x20000 \"SEGGER RTT\"" \
 	-c "rtt start"
 
