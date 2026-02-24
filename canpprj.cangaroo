@@ -1,0 +1,24 @@
+<cangaroo-workspace>
+ <tabs>
+  <tab title="Trace" TimestampMode="2" mode="aggregated" type="TraceWindow">
+   <LinearTraceView AutoScroll="0"/>
+   <AggregatedTraceView SortColumn="-1"/>
+  </tab>
+  <tab title="Trace" TimestampMode="2" mode="aggregated" type="TraceWindow">
+   <LinearTraceView AutoScroll="0"/>
+   <AggregatedTraceView SortColumn="-1"/>
+  </tab>
+  <tab title="Trace" TimestampMode="2" mode="aggregated" type="TraceWindow">
+   <LinearTraceView AutoScroll="0"/>
+   <AggregatedTraceView SortColumn="-1"/>
+  </tab>
+ </tabs>
+ <setup>
+  <network name="Network 1">
+   <interfaces>
+    <interface name="COM7" configure="1" can-fd="0" auto-restart-time="100" sample-point-fd="875" driver="CANable SLCAN" bitrate-fd="4000000" triple-sampling="0" bitrate="1000000" auto-restart="0" listen-only="0" type="can" one-shot="0" sample-point="875"/>
+   </interfaces>
+   <databases/>
+  </network>
+ </setup>
+</cangaroo-workspace>

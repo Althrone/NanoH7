@@ -124,7 +124,7 @@ rt_uint32_t data1[16]={188,94,250,188,94,94,94,94,188,188,188,188,188,188,188};
 int main(void)
 {
     //dsplib测试
-    SEGGER_SYSVIEW_Start();
+    // SEGGER_SYSVIEW_Start();
     float32_t a=arm_sin_f32(PI/2);
 
     HAL_CRC_Init(&hcrc);
@@ -150,7 +150,7 @@ int main(void)
     HAL_TIM_PWM_Start_DMA(extern_tim_handle,TIM_CHANNEL_4,data1,16);
 
     rt_thread_t t=rt_thread_create("can_thread",can_thread_entry,
-                                  RT_NULL,1024,5,5);
+                                  RT_NULL,1024*10,5,5);
     if(t != RT_NULL) rt_thread_startup(t);
 
     rt_thread_t t1=rt_thread_create("imu_get_data",imu_data_thrd,
@@ -340,13 +340,14 @@ FDCAN_HandleTypeDef hfdcan={
     .Init.ProtocolException=DISABLE,
     //波特率1m 5m
     .Init.NominalPrescaler=5,
-    .Init.NominalSyncJumpWidth=8,
+    .Init.NominalSyncJumpWidth=1,
     .Init.NominalTimeSeg1=15,
     .Init.NominalTimeSeg2=4,
-    .Init.DataPrescaler=1,
-    .Init.DataSyncJumpWidth=8,
-    .Init.DataTimeSeg1=15,
-    .Init.DataTimeSeg2=4,
+
+    .Init.DataPrescaler=2,
+    .Init.DataSyncJumpWidth=1,
+    .Init.DataTimeSeg1=19,
+    .Init.DataTimeSeg2=5,
     //msg ram
     .Init.MessageRAMOffset=0,
     .Init.StdFiltersNbr=1,
@@ -393,14 +394,14 @@ void can_thread_entry(void *parameter)
     rt_pin_mode(GET_PIN(D,4),PIN_MODE_OUTPUT);
     rt_pin_write(GET_PIN(D,4),PIN_LOW);//can收发器使能
 
-    // static rt_device_t can_dev;
-    // volatile rt_err_t ret;
-    // can_dev=rt_device_find("fdcan1");
-    // /* 以中断接收及发送模式打开 CAN 设备 */
-    // ret=rt_device_open(can_dev, RT_DEVICE_FLAG_INT_TX | RT_DEVICE_FLAG_INT_RX);
+    static rt_device_t can_dev;
+    volatile rt_err_t ret;
+    can_dev=rt_device_find("mcan1");
+    /* 以中断接收及发送模式打开 CAN 设备 */
+    ret=rt_device_open(can_dev, RT_DEVICE_FLAG_INT_TX | RT_DEVICE_FLAG_INT_RX);
 
-    // /* 设置 CAN 的工作模式为正常工作模式 */
-    // ret = rt_device_control(can_dev, RT_CAN_CMD_SET_MODE, (void *)RT_CAN_MODE_NORMAL);
+    /* 设置 CAN 的工作模式为正常工作模式 */
+    ret = rt_device_control(can_dev, RT_CAN_CMD_SET_MODE, (void *)RT_CAN_MODE_NORMAL);
 
     // // RT_CAN_MODE_LOOPBACK
     // static struct rt_can_status status;    /* 获取到的 CAN 总线状态 */
@@ -441,18 +442,18 @@ void can_thread_entry(void *parameter)
 
     //使用hal测试canfd功能
 
-    HAL_FDCAN_Init(&hfdcan);
-    HAL_FDCAN_ConfigFilter(&hfdcan,&sFilterConfig);
-    HAL_FDCAN_Start(&hfdcan);
+    // HAL_FDCAN_Init(&hfdcan);
+    // HAL_FDCAN_ConfigFilter(&hfdcan,&sFilterConfig);
+    // HAL_FDCAN_Start(&hfdcan);
 
-    while(1)
-    {
-        uint8_t data[64]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
-        0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
-        HAL_FDCAN_AddMessageToTxBuffer(&hfdcan,&TxHeader,data,FDCAN_TX_BUFFER0);
-        HAL_FDCAN_EnableTxBufferRequest(&hfdcan,FDCAN_TX_BUFFER0);
-        rt_thread_mdelay(500);	        
-    }
+    // while(1)
+    // {
+    //     uint8_t data[64]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
+    //     0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
+    //     HAL_FDCAN_AddMessageToTxBuffer(&hfdcan,&TxHeader,data,FDCAN_TX_BUFFER0);
+    //     HAL_FDCAN_EnableTxBufferRequest(&hfdcan,FDCAN_TX_BUFFER0);
+    //     rt_thread_mdelay(500);	        
+    // }
 }
 
 /* 消息队列控制块 */

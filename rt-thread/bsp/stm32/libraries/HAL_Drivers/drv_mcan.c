@@ -99,7 +99,7 @@ static const struct rt_canx_ops s_mcan_ops=
  *****************************************************************************/
 
 static rt_err_t _stm32_mcan_baud_cfg(FDCAN_HandleTypeDef* pmcan,struct canx_configure *cfg);
-static rt_err_t _stm32_mcan_msg_ram_cfg(FDCAN_HandleTypeDef* pmcan);
+static rt_err_t _stm32_mcan_msg_ram_cfg(FDCAN_HandleTypeDef* pmcan,struct canx_configure *cfg);
 static rt_err_t _stm32_mcan_filter_cfg(FDCAN_HandleTypeDef* pmcan);
 
 int find_bit_by_bsr(uint32_t value);
@@ -157,6 +157,7 @@ void HAL_FDCAN_RxBufferNewMessageCallback(FDCAN_HandleTypeDef *hfdcan)
             if(hfdcan->Instance->NDAT1&(1<<i))
             {
                 rt_hw_canx_isr(&mcan->canx,RT_CANX_EVENT_RX_IND|((FDCAN_RX_BUFFER0+i)<<8));
+                break;
             }
         }
         for (size_t i = 0; i < 32; i++)
@@ -164,6 +165,7 @@ void HAL_FDCAN_RxBufferNewMessageCallback(FDCAN_HandleTypeDef *hfdcan)
             if(hfdcan->Instance->NDAT2&(1<<i))
             {
                 rt_hw_canx_isr(&mcan->canx,RT_CANX_EVENT_RX_IND|((FDCAN_RX_BUFFER32+i)<<8));
+                break;
             }
         }
       #endif
@@ -265,6 +267,25 @@ void HAL_FDCAN_TxEventFifoCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t TxEvent
     }
 }
 #endif
+#if 1
+#ifdef BSP_USING_FDCAN1
+
+void FDCAN1_IT0_IRQHandler(void)             /* FDCAN2 interrupt line 0      */
+{
+	rt_interrupt_enter();
+	HAL_FDCAN_IRQHandler(&(s_mcan_obj[MCAN1_INDEX].hmcan));
+	rt_interrupt_leave();
+}
+
+void FDCAN1_IT1_IRQHandler(void)             /* FDCAN2 interrupt line 1      */
+{
+	rt_interrupt_enter();
+	HAL_FDCAN_IRQHandler(&(s_mcan_obj[MCAN1_INDEX].hmcan));
+	rt_interrupt_leave();
+}
+
+#endif /*BSP_USING_FDCAN1*/
+#endif
 /******************************************************************************
  * private functions definition
  *****************************************************************************/
@@ -298,7 +319,7 @@ static rt_err_t _inline_canx_control(struct rt_canx_device *canx, int cmd, void 
         //这三个应该丢去初始化
         HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_RX_BUFFER_NEW_MESSAGE, FDCAN_INTERRUPT_LINE0);
         HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_RX_FIFO0_NEW_MESSAGE, FDCAN_INTERRUPT_LINE0);
-        HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_RX_FIFO0_NEW_MESSAGE, FDCAN_INTERRUPT_LINE0);
+        HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_RX_FIFO1_NEW_MESSAGE, FDCAN_INTERRUPT_LINE0);
         //tx
         // HAL_FDCAN_ActivateNotification(&pmcan->hmcan,FDCAN_IT_TX_COMPLETE,);//开了几个buf就写几个
         //丢去初始化
@@ -400,7 +421,7 @@ static int _inline_canx_sendmsg(struct rt_canx_device *canx, const void *buf, rt
 static rt_err_t _inline_canx_configure(struct rt_canx_device *canx, struct canx_configure *cfg)
 {
     RT_ASSERT(canx);
-	RT_ASSERT(cfg);
+    RT_ASSERT(cfg);
 
     struct stm32_mcan *pmcan;
     pmcan = rt_container_of(canx, struct stm32_mcan, canx);
@@ -408,49 +429,39 @@ static rt_err_t _inline_canx_configure(struct rt_canx_device *canx, struct canx_
     //配置hal部分的参数
     pmcan->hmcan.Instance=pmcan->config->Instance;//外设基地址从mcan_config的宏传入
 
-    //通过can矩阵来判断是否有canfd帧
-  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) \
-           (((fdf==1))?1:0)|
-    rt_bool_t is_fd=CAN_MSG_MATRIX 0;
-  #undef Y
-    //通过can矩阵来判断是否有canfd帧使用BRS
-  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) \
-           (((brs==1))?1:0)|
-    rt_bool_t is_brs=CAN_MSG_MATRIX 0;
-  #undef Y
-
-  #ifndef RT_CANX_USING_FD
-    RT_ASSERT(is_fd);
-    pmcan->hmcan.Init.FrameFormat=FDCAN_FRAME_CLASSIC;
-  #else
-    if(is_brs)//根据can表的设置决定是否开启BRS
-        pmcan->hmcan.Init.FrameFormat=FDCAN_FRAME_FD_BRS;
+    if(cfg->is_fd)
+    {
+        if(cfg->is_brs)
+            pmcan->hmcan.Init.FrameFormat=FDCAN_FRAME_FD_BRS;
+        else
+            pmcan->hmcan.Init.FrameFormat=FDCAN_FRAME_FD_NO_BRS;
+    }
     else
-        pmcan->hmcan.Init.FrameFormat=FDCAN_FRAME_FD_NO_BRS;
-  #endif
-    
+        pmcan->hmcan.Init.FrameFormat=FDCAN_FRAME_CLASSIC;
+        
+
     pmcan->hmcan.Init.Mode=FDCAN_MODE_NORMAL;
 
-    pmcan->hmcan.Init.AutoRetransmission=DISABLE;
-    pmcan->hmcan.Init.TransmitPause=DISABLE;
-    pmcan->hmcan.Init.ProtocolException=DISABLE;
+    pmcan->hmcan.Init.AutoRetransmission=DISABLE;//自动重传
+    pmcan->hmcan.Init.TransmitPause=DISABLE;//传输暂停
+    pmcan->hmcan.Init.ProtocolException=DISABLE;//协议异常
 
     //波特率设置
     _stm32_mcan_baud_cfg(&pmcan->hmcan,cfg);
 
     //msg ram设置
-    _stm32_mcan_msg_ram_cfg(&pmcan->hmcan);
+    _stm32_mcan_msg_ram_cfg(&pmcan->hmcan,cfg);
+
+    if (HAL_FDCAN_Init(&pmcan->hmcan) != HAL_OK)
+    {
+        return -RT_ERROR;
+    }
 
     //过滤器配置
     _stm32_mcan_filter_cfg(&pmcan->hmcan);
 
-    if (HAL_FDCAN_Init(&pmcan->hmcan) != HAL_OK)
-	{
-		return -RT_ERROR;
-	}
-
     HAL_FDCAN_Start(&pmcan->hmcan);
-	return RT_EOK;
+    return RT_EOK;
 }
 
 /**
@@ -728,37 +739,50 @@ static rt_err_t _stm32_mcan_baud_cfg(FDCAN_HandleTypeDef* pmcan,struct canx_conf
     uint32_t seg1=0;
     uint32_t seg2=0;
   #ifdef RT_CANX_CALC_BITTIMING
-    //计算仲裁段波分频
-    uint32_t div_quotient =CAN_APB_CLOCK/cfg->nominal_baud.baud_rate;
-    uint32_t div_remainder=CAN_APB_CLOCK%cfg->nominal_baud.baud_rate;
-    //只有完全整除才往下跑
-    RT_ASSERT(div_remainder!=0);
 
-    div=div_quotient/100;//分频到100
-    RT_ASSERT((div_quotient%100)!=0);
+    //计算仲裁段波分频
+    uint32_t div_quotient =CAN_APB_CLOCK/cfg->nominal_baud.baud_rate;//商
+    uint32_t div_remainder=CAN_APB_CLOCK%cfg->nominal_baud.baud_rate;//余
+    
+    if(div_remainder==0)//完全整除
+    {
+        div=1;//最小分频精度最高
+    }
 
     //使用最小分频1，因此 num of tq=div_quotient/1
     //不考虑div_quotient是否超过SEG1+SEG2，这个应该是hal层写入寄存器的时候判断的
     uint32_t sp_quotient=div_quotient*cfg->nominal_baud.sample_point/10000;
     seg1=sp_quotient-1;//减去SyncSeg的一个tq
     seg2=div_quotient-sp_quotient;
-  #else
-    //按照cfg给定的参数写入
-  #endif
-    
+
     pmcan->Init.NominalPrescaler=div;
     pmcan->Init.NominalSyncJumpWidth=1;//比较严格
     pmcan->Init.NominalTimeSeg1=seg1;
     pmcan->Init.NominalTimeSeg2=seg2;
-  
-  #ifdef RT_CANX_USING_FD
-    #ifdef RT_CANX_CALC_BITTIMING
-        //todo
-    #endif
+
+    //计算数据段
+    div_quotient =CAN_APB_CLOCK/cfg->data_baud.baud_rate;//商
+    div_remainder=CAN_APB_CLOCK%cfg->data_baud.baud_rate;//余
+    if(div_remainder==0)//完全整除
+    {
+        div=2;//最小分频精度最高
+    }
+    sp_quotient=div_quotient*cfg->data_baud.sample_point/10000/div;
+    seg1=sp_quotient-1;//减去SyncSeg的一个tq
+    seg2=div_quotient/div-sp_quotient;
+
+    pmcan->Init.DataPrescaler=div;
+    pmcan->Init.DataSyncJumpWidth=1;//比较严格
+    pmcan->Init.DataTimeSeg1=seg1;
+    pmcan->Init.DataTimeSeg2=seg2;
+
+  #else
+    //按照cfg给定的参数写入
   #endif
+
 }
 
-static rt_err_t _stm32_mcan_msg_ram_cfg(FDCAN_HandleTypeDef* pmcan)
+static rt_err_t _stm32_mcan_msg_ram_cfg(FDCAN_HandleTypeDef* pmcan,struct canx_configure *cfg)
 {
     if(pmcan->Instance==FDCAN1)
     {
@@ -790,9 +814,9 @@ static rt_err_t _stm32_mcan_msg_ram_cfg(FDCAN_HandleTypeDef* pmcan)
                          pmcan->Init.TxBuffersNbr*pmcan->Init.TxElmtSize+
                          pmcan->Init.TxEventsNbr;
         uint16_t remain_size=2560-fixsize;//按word计算
-        uint16_t coef=remain_size/(pmcan->Init.RxFifo0ElmtsNbr+pmcan->Init.RxFifo0ElmtSize+
-                                   pmcan->Init.RxFifo1ElmtsNbr+pmcan->Init.RxFifo1ElmtSize+
-                                   pmcan->Init.TxFifoQueueElmtsNbr+pmcan->Init.TxElmtSize);
+        uint16_t coef=remain_size/(pmcan->Init.RxFifo0ElmtsNbr*pmcan->Init.RxFifo0ElmtSize+
+                                   pmcan->Init.RxFifo1ElmtsNbr*pmcan->Init.RxFifo1ElmtSize+
+                                   pmcan->Init.TxFifoQueueElmtsNbr*pmcan->Init.TxElmtSize);
 
         if(coef*pmcan->Init.RxFifo0ElmtsNbr>64)
             pmcan->Init.RxFifo0ElmtsNbr=64;
@@ -838,11 +862,12 @@ static rt_err_t _stm32_mcan_msg_ram_cfg(FDCAN_HandleTypeDef* pmcan)
 
 static rt_err_t _stm32_mcan_filter_cfg(FDCAN_HandleTypeDef* pmcan)
 {
-    FDCAN_FilterTypeDef sFilterConfig[kRxCycStdMsgNum+kIsRxEvnStdMsg+kRxCycExtMsgNum+kIsRxEvnExtMsg];
+    FDCAN_FilterTypeDef sFilterConfig[kRxCycStdMsgNum+kIsRxEvnStdMsg+kRxCycExtMsgNum+kIsRxEvnExtMsg]={0};
     rt_uint8_t i=0;//一次配置完后需要归零
     rt_uint8_t std_filt_index=0;
     rt_uint8_t ext_filt_index=0;
     rt_uint8_t rx_buf_index=0;
+
 
     //处理周期报文
 
@@ -866,20 +891,42 @@ static rt_err_t _stm32_mcan_filter_cfg(FDCAN_HandleTypeDef* pmcan)
     #undef Y
 
     //计算事件报文的mask
-    uint32_t std_filter;
-    uint32_t std_mask;
-    _mcan1_get_event_msg_classic_filter(&std_filter,&std_mask);
-    sFilterConfig[i].IdType=FDCAN_STANDARD_ID;
-    sFilterConfig[i].FilterIndex=std_filt_index;
-    sFilterConfig[i].FilterType=FDCAN_FILTER_MASK;
-    sFilterConfig[i].FilterConfig=FDCAN_FILTER_TO_RXFIFO0;
-    sFilterConfig[i].FilterID1=std_filter;
-    sFilterConfig[i].FilterID2=std_mask;
-    sFilterConfig[i].RxBufferIndex=rx_buf_index;
-    sFilterConfig[i].IsCalibrationMsg=0;
-    i++;
-    std_filt_index++;
-    rx_buf_index++;
+    if(kIsRxEvnStdMsg)
+    {
+        uint32_t std_filter;
+        uint32_t std_mask;
+        sFilterConfig[i].IdType=FDCAN_STANDARD_ID;
+        sFilterConfig[i].FilterIndex=std_filt_index;
+        if(kRxEvnStdMsgNum==2)
+        {
+            sFilterConfig[i].FilterType=FDCAN_FILTER_DUAL;
+            uint32_t temp_id[2];
+            uint8_t temp_id_index=0;
+            #define Y(fdf,brs,ide,id,dir,frame_len,cycle) \
+            if((ide==kOpenCanStdId)&&(dir==kOpenCanRecv)&&(cycle==0)){\
+                temp_id[temp_id_index]=id;\
+                temp_id_index++;\
+            }
+            CAN_MSG_MATRIX
+            #undef Y
+            sFilterConfig[i].FilterID1=temp_id[0];
+            sFilterConfig[i].FilterID2=temp_id[1];
+        }
+        else
+        {
+            _mcan1_get_std_event_msg_classic_filter(&std_filter,&std_mask);
+            sFilterConfig[i].FilterType=FDCAN_FILTER_MASK;
+            sFilterConfig[i].FilterID1=std_filter;
+            sFilterConfig[i].FilterID2=std_mask;
+        }
+        sFilterConfig[i].FilterConfig=FDCAN_FILTER_TO_RXFIFO0;
+        // sFilterConfig[i].RxBufferIndex=rx_buf_index;
+        sFilterConfig[i].IsCalibrationMsg=0;
+        i++;
+        std_filt_index++;
+        // rx_buf_index++;
+    }
+    
 
     //配置rx extid buf
     #define Y(fdf,brs,ide,id,dir,frame_len,cycle) \
@@ -901,24 +948,28 @@ static rt_err_t _stm32_mcan_filter_cfg(FDCAN_HandleTypeDef* pmcan)
     #undef Y
 
     //计算事件报文的mask
-    uint32_t ext_filter;
-    uint32_t ext_mask;
-    _mcan1_get_ext_event_msg_classic_filter(&ext_filter,&ext_mask);
-    sFilterConfig[i].IdType=FDCAN_EXTENDED_ID;
-    sFilterConfig[i].FilterIndex=ext_filt_index;
-    sFilterConfig[i].FilterType=FDCAN_FILTER_MASK;
-    sFilterConfig[i].FilterConfig=FDCAN_FILTER_TO_RXFIFO1;
-    sFilterConfig[i].FilterID1=ext_filter;
-    sFilterConfig[i].FilterID2=ext_mask;
-    sFilterConfig[i].RxBufferIndex=rx_buf_index;
-    sFilterConfig[i].IsCalibrationMsg=0;
-    i++;
-    ext_filt_index++;
-    rx_buf_index++;
-
-    for (size_t i = 0; i < sizeof(sFilterConfig); i++)
+    if(kIsRxEvnExtMsg)
     {
-        HAL_FDCAN_ConfigFilter(pmcan,&sFilterConfig[i]);
+        uint32_t ext_filter;
+        uint32_t ext_mask;
+        _mcan1_get_ext_event_msg_classic_filter(&ext_filter,&ext_mask);
+        sFilterConfig[i].IdType=FDCAN_EXTENDED_ID;
+        sFilterConfig[i].FilterIndex=ext_filt_index;
+        sFilterConfig[i].FilterType=FDCAN_FILTER_MASK;
+        sFilterConfig[i].FilterConfig=FDCAN_FILTER_TO_RXFIFO1;
+        sFilterConfig[i].FilterID1=ext_filter;
+        sFilterConfig[i].FilterID2=ext_mask;
+        sFilterConfig[i].RxBufferIndex=rx_buf_index;
+        sFilterConfig[i].IsCalibrationMsg=0;
+        i++;
+        ext_filt_index++;
+        rx_buf_index++;
+    }
+    
+
+    for (i = 0; i < sizeof(sFilterConfig)/sizeof(sFilterConfig[0]); i++)
+    {
+        HAL_FDCAN_ConfigFilter(pmcan,&(sFilterConfig[0]));
     }
 }
 
@@ -953,7 +1004,7 @@ int rt_hw_mcan_init(void)
 
     return 0;
 }
-// INIT_BOARD_EXPORT(rt_hw_mcan_init);
+INIT_BOARD_EXPORT(rt_hw_mcan_init);
 
 #endif
 #endif /* RT_USING_CAN */

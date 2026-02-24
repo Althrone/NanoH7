@@ -592,6 +592,8 @@ void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan)
 	}
 }
 #endif
+
+#if 0
 #ifdef BSP_USING_FDCAN1
 
 void FDCAN1_IT0_IRQHandler(void)             /* FDCAN2 interrupt line 0      */
@@ -607,6 +609,7 @@ void FDCAN1_IT1_IRQHandler(void)             /* FDCAN2 interrupt line 1      */
 	HAL_FDCAN_IRQHandler(&st_DrvCan1.fdcanHandle);
 	rt_interrupt_leave();
 }
+#endif
 
 #endif /*BSP_USING_FDCAN1*/
 
@@ -664,7 +667,7 @@ static int rt_hw_can_init(void)
 
     return 0;
 }
-INIT_BOARD_EXPORT(rt_hw_can_init);
+// INIT_BOARD_EXPORT(rt_hw_can_init);
 
 #endif /* BSP_USING_FDCAN1 || BSP_USING_FDCAN2 */
 #endif /* RT_USING_CAN */

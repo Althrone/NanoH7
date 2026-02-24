@@ -73,7 +73,15 @@ typedef enum
     Y(1,  1,  0,  0x749,  kOpenCanSend, 8,  0   )   \
     Y(1,  1,  0,  0x7DF,  kOpenCanRecv, 8,  0   )
 
-enum{
+enum{//根据CAN_MSG_MATRIX宏计算
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((fdf==1))?1:0)|
+    kIsFd=CAN_MSG_MATRIX 0,//通过can矩阵来判断是否有canfd帧
+  #undef Y
+
+  #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((brs==1))?1:0)|
+    kIsBrs=CAN_MSG_MATRIX 0,//通过can矩阵来判断是否有canfd帧使用BRS
+  #undef Y
+
   #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((dir==kOpenCanSend)&&(cycle!=0))?1:0)+
     kTxCycMsgNum = CAN_MSG_MATRIX 0,//发送周期报文数量
   #undef Y
@@ -111,37 +119,40 @@ enum{
   #undef Y
 };
 
-#ifdef RT_CANX_USING_FD
-  #ifdef RT_CANX_CALC_BITTIMING
-    #define RT_CANX_CONFIG_DEFAULT         \
-    {                                     \
-        {1*1000*1000,  /* 1Mbps */         \
-        8000},          /* 80.00% */        \
-        {5*1000*1000,  /* 5Mbps */         \
-        8000},          /* 80.00% */        \
-        RT_TRUE,\
-        1,\
-        kRxCycExtMsgNum+kRxCycStdMsgNum+kIsRxEvnExtMsg+kIsRxEvnStdMsg,\
-        5,\
-        kTxCycMsgNum+kIsTxEvnMsg,\
-        5\
-    }
-  #else
-    #define RT_CANX_CONFIG_DEFAULT         \
-    {                                     \
-        1,  /* 1Mbps */         \
-        2          /* 80.00% */        \
-        3,  /* 5Mbps */         \
-        4          /* 80.00% */        \
-        1,  /* 1Mbps */         \
-        2          /* 80.00% */        \
-        3,  /* 5Mbps */         \
-        4          /* 80.00% */        \
-    }
-  #endif /* RT_CANX_CALC_BITTIMING */
-#else /* Classic CAN */
+#ifdef RT_CANX_CALC_BITTIMING
+  #define RT_CANX_CONFIG_DEFAULT                                  \
+  {                                                               \
+    kIsFd,                                                        \
+    kIsBrs,                                                       \
+    {                                                             \
+      1*1000*1000,  /* 1Mbps */                                   \
+      8000          /* 80.00% */                                  \
+    },                                                            \
+    {                                                             \
+      2*1000*1000,  /* 5Mbps */                                   \
+      8000          /* 80.00% */                                  \
+    },                                                            \
+    RT_TRUE,                                                      \
+    1,                                                            \
+    kRxCycExtMsgNum+kRxCycStdMsgNum+kIsRxEvnExtMsg+kIsRxEvnStdMsg,\
+    5,/* 用于hal层和中间层的buf系数 */                              \
+    kTxCycMsgNum+kIsTxEvnMsg,                                     \
+    5 /* 用于hal层和中间层的buf系数 */                              \
+  }
+#else
+  #define RT_CANX_CONFIG_DEFAULT         \
+  {                                     \
+      1,  /* 1Mbps */         \
+      2          /* 80.00% */        \
+      3,  /* 5Mbps */         \
+      4          /* 80.00% */        \
+      1,  /* 1Mbps */         \
+      2          /* 80.00% */        \
+      3,  /* 5Mbps */         \
+      4          /* 80.00% */        \
+  }
+#endif /* RT_CANX_CALC_BITTIMING */
 
-#endif /* RT_CANX_USING_FD */
 
 
 
@@ -169,12 +180,14 @@ typedef struct
 
 struct canx_configure
 {
+    rt_bool_t is_fd;
+    rt_bool_t is_brs;
     canx_baud nominal_baud;
-  #ifdef RT_CANX_USING_FD
-    canx_baud data_baud;
+
+    canx_baud data_baud;//fd帧时使用,但是一定要配置
     rt_bool_t is_iso;
     // rt_bool_t 延迟补偿
-  #endif /* RT_CANX_USING_FD */
+
     canx_res_config termination_resistor;
     rt_size_t num_of_rx_buf;
     rt_uint8_t rx_event_fifo_coef;
@@ -239,7 +252,7 @@ struct rt_canx_tx_fifo
 
 struct rt_canx_ops
 {
-    rt_err_t (*configure)(struct rt_canx_device *can, struct can_configure *cfg);
+    rt_err_t (*configure)(struct rt_canx_device *can, struct canx_configure *cfg);
     rt_err_t (*control)(struct rt_canx_device *can, int cmd, void *arg);
     int (*sendmsg)(struct rt_canx_device *can, const void *buf, rt_uint32_t boxno);
     int (*recvmsg)(struct rt_canx_device *can, void *buf, rt_uint32_t boxno);

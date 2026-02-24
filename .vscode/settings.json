@@ -95,5 +95,6 @@
         "rthw.h": "c"
     },
     "Codegeex.GenerationPreference": "automatic",
-    "Codegeex.CompletionDelay": 0.5
+    "Codegeex.CompletionDelay": 0.5,
+    "debug.allowBreakpointsEverywhere": true
 }

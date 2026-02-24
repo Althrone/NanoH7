@@ -115,7 +115,26 @@ void rt_hw_canx_isr(struct rt_canx_device *canx, rt_uint64_t event)
         struct rt_canx_rx_fifo *rx_fifo = (struct rt_canx_rx_fifo *)canx->canx_rx;
         RT_ASSERT(rx_fifo != RT_NULL);
 
-        rt_ringbuffer_put(rx_fifo->rxrb[event>>8],&tmpmsg,2+DLCtoBytes[tmpmsg.header.dlc]);
+        rt_ringbuffer_put(rx_fifo->rxrb[event>>8],(rt_uint8_t*)&tmpmsg,sizeof(tmpmsg.header)+DLCtoBytes[tmpmsg.header.dlc]);
+
+        for (size_t i = 0; i < rx_fifo->rxrbnum; i++)
+        {
+            rt_uint16_t len=rt_ringbuffer_data_len(rx_fifo->rxrb[i]);
+            if(len>=8)
+            {
+                rt_kprintf("buf %d\tlen %d\t",i,len);
+                struct rt_canx_msg tmpprint;
+                rt_ringbuffer_get(rx_fifo->rxrb[i],(rt_uint8_t *)&tmpprint,sizeof(tmpprint.header));
+                rt_ringbuffer_get(rx_fifo->rxrb[i],tmpprint.data,DLCtoBytes[tmpprint.header.dlc]);
+                rt_kprintf("id 0x%x\t",tmpprint.header.id);
+                for(size_t j=0;j<DLCtoBytes[tmpprint.header.dlc];j++)
+                {
+                    rt_kprintf("%x ",tmpprint.data[j]);
+                }
+                rt_kprintf("\n");
+            }
+        }
+        
 
         /* enable interrupt */
         rt_hw_interrupt_enable(level);
@@ -454,6 +473,40 @@ static rt_size_t rt_canx_write(struct rt_device *dev,
     }
 
     return 0;
+}
+
+static rt_err_t rt_canx_control(struct rt_device   *dev,
+                                int                 cmd,
+                                void               *args)
+{
+    struct rt_canx_device *canx;
+    rt_err_t res;
+
+    res = RT_EOK;
+    RT_ASSERT(dev != RT_NULL);
+    canx = (struct rt_canx_device *)dev;
+
+    switch (cmd)
+    {
+    case RT_DEVICE_CTRL_SUSPEND:
+        /* suspend device */
+        dev->flag |= RT_DEVICE_FLAG_SUSPENDED;
+        break;
+    case RT_DEVICE_CTRL_RESUME:
+        /* resume device */
+        dev->flag &= ~RT_DEVICE_FLAG_SUSPENDED;
+        break;
+    case RT_DEVICE_CTRL_CONFIG:
+        /* configure device */
+        res = canx->ops->configure(canx, (struct canx_configure *)args);
+    default:
+        /* control device */
+        if(canx->ops->control != RT_NULL)
+            res = canx->ops->control(canx, cmd, args);
+        else
+            res = -RT_ENOSYS;
+        break;
+    }
 }
 
 static void canx_tx_thread_entry(void *parameter)
