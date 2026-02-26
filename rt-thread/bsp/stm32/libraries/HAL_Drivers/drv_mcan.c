@@ -157,7 +157,7 @@ void HAL_FDCAN_RxBufferNewMessageCallback(FDCAN_HandleTypeDef *hfdcan)
             if(hfdcan->Instance->NDAT1&(1<<i))
             {
                 rt_hw_canx_isr(&mcan->canx,RT_CANX_EVENT_RX_IND|((FDCAN_RX_BUFFER0+i)<<8));
-                break;
+                // break;
             }
         }
         for (size_t i = 0; i < 32; i++)
@@ -165,7 +165,7 @@ void HAL_FDCAN_RxBufferNewMessageCallback(FDCAN_HandleTypeDef *hfdcan)
             if(hfdcan->Instance->NDAT2&(1<<i))
             {
                 rt_hw_canx_isr(&mcan->canx,RT_CANX_EVENT_RX_IND|((FDCAN_RX_BUFFER32+i)<<8));
-                break;
+                // break;
             }
         }
       #endif
@@ -258,11 +258,11 @@ void HAL_FDCAN_TxEventFifoCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t TxEvent
 
     if(hfdcan->Instance==FDCAN1)
     {
-        if(TxEventFifoITs & FDCAN_IT_TX_EVT_FIFO_FULL)
+        if(TxEventFifoITs & FDCAN_IT_TX_EVT_FIFO_NEW_DATA)
         {
             FDCAN_TxEventFifoTypeDef tmptxevent;
             HAL_FDCAN_GetTxEvent(hfdcan,&tmptxevent);
-            rt_hw_canx_isr(&mcan->canx,RT_CANX_EVENT_TX_DONE);//isr识别到高位为0就是fifo空的意思
+            rt_hw_canx_isr(&mcan->canx,(tmptxevent.Identifier<<8)|RT_CANX_EVENT_TX_DONE);//isr识别到高位为0就是fifo空的意思
         }
     }
 }
@@ -321,9 +321,9 @@ static rt_err_t _inline_canx_control(struct rt_canx_device *canx, int cmd, void 
         HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_RX_FIFO0_NEW_MESSAGE, FDCAN_INTERRUPT_LINE0);
         HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_RX_FIFO1_NEW_MESSAGE, FDCAN_INTERRUPT_LINE0);
         //tx
-        // HAL_FDCAN_ActivateNotification(&pmcan->hmcan,FDCAN_IT_TX_COMPLETE,);//开了几个buf就写几个
+        HAL_FDCAN_ActivateNotification(&pmcan->hmcan,FDCAN_IT_TX_EVT_FIFO_NEW_DATA,RT_NULL);//开了几个buf就写几个
         //丢去初始化
-        HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_TX_COMPLETE, FDCAN_INTERRUPT_LINE1);
+        HAL_FDCAN_ConfigInterruptLines(&pmcan->hmcan,FDCAN_IT_TX_EVT_FIFO_NEW_DATA, FDCAN_INTERRUPT_LINE1);
         break;
     default:
         break;
@@ -374,7 +374,10 @@ static int _inline_canx_recvmsg(struct rt_canx_device *canx, void *buf, rt_uint3
             // esi无意义
         }
 
-        //user_data不在这里更新
+        //获取时间戳
+        pmsg->header.rxts = rx_header.RxTimestamp;
+
+        //user_data不用在这里更新，HAL_FDCAN_GetRxMessage已经获取到data了
 
         return 1;//一个帧
     }
@@ -393,26 +396,37 @@ static int _inline_canx_sendmsg(struct rt_canx_device *canx, const void *buf, rt
     TxHeader.Identifier=pmsg->header.id;
     if(pmsg->header.ide)
         TxHeader.IdType=FDCAN_EXTENDED_ID;
+    else
+        TxHeader.IdType=FDCAN_STANDARD_ID;
     if(pmsg->header.rtr)
         TxHeader.TxFrameType=FDCAN_REMOTE_FRAME;
+    else
+        TxHeader.TxFrameType=FDCAN_DATA_FRAME;
     TxHeader.DataLength=(uint32_t)(pmsg->header.dlc)<<16;
     if(pmsg->header.esi)
         TxHeader.ErrorStateIndicator=FDCAN_ESI_PASSIVE;
+    else
+        TxHeader.ErrorStateIndicator=FDCAN_ESI_ACTIVE;
     if(pmsg->header.brs)
         TxHeader.BitRateSwitch=FDCAN_BRS_ON;
+    else
+        TxHeader.BitRateSwitch=FDCAN_BRS_OFF;
     if(pmsg->header.fdf)
         TxHeader.FDFormat=FDCAN_FD_CAN;
+    else
+        TxHeader.FDFormat=FDCAN_CLASSIC_CAN;
 
-    TxHeader.TxEventFifoControl=FDCAN_NO_TX_EVENTS;
     TxHeader.MessageMarker=0;
 
     if(box_num<32)
     {
+        TxHeader.TxEventFifoControl=FDCAN_NO_TX_EVENTS;
         HAL_FDCAN_AddMessageToTxBuffer(&pmcan->hmcan,&TxHeader,pmsg->data,box_num);
         HAL_FDCAN_EnableTxBufferRequest(&pmcan->hmcan,box_num);
     }
     else
     {
+        TxHeader.TxEventFifoControl=FDCAN_STORE_TX_EVENTS;
         if(HAL_FDCAN_GetTxFifoFreeLevel(&pmcan->hmcan))
             HAL_FDCAN_AddMessageToTxFifoQ(&pmcan->hmcan,&TxHeader,pmsg->data);
     }
@@ -456,6 +470,9 @@ static rt_err_t _inline_canx_configure(struct rt_canx_device *canx, struct canx_
     {
         return -RT_ERROR;
     }
+    
+    HAL_FDCAN_ConfigTimestampCounter(&pmcan->hmcan,FDCAN_TIMESTAMP_PRESC_1);//设置时间戳
+    HAL_FDCAN_EnableTimestampCounter(&pmcan->hmcan,FDCAN_TIMESTAMP_INTERNAL);//开启时间戳
 
     //过滤器配置
     _stm32_mcan_filter_cfg(&pmcan->hmcan);
@@ -800,7 +817,7 @@ static rt_err_t _stm32_mcan_msg_ram_cfg(FDCAN_HandleTypeDef* pmcan,struct canx_c
         pmcan->Init.RxBuffersNbr=kRxCycStdMsgNum+kRxCycExtMsgNum;
         pmcan->Init.RxBufferSize=_mcan1_rxbuf_size();
 
-        pmcan->Init.TxEventsNbr=0;
+        pmcan->Init.TxEventsNbr=32;
 
         pmcan->Init.TxBuffersNbr=kTxCycMsgNum;
         pmcan->Init.TxFifoQueueElmtsNbr=kTxEvnMsgNum;//应该要乘一个系数
@@ -812,7 +829,7 @@ static rt_err_t _stm32_mcan_msg_ram_cfg(FDCAN_HandleTypeDef* pmcan,struct canx_c
                          pmcan->Init.ExtFiltersNbr*2+
                          pmcan->Init.RxBuffersNbr*pmcan->Init.RxBufferSize+
                          pmcan->Init.TxBuffersNbr*pmcan->Init.TxElmtSize+
-                         pmcan->Init.TxEventsNbr;
+                         pmcan->Init.TxEventsNbr*2;
         uint16_t remain_size=2560-fixsize;//按word计算
         uint16_t coef=remain_size/(pmcan->Init.RxFifo0ElmtsNbr*pmcan->Init.RxFifo0ElmtSize+
                                    pmcan->Init.RxFifo1ElmtsNbr*pmcan->Init.RxFifo1ElmtSize+

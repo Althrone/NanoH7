@@ -403,6 +403,26 @@ void can_thread_entry(void *parameter)
     /* 设置 CAN 的工作模式为正常工作模式 */
     ret = rt_device_control(can_dev, RT_CAN_CMD_SET_MODE, (void *)RT_CAN_MODE_NORMAL);
 
+    struct rt_canx_msg txmsg ={
+        .header={
+            .id = 0x741,
+            .rtr = 0,
+            .ide = 0,
+            .fdf = 1,
+            .brs = 1,
+            .esi = 0,
+            .dlc = 8,
+        },
+        .data = {0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88},
+    };
+    while(1)
+    {
+        rt_size_t size=rt_device_write(can_dev, 0, &txmsg, sizeof(txmsg));
+        rt_thread_mdelay(500);	   
+    }
+         
+
+    /* 老can驱动的测试代码 */
     // // RT_CAN_MODE_LOOPBACK
     // static struct rt_can_status status;    /* 获取到的 CAN 总线状态 */
     // ret=rt_device_control(can_dev, RT_CAN_CMD_GET_STATUS, &status);

@@ -210,18 +210,19 @@ typedef struct rt_canx_device* rt_canx_t;
 struct rt_canx_header
 {
     rt_uint32_t id  : 29;
-    rt_uint32_t rtr:1;//远程帧标志，canfd取消
-    rt_uint32_t ide:1;//扩展id标志
-    rt_uint32_t fdf:1;//FD帧格式标志
-
-    rt_uint32_t brs:1;//bit rate switch
-    rt_uint32_t esi:1;//fd使用，一个错误标志
-    rt_uint32_t dlc:4;
+    rt_uint32_t rtr : 1;//远程帧标志，canfd取消
+    rt_uint32_t ide : 1;//扩展id标志
+    rt_uint32_t fdf : 1;//FD帧格式标志
+  
+    rt_uint32_t brs : 1;//bit rate switch
+    rt_uint32_t esi : 1;//fd使用，一个错误标志
+    rt_uint32_t dlc : 4;
     //user data
-    rt_uint32_t upd:1;//指示数据已经更新，用户读后清除
-    rt_uint32_t ovr:1;//用户没有读数据，中断直接重写buf了
+    rt_uint32_t upd : 1;//指示数据已经更新，用户读后清除
+    rt_uint32_t ovr : 1;//用户没有读数据，中断直接重写buf了
 
-    rt_uint32_t :24;//可以用来放user data
+    rt_uint32_t     : 8;//可以用来放user data
+    rt_uint32_t rxts: 16;//接收帧时间戳,根据不同芯片修改位宽
 };
 
 struct rt_canx_msg
