@@ -1,10 +1,22 @@
-/******************************************************************************
- * NanoH7 - UAV firmware base on RT-Thread
- * Copyright (C) 2023 - 2025 Althrone <mail>
+// SPDX-License-Identifier: Apache-2.0
+/** ***************************************************************************
+ * @file        canx.c
+ * @brief       using rt_ringbuf instead of rt_list.
+ * @author      RT-Thread Development Team
+ * @author      Althrone
+ * @date        2026-02-27
+ * @version     1.0.0
  * 
- * @file    rt-thread\components\drivers\can\canx.c
+ * @copyright   Copyright (c) 2006-2021 RT-Thread Development Team
+ * @copyright   Copyright (c) 2023-2025 Althrone
  * 
- * ref: Specification of <some UM RM or Datasheet>
+ * @par         Change Logs
+ * 
+ * | Date       | Author            | Notes                                     |
+ * |------------|-------------------|-------------------------------------------|
+ * | 2015-05-14 | aubrcool@qq.com   | first version                             |
+ * | 2015-07-06 | Bernard           | code cleanup and remove RT_CAN_USING_LED  |
+ * | 2026-02-27 | Althrone          | using rt_ringbuf instead of rt_list       |
  *****************************************************************************/
 
 /******************************************************************************

@@ -1,10 +1,23 @@
-/******************************************************************************
- * NanoH7 - UAV firmware base on RT-Thread
- * Copyright (C) 2023 - 2025 Althrone <mail>
+// SPDX-License-Identifier: Apache-2.0
+/** ***************************************************************************
+ * @file        drv_mcan.c
+ * @brief       Generic Bosch M_CAN driver adapted from STM32 FDCAN implementation.
+ * @author      RT-Thread Development Team
+ * @author      Althrone
+ * @date        2026-02-27
+ * @version     1.0.0
  * 
- * @file    rt-thread\bsp\stm32\libraries\HAL_Drivers\drv_mcan.c
+ * @copyright   Copyright (c) 2006-2018 RT-Thread Development Team
+ * @copyright   Copyright (c) 2023-2025 Althrone
+ * @see         https://www.bosch-semiconductors.com/media/ip_modules/pdf_2/m_can/mcan_users_manual_v331.pdf
  * 
- * ref: Specification of <some UM RM or Datasheet>
+ * @par         Change Logs
+ * 
+ * | Date       | Author    | Notes             |
+ * |------------|-----------|-------------------|
+ * | 2020-02-24 | heyuan    | the first version |
+ * | 2020-08-17 | malongwei | Fix something     |
+ * | 2026-02-27 | Althrone  | mcan version      |
  *****************************************************************************/
 
 /******************************************************************************

@@ -1,10 +1,22 @@
-/******************************************************************************
- * NanoH7 - UAV firmware base on RT-Thread
- * Copyright (C) 2023 - 2025 Althrone <mail>
+// SPDX-License-Identifier: Apache-2.0
+/** ***************************************************************************
+ * @file        canx.h
+ * @brief       using rt_ringbuf instead of rt_list.
+ * @author      RT-Thread Development Team
+ * @author      Althrone
+ * @date        2026-02-27
+ * @version     1.0.0
  * 
- * @file    rt-thread\components\drivers\include\drivers\canx.h
+ * @copyright   Copyright (c) 2006-2021 RT-Thread Development Team
+ * @copyright   Copyright (c) 2023-2025 Althrone
  * 
- * ref: Specification of <some UM RM or Datasheet>
+ * @par         Change Logs
+ * 
+ * | Date       | Author            | Notes                                     |
+ * |------------|-------------------|-------------------------------------------|
+ * | 2015-05-14 | aubrcool@qq.com   | first version                             |
+ * | 2015-07-06 | Bernard           | code cleanup and remove RT_CAN_USING_LED  |
+ * | 2026-02-27 | Althrone          | using rt_ringbuf instead of rt_list       |
  *****************************************************************************/
 
 #ifndef CANX_H_
@@ -38,40 +50,40 @@ typedef enum
 
     //fdf brs ide    id   send/recv  framelen cyc 
 #define CAN_MSG_MATRIX \
-    Y(1,  1,  0,  0x083,  kOpenCanRecv, 8,  10  )   \
-    Y(1,  1,  0,  0x0A2,  kOpenCanRecv, 8,  20  )   \
-    Y(1,  1,  0,  0x0D3,  kOpenCanRecv, 8,  10  )   \
-    Y(1,  1,  0,  0x0D4,  kOpenCanRecv, 24, 10  )   \
-    Y(1,  1,  0,  0x0FE,  kOpenCanRecv, 8,  20  )   \
-    Y(1,  1,  0,  0x101,  kOpenCanRecv, 8,  10  )   \
-    Y(1,  1,  0,  0x102,  kOpenCanRecv, 8,  20  )   \
-    Y(1,  1,  0,  0x119,  kOpenCanRecv, 8,  20  )   \
-    Y(1,  1,  0,  0x11D,  kOpenCanRecv, 8,  20  )   \
-    Y(1,  1,  0,  0x121,  kOpenCanRecv, 8,  10  )   \
-    Y(1,  1,  0,  0x124,  kOpenCanRecv, 8,  10  )   \
-    Y(1,  1,  0,  0x132,  kOpenCanRecv, 8,  20  )   \
-    Y(1,  1,  0,  0x133,  kOpenCanRecv, 8,  10  )   \
-    Y(1,  1,  0,  0x142,  kOpenCanRecv, 8,  10  )   \
-    Y(1,  1,  0,  0x144,  kOpenCanRecv, 8,  10  )   \
-    Y(1,  1,  0,  0x188,  kOpenCanRecv, 8,  20  )   \
-    Y(1,  1,  0,  0x1B0,  kOpenCanRecv, 16, 20  )   \
-    Y(1,  1,  0,  0x1FB,  kOpenCanRecv, 8,  20  )   \
-    Y(1,  1,  0,  0x30C,  kOpenCanRecv, 8,  100 )   \
-    Y(1,  1,  0,  0x320,  kOpenCanRecv, 8,  100 )   \
-    Y(1,  1,  0,  0x33C,  kOpenCanRecv, 8,  100 )   \
-    Y(1,  1,  0,  0x341,  kOpenCanRecv, 8,  100 )   \
-    Y(1,  1,  0,  0x3DA,  kOpenCanRecv, 8,  100 )   \
-    Y(1,  1,  0,  0x3F2,  kOpenCanRecv, 8,  100 )   \
-    Y(1,  1,  0,  0x443,  kOpenCanSend, 8,  100 )   \
-    Y(1,  1,  0,  0x4DA,  kOpenCanRecv, 8,  1000)   \
-    Y(1,  1,  0,  0x584,  kOpenCanRecv, 8,  500 )   \
-    Y(0,  0,  0,  0x599,  kOpenCanRecv, 8,  500 )   \
-    Y(0,  0,  0,  0x5B5,  kOpenCanSend, 8,  500 )   \
-    Y(0,  0,  0,  0x5B6,  kOpenCanRecv, 8,  500 )   \
-    Y(1,  1,  0,  0x643,  kOpenCanSend, 16, 500 )   \
-    Y(1,  1,  0,  0x741,  kOpenCanRecv, 8,  0   )   \
-    Y(1,  1,  0,  0x749,  kOpenCanSend, 8,  0   )   \
-    Y(1,  1,  0,  0x7DF,  kOpenCanRecv, 8,  0   )
+    Y(1,  1,  0,  0x2A7,  kOpenCanRecv, 5,  10  )   \
+    Y(1,  1,  0,  0x4F1,  kOpenCanRecv, 12, 20  )   \
+    Y(1,  1,  0,  0x0B3,  kOpenCanRecv, 0,  10  )   \
+    Y(1,  1,  0,  0x5C8,  kOpenCanRecv, 64, 10  )   \
+    Y(1,  1,  0,  0x1D2,  kOpenCanRecv, 7,  20  )   \
+    Y(1,  1,  0,  0x6E4,  kOpenCanRecv, 3,  10  )   \
+    Y(1,  1,  0,  0x3B9,  kOpenCanRecv, 48, 20  )   \
+    Y(1,  1,  0,  0x7A0,  kOpenCanRecv, 16, 20  )   \
+    Y(1,  1,  0,  0x0F5,  kOpenCanRecv, 2,  20  )   \
+    Y(1,  1,  0,  0x2C1,  kOpenCanRecv, 8,  10  )   \
+    Y(1,  1,  0,  0x4A6,  kOpenCanRecv, 20, 10  )   \
+    Y(1,  1,  0,  0x1E7,  kOpenCanRecv, 1,  20  )   \
+    Y(1,  1,  0,  0x6D3,  kOpenCanRecv, 24, 10  )   \
+    Y(1,  1,  0,  0x3F0,  kOpenCanRecv, 32, 10  )   \
+    Y(1,  1,  0,  0x7BF,  kOpenCanRecv, 4,  10  )   \
+    Y(1,  1,  0,  0x0A1,  kOpenCanRecv, 6,  20  )   \
+    Y(1,  1,  0,  0x5E2,  kOpenCanRecv, 12, 20  )   \
+    Y(1,  1,  0,  0x2B8,  kOpenCanRecv, 0,  20  )   \
+    Y(1,  1,  0,  0x4C3,  kOpenCanRecv, 7,  100 )   \
+    Y(1,  1,  0,  0x1A9,  kOpenCanRecv, 8,  100 )   \
+    Y(1,  1,  0,  0x6F7,  kOpenCanRecv, 16, 100 )   \
+    Y(1,  1,  0,  0x3D4,  kOpenCanRecv, 5,  100 )   \
+    Y(1,  1,  0,  0x7E5,  kOpenCanRecv, 64, 100 )   \
+    Y(1,  1,  0,  0x0C6,  kOpenCanRecv, 3,  100 )   \
+    Y(1,  1,  0,  0x5B1,  kOpenCanSend, 2,  100 )   \
+    Y(1,  1,  0,  0x2E9,  kOpenCanRecv, 48, 1000)   \
+    Y(1,  1,  0,  0x4D0,  kOpenCanRecv, 1,  500 )   \
+    Y(0,  0,  0,  0x1C5,  kOpenCanRecv, 4,  500 )   \
+    Y(0,  0,  0,  0x6AB,  kOpenCanSend, 20, 500 )   \
+    Y(0,  0,  0,  0x3FE,  kOpenCanRecv, 6,  500 )   \
+    Y(1,  1,  0,  0x7D8,  kOpenCanSend, 32, 500 )   \
+    Y(1,  1,  0,  0x0E3,  kOpenCanRecv, 8,  0   )   \
+    Y(1,  1,  0,  0x5A4,  kOpenCanSend, 0,  0   )   \
+    Y(1,  1,  0,  0x2F2,  kOpenCanRecv, 12, 0   )
 
 enum{//根据CAN_MSG_MATRIX宏计算
   #define Y(fdf,brs,ide,id,dir,frame_len,cycle) (((fdf==1))?1:0)|
