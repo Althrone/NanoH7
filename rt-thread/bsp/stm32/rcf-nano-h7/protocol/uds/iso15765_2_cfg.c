@@ -203,12 +203,12 @@ const size_t kg_num_of_sdu=sizeof(g_n_sdu_tbl)/sizeof(N_SDU);
 
 #define Z(Mtype,N_SA,N_TA,N_TAtype,N_AE,is_extended,is_fixed,canid) \
     {Mtype,{N_SA,N_TA,N_TAtype,N_AE},{is_extended,is_fixed},canid},
-const CanIdLutStruct g_n_canid_lut_tbl[]={
-    TP2PHY_MAP_TBL
+const CanIdLutStruct kg_n_addr_canid_map[]={
+    N_ADDR_CANID_MAP
 };
 #undef Z
 
-const size_t kg_num_of_canid_lut=sizeof(g_n_canid_lut_tbl)/sizeof(CanIdLutStruct);
+const size_t kg_sizeof_n_addr_canid_map=sizeof(kg_n_addr_canid_map)/sizeof(CanIdLutStruct);
 
 /******************************************************************************
  * private types

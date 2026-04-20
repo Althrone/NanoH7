@@ -168,6 +168,15 @@ typedef struct
     OpenLinMsgDirEnum   dir;
 }OpenLinMsgStruct;
 
+struct rt_lin_msg
+{
+    rt_uint8_t pid;
+    rt_uint8_t data[8];
+    rt_uint8_t checksum;
+    rt_uint8_t data_len;
+};
+
+
 #endif /* __DRV_OPENLIN_H__ */
 
 

@@ -26,8 +26,8 @@ extern const size_t kg_num_of_sdu;
 
 extern const struct L_DataOps L_Data;
 
-extern const CanIdLutStruct g_n_canid_lut_tbl[];
-extern const size_t kg_num_of_canid_lut;
+extern const CanIdLutStruct kg_n_addr_canid_map[];
+extern const size_t kg_sizeof_n_addr_canid_map;
 
 
 static void N_USData_request            (MtypeEnum Mtype, uint8_t N_SA, uint8_t N_TA, N_TAtypeEnum N_TAtype, uint8_t N_AE, uint8_t* MessageData, size_t Length, N_UserExtStruct N_UserExt);
@@ -397,6 +397,7 @@ void NetworkLayerTimingTask(uint16_t ms)
 
 void DoCanTpTask(void)
 {
+    //os的indication回调里释放信号量，然后运行此线程，直至fifo为空
     for (size_t i = 0; i < kg_num_of_sdu; i++)
     {
         //先根据事件更新状态
@@ -407,6 +408,38 @@ void DoCanTpTask(void)
     }
 }
 
+void DoCan_thread_entry(void *parameter)
+{
+    rt_device_t can_dev=rt_device_find("mcan1");//后续可以用parameter代替
+    rt_sem_t temp_can_rx_event_frame = rt_object_find("can_sem",RT_Object_Class_Semaphore);
+    RT_ASSERT(can_dev!=RT_NULL);
+
+    //从canx抽取事件帧，放入docan tp的rb
+    struct rt_canx_msg temp_rx_msg;
+    //     .header={
+    //         .id = //从
+    //     }
+    // };
+
+    //通过查找表找到对应的canid
+    //一般就两个，一个功能地址一个物理地址
+
+    while(1)
+    {
+        //通过canid找到对应的地址信息，查N_ADDR_CANID_MAP表
+        for (size_t i = 0; i < kg_sizeof_n_addr_canid_map; i++)
+        {
+            /* code */
+        }
+        
+        //通过地址信息找到对应的sdu
+        //只要rb有东西，就一直读取，直到空才挂起线程
+        if(rt_device_read(can_dev,0,&temp_rx_msg,1)==0){
+            rt_sem_take(temp_can_rx_event_frame, RT_WAITING_FOREVER);
+        }
+    }
+}
+
 /******************************************************************************
  * private functions definition
  *****************************************************************************/
@@ -414,19 +447,19 @@ static bool _SearchSduIndex(struct rt_canx_msg* rx_can_msg,size_t* sdu_index){
 
     //先从查找表找到caiid对应的N_SA和N_TA
     size_t j = 0;
-    for (; j < kg_num_of_canid_lut; j++)
+    for (; j < kg_sizeof_n_addr_canid_map; j++)
     {
-        if(rx_can_msg->header.id == g_n_canid_lut_tbl[j].can_id)
+        if(rx_can_msg->header.id == kg_n_addr_canid_map[j].can_id)
         {
             N_TAtypeEnum temp_ta_type=(rx_can_msg->header.ide<<2)|(rx_can_msg->header.fdf<<1)+1;
-            if((temp_ta_type==g_n_canid_lut_tbl[j].N_AI.N_TAtype)||
-               (temp_ta_type+1==g_n_canid_lut_tbl[j].N_AI.N_TAtype))
+            if((temp_ta_type==kg_n_addr_canid_map[j].N_AI.N_TAtype)||
+               (temp_ta_type+1==kg_n_addr_canid_map[j].N_AI.N_TAtype))
             {
                 break;
             }
         }
     }
-    if(j == kg_num_of_canid_lut)
+    if(j == kg_sizeof_n_addr_canid_map)
     {
         return false;
     }
@@ -437,13 +470,13 @@ static bool _SearchSduIndex(struct rt_canx_msg* rx_can_msg,size_t* sdu_index){
     for (; i < kg_num_of_sdu; i++)
     {   
         //看一下N_AI的成员是否完全相同
-        if ((g_n_canid_lut_tbl[j].Mtype                 != g_n_sdu_tbl[i].Mtype)|| 
-            (g_n_canid_lut_tbl[j].N_AI.N_SA             != g_n_sdu_tbl[i].N_AI.N_SA)||
-            (g_n_canid_lut_tbl[j].N_AI.N_TA             != g_n_sdu_tbl[i].N_AI.N_TA)||
-            (g_n_canid_lut_tbl[j].N_AI.N_TAtype         != g_n_sdu_tbl[i].N_AI.N_TAtype)||
-            (g_n_canid_lut_tbl[j].N_AI.N_AE             != g_n_sdu_tbl[i].N_AI.N_AE)||
-            (g_n_canid_lut_tbl[j].N_UserExt.is_extended != g_n_sdu_tbl[i].N_UserExt.is_extended)||
-            (g_n_canid_lut_tbl[j].N_UserExt.is_fixed    != g_n_sdu_tbl[i].N_UserExt.is_fixed))
+        if ((kg_n_addr_canid_map[j].Mtype                 != g_n_sdu_tbl[i].Mtype)|| 
+            (kg_n_addr_canid_map[j].N_AI.N_SA             != g_n_sdu_tbl[i].N_AI.N_SA)||
+            (kg_n_addr_canid_map[j].N_AI.N_TA             != g_n_sdu_tbl[i].N_AI.N_TA)||
+            (kg_n_addr_canid_map[j].N_AI.N_TAtype         != g_n_sdu_tbl[i].N_AI.N_TAtype)||
+            (kg_n_addr_canid_map[j].N_AI.N_AE             != g_n_sdu_tbl[i].N_AI.N_AE)||
+            (kg_n_addr_canid_map[j].N_UserExt.is_extended != g_n_sdu_tbl[i].N_UserExt.is_extended)||
+            (kg_n_addr_canid_map[j].N_UserExt.is_fixed    != g_n_sdu_tbl[i].N_UserExt.is_fixed))
         {
             continue;  // ID不匹配，继续下一个
         }
@@ -478,15 +511,15 @@ static bool _SearchCanIdFromSdu(N_SDU* p_n_sdu,uint32_t* canid)
 {
     size_t i = 0;
     bool id_matches = false;
-    for (i = 0; i < kg_num_of_canid_lut; i++)
+    for (i = 0; i < kg_sizeof_n_addr_canid_map; i++)
     {
-        if ((g_n_canid_lut_tbl[i].Mtype                 != p_n_sdu->Mtype)|| 
-            (g_n_canid_lut_tbl[i].N_AI.N_SA             != p_n_sdu->N_AI.N_SA)||
-            (g_n_canid_lut_tbl[i].N_AI.N_TA             != p_n_sdu->N_AI.N_TA)||
-            (g_n_canid_lut_tbl[i].N_AI.N_TAtype         != p_n_sdu->N_AI.N_TAtype)||
-            (g_n_canid_lut_tbl[i].N_AI.N_AE             != p_n_sdu->N_AI.N_AE)||
-            (g_n_canid_lut_tbl[i].N_UserExt.is_extended != p_n_sdu->N_UserExt.is_extended)||
-            (g_n_canid_lut_tbl[i].N_UserExt.is_fixed    != p_n_sdu->N_UserExt.is_fixed))
+        if ((kg_n_addr_canid_map[i].Mtype                 != p_n_sdu->Mtype)|| 
+            (kg_n_addr_canid_map[i].N_AI.N_SA             != p_n_sdu->N_AI.N_SA)||
+            (kg_n_addr_canid_map[i].N_AI.N_TA             != p_n_sdu->N_AI.N_TA)||
+            (kg_n_addr_canid_map[i].N_AI.N_TAtype         != p_n_sdu->N_AI.N_TAtype)||
+            (kg_n_addr_canid_map[i].N_AI.N_AE             != p_n_sdu->N_AI.N_AE)||
+            (kg_n_addr_canid_map[i].N_UserExt.is_extended != p_n_sdu->N_UserExt.is_extended)||
+            (kg_n_addr_canid_map[i].N_UserExt.is_fixed    != p_n_sdu->N_UserExt.is_fixed))
         {
             continue;  // ID不匹配，继续下一个
         }
@@ -496,7 +529,7 @@ static bool _SearchCanIdFromSdu(N_SDU* p_n_sdu,uint32_t* canid)
 
     if(id_matches)
     {
-        *canid=g_n_canid_lut_tbl[i].can_id;
+        *canid=kg_n_addr_canid_map[i].can_id;
     }
 
     return id_matches;
@@ -685,7 +718,7 @@ static N_ResultEnum _RxSf(N_SDU* p_n_sdu){
     struct rt_canx_msg rx_msg;
     rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
     //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
+    rt_ringbuffer_get(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
 
     uint8_t temp_sf_dl=1;//SF_DL最小的有效值
     uint8_t CAN_DL=DLCtoBytes[rx_msg.header.dlc];
@@ -996,7 +1029,7 @@ static N_ResultEnum _RxFf(N_SDU* p_n_sdu){
     struct rt_canx_msg rx_msg;
     rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
     //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
+    rt_ringbuffer_get(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
 
     // 9.6.3.2 FF_DL error handling
 
@@ -1231,7 +1264,7 @@ static N_ResultEnum _RxCf(N_SDU* p_n_sdu){
     struct rt_canx_msg rx_msg;
     rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
     //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
+    rt_ringbuffer_get(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
 
     /* The payload data length CAN_DL of the received CAN frame has to match 
        the RX_DL value which was determined in the reception process of the 
@@ -1425,7 +1458,7 @@ static N_ResultEnum _RxFc(N_SDU* p_n_sdu){
     struct rt_canx_msg rx_msg;
     rt_ringbuffer_peek(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8);//获取rt_canx_msg的头
     //将头+data[dlc]的整个包读出来
-    rt_ringbuffer_read(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
+    rt_ringbuffer_get(p_n_sdu->datalink_rb,(uint8_t*)&rx_msg,8+DLCtoBytes[rx_msg.header.dlc]);
 
     //9.6.5.2 FlowStatus (FS) error handling
 

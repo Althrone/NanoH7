@@ -128,28 +128,36 @@ void rt_hw_canx_isr(struct rt_canx_device *canx, rt_uint64_t event)
         RT_ASSERT(rx_fifo != RT_NULL);
 
         //务必确保buf是帧大小的整数倍
+        if((event>>8)>(rx_fifo->rxrbnum-1))
+            event = (rx_fifo->rxrbnum-1)<<8;
+        //针对事件帧，可能要过滤一下
+        //对齐放置，空白填充A5
         rt_ringbuffer_put_force(rx_fifo->rxrb[event>>8],(rt_uint8_t*)&tmpmsg,sizeof(tmpmsg.header)+DLCtoBytes[tmpmsg.header.dlc]);
-
-        for (size_t i = 0; i < rx_fifo->rxrbnum; i++)
+        rt_uint8_t remainder = rx_fifo->rx_event_max_len - sizeof(tmpmsg.header) - DLCtoBytes[tmpmsg.header.dlc];
+        for (size_t i = 0; i < remainder; i++)
         {
-            rt_uint16_t len=rt_ringbuffer_data_len(rx_fifo->rxrb[i]);
-            if(len>=8)
-            {
-                rt_kprintf("buf %d\tlen %d\t",i,len);
-                struct rt_canx_msg tmpprint;
-                rt_ringbuffer_get(rx_fifo->rxrb[i],(rt_uint8_t *)&tmpprint,sizeof(tmpprint.header));
-                rt_ringbuffer_get(rx_fifo->rxrb[i],tmpprint.data,DLCtoBytes[tmpprint.header.dlc]);
-                rt_kprintf("id 0x%x\t",tmpprint.header.id);
-                for(size_t j=0;j<DLCtoBytes[tmpprint.header.dlc];j++)
-                {
-                    rt_kprintf("%x ",tmpprint.data[j]);
-                }
-
-                rt_kprintf("time %d\t",tmpprint.header.rxts);
-                rt_kprintf("\n");
-            }
+            rt_ringbuffer_putchar_force(rx_fifo->rxrb[event>>8],0xA5);
         }
-        
+
+        // for (size_t i = 0; i < rx_fifo->rxrbnum; i++)
+        // {
+        //     rt_uint16_t len=rt_ringbuffer_data_len(rx_fifo->rxrb[i]);
+        //     if(len>=8)
+        //     {
+        //         rt_kprintf("buf %d\tlen %d\t",i,len);
+        //         struct rt_canx_msg tmpprint;
+        //         rt_ringbuffer_get(rx_fifo->rxrb[i],(rt_uint8_t *)&tmpprint,sizeof(tmpprint.header));
+        //         rt_ringbuffer_get(rx_fifo->rxrb[i],tmpprint.data,DLCtoBytes[tmpprint.header.dlc]);
+        //         rt_kprintf("id 0x%x\t",tmpprint.header.id);
+        //         for(size_t j=0;j<DLCtoBytes[tmpprint.header.dlc];j++)
+        //         {
+        //             rt_kprintf("%x ",tmpprint.data[j]);
+        //         }
+
+        //         rt_kprintf("time %d\t",tmpprint.header.rxts);
+        //         rt_kprintf("\n");
+        //     }
+        // }
 
         /* enable interrupt */
         rt_hw_interrupt_enable(level);
@@ -247,7 +255,7 @@ rt_inline int _canx_int_tx(struct rt_canx_device *canx, rt_uint8_t *data, rt_siz
     size_t i = 0;
     for (; i < tx_fifo->txrbnum-1; i++)
     {
-        if((tx_fifo->txbuf[i].header.id == ((struct rt_canx_msg*)data)->header.id)&&
+        if((tx_fifo->txbuf[i].header.id  == ((struct rt_canx_msg*)data)->header.id)&&
            (tx_fifo->txbuf[i].header.rtr == ((struct rt_canx_msg*)data)->header.rtr)&&
            (tx_fifo->txbuf[i].header.ide == ((struct rt_canx_msg*)data)->header.ide)&&
            (tx_fifo->txbuf[i].header.fdf == ((struct rt_canx_msg*)data)->header.fdf)&&
@@ -332,11 +340,18 @@ static rt_err_t rt_canx_open(struct rt_device *dev, rt_uint16_t oflag)
                 j++;
             }
             //事件接收帧创建空间
+            //应该创建最长帧的倍数空间，且存储的时候，对齐存储，本质实现类似can自己的fifo
             #define Y(fdf,brs,ide,id,dir,frame_len,cycle) \
-              (((dir==kOpenCanRecv)&&(cycle==0))?(sizeof(struct rt_canx_header)+frame_len)*canx->config.rx_event_fifo_coef:0)+
-              rt_uint8_t txbuflen =CAN_MSG_MATRIX 0;
-              rx_fifo->rxrb[rx_fifo->rxrbnum-1] = rt_ringbuffer_create(txbuflen);
+              (((dir==kOpenCanRecv)&&(cycle==0))?(sizeof(struct rt_canx_header)+frame_len):0),
+              rt_uint8_t rx_event_tbl[] ={CAN_MSG_MATRIX};
             #undef Y
+            rx_fifo->rx_event_max_len = 0;
+            for (size_t i = 0; i < sizeof(rx_event_tbl); i++)
+            {
+                if(rx_event_tbl[i] > rx_fifo->rx_event_max_len)
+                    rx_fifo->rx_event_max_len = rx_event_tbl[i];
+            }
+            rx_fifo->rxrb[rx_fifo->rxrbnum-1] = rt_ringbuffer_create(rx_fifo->rx_event_max_len*canx->config.rx_event_fifo_coef);
 
             canx->canx_rx = rx_fifo;
 
@@ -362,8 +377,8 @@ static rt_err_t rt_canx_open(struct rt_device *dev, rt_uint16_t oflag)
             tx_fifo->txrbnum = canx->config.num_of_tx_buf;
 
             #define Y(fdf,brs,ide,id,dir,frame_len,cycle) \
-              (((dir==kOpenCanSend)&&(cycle!=0))?(sizeof(struct rt_canx_header)+frame_len)*canx->config.tx_event_fifo_coef:0),
-            rt_uint8_t txbuflen_tbl[] ={CAN_MSG_MATRIX};//只有发送的周期帧有长度
+              {(((dir==kOpenCanSend)&&(cycle!=0))?(sizeof(struct rt_canx_header)+frame_len)*canx->config.tx_event_fifo_coef:0),cycle},
+            rt_uint8_t txbuflen_tbl[][2] ={CAN_MSG_MATRIX};//只有发送的周期帧有长度
             #undef Y
 
             #define Y(h_fdf,h_brs,h_ide,h_id,dir,frame_len,cycle) \
@@ -373,22 +388,30 @@ static rt_err_t rt_canx_open(struct rt_device *dev, rt_uint16_t oflag)
 
             //给周期发送的创建空间
             size_t j=0;
-            for (size_t i = 0; i < sizeof(txbuflen_tbl); i++)
+            for (size_t i = 0; i < sizeof(txbuflen_tbl)/sizeof(txbuflen_tbl[0]); i++)
             {
-                if(txbuflen_tbl[i] == 0)
+                if(txbuflen_tbl[i][0] == 0)
                     continue;
                 tx_fifo->txbuf[j].header=tmpheader[i];
-                tx_fifo->txbuf[j].txrb = rt_ringbuffer_create(txbuflen_tbl[i]);
+                tx_fifo->txbuf[j].txrb = rt_ringbuffer_create(txbuflen_tbl[i][0]);
+                tx_fifo->txbuf[j].cycle_ms = txbuflen_tbl[i][1];
+                tx_fifo->txbuf[j].next_send_time = 0;
                 j++;
             }
             //给非周期帧创建空间
             #define Y(fdf,brs,ide,id,dir,frame_len,cycle) \
-              (((dir==kOpenCanSend)&&(cycle==0))?(sizeof(struct rt_canx_header)+frame_len)*canx->config.tx_event_fifo_coef:0)+
-              rt_uint8_t txbuflen =CAN_MSG_MATRIX 0;
-              struct rt_canx_header empty_header = {0};
-              tx_fifo->txbuf[tx_fifo->txrbnum-1].header = empty_header;
-              tx_fifo->txbuf[tx_fifo->txrbnum-1].txrb = rt_ringbuffer_create(txbuflen);
+              (((dir==kOpenCanSend)&&(cycle==0))?(sizeof(struct rt_canx_header)+frame_len):0),
+              rt_uint8_t tx_event_tbl[] ={CAN_MSG_MATRIX};
             #undef Y
+            tx_fifo->tx_event_max_len = 0;
+            for (size_t i = 0; i < sizeof(tx_event_tbl); i++)
+            {
+                if(tx_event_tbl[i] > tx_fifo->tx_event_max_len)
+                    tx_fifo->tx_event_max_len = tx_event_tbl[i];
+            }
+            struct rt_canx_header empty_header = {0};
+            tx_fifo->txbuf[tx_fifo->txrbnum-1].header = empty_header;
+            tx_fifo->txbuf[tx_fifo->txrbnum-1].txrb = rt_ringbuffer_create(tx_fifo->tx_event_max_len*canx->config.tx_event_fifo_coef);
 
             canx->canx_tx = tx_fifo;
 
@@ -541,6 +564,11 @@ static rt_err_t rt_canx_control(struct rt_device   *dev,
     }
 }
 
+/**
+ * @brief 用于将txfifo的数据发送出去
+ * 
+ * @param parameter 
+ */
 static void canx_tx_thread_entry(void *parameter)
 {
     //循环执行
@@ -556,16 +584,57 @@ static void canx_tx_thread_entry(void *parameter)
     tx_fifo = (struct rt_canx_tx_fifo *)canx->canx_tx;
     RT_ASSERT(tx_fifo != RT_NULL);
 
+    // 获取最小的非0周期
+    #define Y(fdf,brs,ide,id,dir,frame_len,cycle) \
+        (((dir==kOpenCanSend)&&(cycle!=0))?cycle:0),
+        rt_uint8_t cyc_tbl[] ={CAN_MSG_MATRIX};//只有发送的周期帧有长度
+    #undef Y
+    rt_uint8_t min_cycle = 0;
+    for (size_t i = 0; i < sizeof(cyc_tbl); i++)
+    {
+        if (cyc_tbl[i] == 0)
+            continue;
+        if(min_cycle == 0)
+            min_cycle = cyc_tbl[i];
+        if(min_cycle > cyc_tbl[i])
+            min_cycle = cyc_tbl[i];
+    }
+
+    if(min_cycle/2>=10)//周期太短，就等10ms
+        min_cycle/=2;
+
+    rt_tick_t now;
+
     while(1)
     {
-        //发送
+        // //发送
+        // for (size_t i = 0; i < tx_fifo->txrbnum-1; i++)//前面的周期buf发一个等一次
+        // {
+        //     canx->ops->sendmsg(canx,tx_fifo->txbuf[i].txrb,i);
+        //     rt_completion_wait(&(tx_fifo->txbuf[i].completion), RT_WAITING_FOREVER);
+        // }
+        // //事件fifo放到没空间
+        // rt_completion_wait(&(tx_fifo->txbuf[tx_fifo->txrbnum-1].completion), RT_WAITING_FOREVER);
+
+        // //周期帧周期到了就发
+        // //事件帧有就发，发到fifo空为止
+
+        //事件帧直接在对应的线程内发，这个线程只发周期的
+
+        now = rt_tick_get();
         for (size_t i = 0; i < tx_fifo->txrbnum-1; i++)//前面的周期buf发一个等一次
         {
-            canx->ops->sendmsg(canx,tx_fifo->txbuf[i].txrb,i);
-            rt_completion_wait(&(tx_fifo->txbuf[i].completion), RT_WAITING_FOREVER);
+            if ((now - tx_fifo->txbuf[i].next_send_time) < (RT_TICK_MAX / 2))
+            {
+                //应该在txfifo有东西的前提下才发送
+                //或者如果帧为空 发默认帧
+                //如果fifo为空，不发
+                if(rt_ringbuffer_data_len(tx_fifo->txbuf[i].txrb) !=0)
+                    canx->ops->sendmsg(canx,tx_fifo->txbuf[i].txrb,i);
+                tx_fifo->txbuf[i].next_send_time += rt_tick_from_millisecond(tx_fifo->txbuf[i].cycle_ms);
+            }
         }
-        //事件fifo放到没空间
-        rt_completion_wait(&(tx_fifo->txbuf[tx_fifo->txrbnum-1].completion), RT_WAITING_FOREVER);
-        
+
+        rt_thread_mdelay(min_cycle);//这个值也建议动态做，减少cpu占用
     }
 }

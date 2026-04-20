@@ -386,19 +386,33 @@ FDCAN_TxHeaderTypeDef TxHeader={
     .MessageMarker=0xaa,
 };
 
+static rt_err_t mcan1_rx_cbk(rt_device_t dev, rt_size_t size)
+{
+    //传过来的size不是长度，是box
+    if(size == ((struct rt_canx_rx_fifo *)((rt_canx_t)dev)->canx_rx)->rxrbnum-1)
+    {
+        //收到的是事件帧，发送一个东西启动事件帧的接收？
+        rt_sem_t temp_can_rx_event_frame = rt_object_find("can_sem",RT_Object_Class_Semaphore);
+        rt_sem_release(temp_can_rx_event_frame);
+    }
+}
+
 void can_thread_entry(void *parameter)
 {
+    rt_sem_t temp_can_rx_event_frame = rt_sem_create("can_sem",0,RT_IPC_FLAG_FIFO);
+
     rt_pin_mode(GET_PIN(D,5),PIN_MODE_OUTPUT);
     rt_pin_write(GET_PIN(D,5),PIN_LOW);//使能终端电阻
 
     rt_pin_mode(GET_PIN(D,4),PIN_MODE_OUTPUT);
     rt_pin_write(GET_PIN(D,4),PIN_LOW);//can收发器使能
 
-    static rt_device_t can_dev;
-    volatile rt_err_t ret;
+    rt_device_t can_dev;
+    rt_err_t ret;
     can_dev=rt_device_find("mcan1");
     /* 以中断接收及发送模式打开 CAN 设备 */
     ret=rt_device_open(can_dev, RT_DEVICE_FLAG_INT_TX | RT_DEVICE_FLAG_INT_RX);
+    rt_device_set_rx_indicate(can_dev, mcan1_rx_cbk);
 
     /* 设置 CAN 的工作模式为正常工作模式 */
     ret = rt_device_control(can_dev, RT_CAN_CMD_SET_MODE, (void *)RT_CAN_MODE_NORMAL);

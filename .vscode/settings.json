@@ -96,5 +96,6 @@
     },
     "Codegeex.GenerationPreference": "automatic",
     "Codegeex.CompletionDelay": 0.5,
-    "debug.allowBreakpointsEverywhere": true
+    "debug.allowBreakpointsEverywhere": true,
+    "C_Cpp.default.compilerPath": "D:/Software/Work/NXP/S32DS.3.5/S32DS/build_tools/gcc_v10.2/gcc-10.2-arm32-eabi/bin/arm-none-eabi-gcc.exe"
 }

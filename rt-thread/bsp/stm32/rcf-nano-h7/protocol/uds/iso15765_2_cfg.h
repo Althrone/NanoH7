@@ -24,14 +24,18 @@ extern "C" {
 /******************************************************************************
  * macros
  *****************************************************************************/
+
+ //0xF1:诊断仪
+ //0x33:OBD/WWH-OBD 系统
+
     //is_mixed
     //Mtype         N_SA    N_TA    N_TAtype        N_AE    is_extended is_fixed    canid 
-#define TP2PHY_MAP_TBL \
-    Z(kDiagnostics, 0xF1,   0,      kFuncCanBaseFmt,0,      false,      false,      0x7DF)\
-    Z(kDiagnostics, 0xF1,   0x00,   kPhyCanBaseFmt, 0,      false,      false,      0x7E0)\
-    Z(kDiagnostics, 0x00,   0xF1,   kPhyCanBaseFmt, 0,      false,      false,      0x7E8)\
-    Z(kDiagnostics, 0xF1,   0x01,   kPhyCanBaseFmt, 0,      false,      false,      0x7E1)\
-    Z(kDiagnostics, 0x01,   0xF1,   kPhyCanBaseFmt, 0,      false,      false,      0x7E9)\
+#define N_ADDR_CANID_MAP \
+    Z(kDiagnostics, 0xF1,   0x33,   kFuncCanBaseFmt,0,      false,      false,      0x7DF)\
+    Z(kDiagnostics, 0xF1,   0x01,   kPhyCanBaseFmt, 0,      false,      false,      0x7E0)\
+    Z(kDiagnostics, 0x01,   0xF1,   kPhyCanBaseFmt, 0,      false,      false,      0x7E8)\
+    Z(kDiagnostics, 0xF1,   0x02,   kPhyCanBaseFmt, 0,      false,      false,      0x7E1)\
+    Z(kDiagnostics, 0x02,   0xF1,   kPhyCanBaseFmt, 0,      false,      false,      0x7E9)\
 
 #define DOCAN_TP_FF_DL      4095
 

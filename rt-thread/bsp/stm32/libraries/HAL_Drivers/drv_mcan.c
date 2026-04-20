@@ -434,7 +434,7 @@ static int _inline_canx_sendmsg(struct rt_canx_device *canx, const void *buf, rt
     if(box_num<32)
     {
         TxHeader.TxEventFifoControl=FDCAN_NO_TX_EVENTS;
-        HAL_FDCAN_AddMessageToTxBuffer(&pmcan->hmcan,&TxHeader,pmsg->data,box_num);
+        HAL_FDCAN_AddMessageToTxBuffer(&pmcan->hmcan,&TxHeader,pmsg->data,1<<box_num);
         HAL_FDCAN_EnableTxBufferRequest(&pmcan->hmcan,box_num);
     }
     else

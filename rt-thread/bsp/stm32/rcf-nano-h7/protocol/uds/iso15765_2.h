@@ -130,8 +130,8 @@ typedef enum
 
 typedef struct
 {
-    uint8_t N_TA;
     uint8_t N_SA;
+    uint8_t N_TA;
     N_TAtypeEnum N_TAtype;//定义了ide fdf 功能或者物理地址
     uint8_t N_AE;
 }N_AIStruct;

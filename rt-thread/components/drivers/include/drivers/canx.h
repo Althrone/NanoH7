@@ -246,6 +246,7 @@ struct rt_canx_msg
 struct rt_canx_rx_fifo
 {
     rt_size_t rxrbnum;
+    rt_uint8_t rx_event_max_len;
     struct rt_ringbuffer * rxrb[];
 };
 
@@ -254,11 +255,14 @@ struct rt_canx_tx_buf
     struct rt_canx_header header;//存对比用的id之类的信息
     struct rt_ringbuffer * txrb;
     struct rt_completion completion;//发送完成信号
+    rt_tick_t cycle_ms;//定时发送用
+    rt_tick_t next_send_time;
 };
 
 struct rt_canx_tx_fifo
 {
     rt_size_t txrbnum;
+    rt_uint8_t tx_event_max_len;
     struct rt_canx_tx_buf txbuf[];
     // struct rt_ringbuffer * txrb[];
 };
